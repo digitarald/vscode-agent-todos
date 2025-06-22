@@ -1,0 +1,278 @@
+{
+  "name": "agent-plan",
+  "displayName": "Todos",
+  "description": "VS Code extension that adds todo management tools to agent mode with tree view",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onLanguageModelTool:todo_read",
+    "onLanguageModelTool:todo_write"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "todoManager.clearTodos",
+        "title": "Clear All Todos",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "todoManager.refreshTodos",
+        "title": "Refresh Todos",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "todoManager.toggleTodoStatus",
+        "title": "Toggle Todo Status"
+      },
+      {
+        "command": "todoManager.toggleAutoInject",
+        "title": "Toggle Auto-inject",
+        "icon": "$(markdown)"
+      },
+      {
+        "command": "todoManager.toggleAutoOpenView",
+        "title": "Toggle Auto-open View",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "todoManager.deleteTodo",
+        "title": "Delete Todo",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "todoManager.setStatusPending",
+        "title": "Set Status: Pending",
+        "icon": "$(circle-outline)"
+      },
+      {
+        "command": "todoManager.setStatusInProgress",
+        "title": "Set Status: In Progress",
+        "icon": "$(sync~spin)"
+      },
+      {
+        "command": "todoManager.setStatusCompleted",
+        "title": "Set Status: Completed",
+        "icon": "$(pass-filled)"
+      },
+      {
+        "command": "todoManager.setPriorityHigh",
+        "title": "Set Priority: High",
+        "icon": "$(flame)"
+      },
+      {
+        "command": "todoManager.setPriorityMedium",
+        "title": "Set Priority: Medium",
+        "icon": "$(dash)"
+      },
+      {
+        "command": "todoManager.setPriorityLow",
+        "title": "Set Priority: Low",
+        "icon": "$(chevron-down)"
+      }
+    ],
+    "views": {
+      "workbench.panel.chat": [
+        {
+          "id": "todoManager",
+          "name": "Todos",
+          "when": "true",
+          "icon": "$(checklist)"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "todoManager.clearTodos",
+          "when": "view == todoManager",
+          "group": "navigation"
+        },
+        {
+          "command": "todoManager.refreshTodos",
+          "when": "view == todoManager",
+          "group": "navigation"
+        },
+        {
+          "command": "todoManager.toggleAutoInject",
+          "when": "view == todoManager",
+          "group": "navigation"
+        },
+        {
+          "command": "todoManager.toggleAutoOpenView",
+          "when": "view == todoManager",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "todoManager.deleteTodo",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "inline"
+        },
+        {
+          "command": "todoManager.deleteTodo",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "3_modification"
+        },
+        {
+          "command": "todoManager.setStatusPending",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "1_status"
+        },
+        {
+          "command": "todoManager.setStatusInProgress",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "1_status"
+        },
+        {
+          "command": "todoManager.setStatusCompleted",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "1_status"
+        },
+        {
+          "command": "todoManager.setPriorityHigh",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "2_priority"
+        },
+        {
+          "command": "todoManager.setPriorityMedium",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "2_priority"
+        },
+        {
+          "command": "todoManager.setPriorityLow",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "2_priority"
+        }
+      ]
+    },
+    "languageModelTools": [
+      {
+        "name": "todo_read",
+        "tags": [
+          "todo"
+        ],
+        "toolReferenceName": "readTodos",
+        "displayName": "Read Todos",
+        "modelDescription": "Read the current task list to track progress and plan next steps. NOTE: If <todos> is already present in the instructions, you can skip using this tool as the todo list is already available. Use PROACTIVELY and FREQUENTLY: at conversation start to see pending work, before starting new tasks to prioritize, when user asks about previous tasks, whenever uncertain about next steps, after completing tasks to update understanding, every few messages to stay on track. Returns all todos with status/priority/content. Empty list if no todos exist yet. Essential for maintaining context and avoiding duplicate work.",
+        "userDescription": "View all current todo items with their status and priority levels.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(list-unordered)",
+        "inputSchema": {}
+      },
+      {
+        "name": "todo_write",
+        "tags": [
+          "todo"
+        ],
+        "toolReferenceName": "writeTodos",
+        "displayName": "Write Todos",
+        "modelDescription": "Creates and manages a structured task list for tracking progress and organizing work. Use PROACTIVELY for: complex multi-step tasks (3+ steps), non-trivial tasks requiring planning, multiple user requests, capturing new instructions, marking tasks in_progress BEFORE starting work, and marking completed IMMEDIATELY after finishing. SKIP for: single straightforward tasks, trivial operations (<3 steps), purely conversational requests. RULES: Only ONE task can be in_progress at a time, update status in real-time, complete current tasks before starting new ones, break complex tasks into specific actionable items. Each todo requires: id (unique), content (clear action, min 1 char), status (pending/in_progress/completed), priority (high/medium/low). This replaces the entire list, so include all existing todos to keep.",
+        "userDescription": "Manage your task list: create actionable items, track progress in real-time, and organize work by priority. Best for multi-step projects and complex tasks.",
+        "canBeReferencedInPrompt": true,
+        "icon": "$(edit)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "todos": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Unique identifier string"
+                  },
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Clear, actionable description of what needs to be done"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "in_progress",
+                      "completed"
+                    ],
+                    "description": "Current state of the task (only ONE task should be in_progress at a time)"
+                  },
+                  "priority": {
+                    "type": "string",
+                    "enum": [
+                      "low",
+                      "medium",
+                      "high"
+                    ],
+                    "description": "Task urgency: high (critical/blocking), medium (important), low (nice-to-have)"
+                  }
+                },
+                "required": [
+                  "id",
+                  "content",
+                  "status",
+                  "priority"
+                ]
+              }
+            },
+            "title": {
+              "type": "string",
+              "description": "Optional title for the todo list"
+            }
+          },
+          "required": [
+            "todos"
+          ]
+        }
+      }
+    ],
+    "configuration": {
+      "title": "Todos",
+      "properties": {
+        "todoManager.autoInject": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically inject todo list into .github/copilot-instructions.md and disable the List Todos tool"
+        },
+        "todoManager.autoOpenView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open the Todos view when the todo list changes"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.101.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "eslint": "^9.16.0",
+    "esbuild": "^0.24.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.2",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  }
+}
