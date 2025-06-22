@@ -28,7 +28,8 @@
       },
       {
         "command": "todoManager.toggleTodoStatus",
-        "title": "Toggle Todo Status"
+        "title": "Toggle Todo Status",
+        "icon": "$(check)"
       },
       {
         "command": "todoManager.toggleAutoInject",
@@ -74,6 +75,36 @@
         "command": "todoManager.setPriorityLow",
         "title": "Set Priority: Low",
         "icon": "$(chevron-down)"
+      },
+      {
+        "command": "todoManager.addSubtask",
+        "title": "Add Subtask",
+        "icon": "$(add)"
+      },
+      {
+        "command": "todoManager.toggleSubtask",
+        "title": "Toggle Subtask",
+        "icon": "$(check)"
+      },
+      {
+        "command": "todoManager.deleteSubtask",
+        "title": "Delete Subtask",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "todoManager.addEditDetails",
+        "title": "Add/Edit Details",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "todoManager.clearDetails",
+        "title": "Clear Details",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "todoManager.runTodo",
+        "title": "Run Todo in Chat",
+        "icon": "$(play)"
       }
     ],
     "views": {
@@ -111,9 +142,19 @@
       ],
       "view/item/context": [
         {
+          "command": "todoManager.runTodo",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "inline@1"
+        },
+        {
+          "command": "todoManager.toggleTodoStatus",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "inline@2"
+        },
+        {
           "command": "todoManager.deleteTodo",
           "when": "view == todoManager && viewItem =~ /^todoItem/",
-          "group": "inline"
+          "group": "inline@3"
         },
         {
           "command": "todoManager.deleteTodo",
@@ -149,6 +190,31 @@
           "command": "todoManager.setPriorityLow",
           "when": "view == todoManager && viewItem =~ /^todoItem/",
           "group": "2_priority"
+        },
+        {
+          "command": "todoManager.addSubtask",
+          "when": "view == todoManager && viewItem =~ /^todoItem/ && config.todoManager.enableSubtasks",
+          "group": "4_subtasks"
+        },
+        {
+          "command": "todoManager.addEditDetails",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "5_details"
+        },
+        {
+          "command": "todoManager.clearDetails",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "5_details"
+        },
+        {
+          "command": "todoManager.toggleSubtask",
+          "when": "view == todoManager && viewItem =~ /^subtaskItem/ && config.todoManager.enableSubtasks",
+          "group": "inline"
+        },
+        {
+          "command": "todoManager.deleteSubtask",
+          "when": "view == todoManager && viewItem =~ /^subtaskItem/ && config.todoManager.enableSubtasks",
+          "group": "inline"
         }
       ]
     },
@@ -160,8 +226,8 @@
         ],
         "toolReferenceName": "readTodos",
         "displayName": "Read Todos",
-        "modelDescription": "Read the current task list to track progress and plan next steps. NOTE: If <todos> is already present in the instructions, you can skip using this tool as the todo list is already available. Use PROACTIVELY and FREQUENTLY: at conversation start to see pending work, before starting new tasks to prioritize, when user asks about previous tasks, whenever uncertain about next steps, after completing tasks to update understanding, every few messages to stay on track. Returns all todos with status/priority/content. Empty list if no todos exist yet. Essential for maintaining context and avoiding duplicate work.",
-        "userDescription": "View all current todo items with their status and priority levels.",
+        "modelDescription": "Read the current task list including subtasks and implementation details to track progress and plan next steps. NOTE: If <todos> is already present in the instructions, you can skip using this tool as the todo list is already available. Use PROACTIVELY and FREQUENTLY: at conversation start to see pending work, before starting new tasks to prioritize, when user asks about previous tasks, whenever uncertain about next steps, after completing tasks to update understanding, every few messages to stay on track. Returns all todos with status/priority/content plus any subtasks (when enabled) and implementation details. Empty list if no todos exist yet. Essential for maintaining context and avoiding duplicate work.",
+        "userDescription": "View your current tasks and progress.",
         "canBeReferencedInPrompt": true,
         "icon": "$(list-unordered)",
         "inputSchema": {}
@@ -173,8 +239,8 @@
         ],
         "toolReferenceName": "writeTodos",
         "displayName": "Write Todos",
-        "modelDescription": "Creates and manages a structured task list for tracking progress and organizing work. Use PROACTIVELY for: complex multi-step tasks (3+ steps), non-trivial tasks requiring planning, multiple user requests, capturing new instructions, marking tasks in_progress BEFORE starting work, and marking completed IMMEDIATELY after finishing. SKIP for: single straightforward tasks, trivial operations (<3 steps), purely conversational requests. RULES: Only ONE task can be in_progress at a time, update status in real-time, complete current tasks before starting new ones, break complex tasks into specific actionable items. Each todo requires: id (unique), content (clear action, min 1 char), status (pending/in_progress/completed), priority (high/medium/low). This replaces the entire list, so include all existing todos to keep.",
-        "userDescription": "Manage your task list: create actionable items, track progress in real-time, and organize work by priority. Best for multi-step projects and complex tasks.",
+        "modelDescription": "Creates and manages a structured task list with optional subtasks for tracking progress and organizing work. Use PROACTIVELY for: complex multi-step tasks (3+ steps), non-trivial tasks requiring planning, multiple user requests, capturing new instructions, marking tasks in_progress BEFORE starting work, and marking completed IMMEDIATELY after finishing. SKIP for: single straightforward tasks, trivial operations (<3 steps), purely conversational requests. RULES: Only ONE task can be in_progress at a time, update status in real-time, complete current tasks before starting new ones, break complex tasks into specific actionable items. Each todo requires: id (unique), content (clear action, min 1 char), status (pending/in_progress/completed), priority (high/medium/low). SUBTASKS (when enabled): Granular Tasks - Break down complex tasks into manageable subtasks; Clear Dependencies - Define subtask dependencies to show implementation order; Implementation Notes - Use details field to track progress and decisions; Status Tracking - Keep subtask status updated as work progresses. Each subtask requires: id, content, status (pending/completed). This replaces the entire list, so include all existing todos to keep.",
+        "userDescription": "Create and manage your task list.",
         "canBeReferencedInPrompt": true,
         "icon": "$(edit)",
         "inputSchema": {
@@ -211,6 +277,34 @@
                       "high"
                     ],
                     "description": "Task urgency: high (critical/blocking), medium (important), low (nice-to-have)"
+                  },
+                  "subtasks": {
+                    "type": "array",
+                    "description": "Optional subtasks for breaking down complex tasks",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "Unique identifier for subtask"
+                        },
+                        "content": {
+                          "type": "string",
+                          "minLength": 1,
+                          "description": "Subtask description"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": ["pending", "completed"],
+                          "description": "Subtask completion status"
+                        }
+                      },
+                      "required": ["id", "content", "status"]
+                    }
+                  },
+                  "details": {
+                    "type": "string",
+                    "description": "Optional implementation details or notes"
                   }
                 },
                 "required": [
@@ -244,6 +338,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically open the Todos view when the todo list changes"
+        },
+        "todoManager.enableSubtasks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable subtasks feature for breaking down complex tasks"
         }
       }
     }

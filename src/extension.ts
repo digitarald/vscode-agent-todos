@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { TodoManager } from './todoManager';
 import { TodoTreeDataProvider, TodoDecorationProvider } from './todoTreeProvider';
 import { TodoReadTool, TodoWriteTool } from './languageModelTools';
+import { SubtaskManager } from './subtaskManager';
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('Todos extension is now active!');
@@ -63,8 +64,12 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Todos refreshed!');
 	});
 
-	const toggleTodoStatusCommand = vscode.commands.registerCommand('todoManager.toggleTodoStatus', async (todoId: string) => {
-		await todoManager.toggleTodoStatus(todoId);
+	const toggleTodoStatusCommand = vscode.commands.registerCommand('todoManager.toggleTodoStatus', async (item: any) => {
+		// Handle both direct call with todoId and tree item call
+		const todoId = typeof item === 'string' ? item : item?.todo?.id;
+		if (todoId) {
+			await todoManager.toggleTodoStatus(todoId);
+		}
 	});
 
 	const deleteTodoCommand = vscode.commands.registerCommand('todoManager.deleteTodo', async (item: any) => {
@@ -137,6 +142,86 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	// Subtask commands
+	const addSubtaskCommand = vscode.commands.registerCommand('todoManager.addSubtask', async (item: any) => {
+		const todoId = typeof item === 'string' ? item : item?.todo?.id;
+		if (todoId) {
+			const content = await vscode.window.showInputBox({
+				prompt: 'Enter subtask description',
+				placeHolder: 'Subtask description'
+			});
+			if (content) {
+				const subtaskId = SubtaskManager.generateSubtaskId(content);
+				await todoManager.addSubtask(todoId, {
+					id: subtaskId,
+					content,
+					status: 'pending'
+				});
+			}
+		}
+	});
+
+	const toggleSubtaskCommand = vscode.commands.registerCommand('todoManager.toggleSubtask', async (item: any) => {
+		if (item?.subtask && item?.parentTodoId) {
+			await todoManager.toggleSubtaskStatus(item.parentTodoId, item.subtask.id);
+		}
+	});
+
+	const deleteSubtaskCommand = vscode.commands.registerCommand('todoManager.deleteSubtask', async (item: any) => {
+		if (item?.subtask && item?.parentTodoId) {
+			const selection = await vscode.window.showInformationMessage('Delete this subtask?', 'Yes', 'No');
+			if (selection === 'Yes') {
+				await todoManager.deleteSubtask(item.parentTodoId, item.subtask.id);
+			}
+		}
+	});
+
+	// Details commands
+	const addEditDetailsCommand = vscode.commands.registerCommand('todoManager.addEditDetails', async (item: any) => {
+		const todoId = typeof item === 'string' ? item : item?.todo?.id;
+		if (todoId) {
+			const todo = todoManager.getTodos().find(t => t.id === todoId);
+			const currentDetails = todo?.details || '';
+			const details = await vscode.window.showInputBox({
+				prompt: 'Enter implementation details or notes',
+				placeHolder: 'Implementation details',
+				value: currentDetails,
+				validateInput: (value) => {
+					if (value.length > 500) {
+						return 'Details must be less than 500 characters';
+					}
+					return null;
+				}
+			});
+			if (details !== undefined) {
+				await todoManager.setTodoDetails(todoId, details);
+			}
+		}
+	});
+
+	const clearDetailsCommand = vscode.commands.registerCommand('todoManager.clearDetails', async (item: any) => {
+		const todoId = typeof item === 'string' ? item : item?.todo?.id;
+		if (todoId) {
+			await todoManager.setTodoDetails(todoId, undefined);
+		}
+	});
+
+	const runTodoCommand = vscode.commands.registerCommand('todoManager.runTodo', async (item: any) => {
+		const todo = item?.todo;
+		if (todo) {
+			// Set the todo status to in-progress
+			await todoManager.setTodoStatus(todo.id, 'in_progress');
+			
+			let query = `Continue todos with step _${todo.content}_`;
+
+			// Execute the chat command with agent mode
+			await vscode.commands.executeCommand('workbench.action.chat.open', {
+				mode: 'agent',
+				query: query
+			});
+		}
+	});
+
 	// Add all disposables to context
 	context.subscriptions.push(
 		treeView,
@@ -154,7 +239,13 @@ export async function activate(context: vscode.ExtensionContext) {
 		setStatusCompletedCommand,
 		setPriorityHighCommand,
 		setPriorityMediumCommand,
-		setPriorityLowCommand
+		setPriorityLowCommand,
+		addSubtaskCommand,
+		toggleSubtaskCommand,
+		deleteSubtaskCommand,
+		addEditDetailsCommand,
+		clearDetailsCommand,
+		runTodoCommand
 	);
 
 	// Initialize todos from storage or instructions file

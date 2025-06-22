@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
-import { TodoItem } from './types';
+import { TodoItem, Subtask } from './types';
 import { CopilotInstructionsManager } from './copilotInstructionsManager';
+import { SubtaskManager } from './subtaskManager';
+import { TodoValidator } from './todoValidator';
 
 export class TodoManager {
     private static instance: TodoManager;
@@ -59,6 +61,10 @@ export class TodoManager {
 
     private isAutoOpenViewEnabled(): boolean {
         return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoOpenView', true);
+    }
+
+    private isSubtasksEnabled(): boolean {
+        return vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
     }
 
     private async handleAutoInjectSettingChange(): Promise<void> {
@@ -176,20 +182,7 @@ export class TodoManager {
     }
 
     private areTodosEqual(todos1: TodoItem[], todos2: TodoItem[]): boolean {
-        if (todos1.length !== todos2.length) {
-            return false;
-        }
-
-        // Simple comparison based on content, status, and priority
-        for (let i = 0; i < todos1.length; i++) {
-            const t1 = todos1[i];
-            const t2 = todos2[i];
-            if (t1.content !== t2.content || t1.status !== t2.status || t1.priority !== t2.priority) {
-                return false;
-            }
-        }
-
-        return true;
+        return TodoValidator.areTodosEqual(todos1, todos2);
     }
 
     public getTodos(): TodoItem[] {
@@ -233,6 +226,7 @@ export class TodoManager {
 
     public async clearTodos(): Promise<void> {
         this.todos = [];
+        this.title = 'Todos'; // Reset title to default
         this.onDidChangeTodosEmitter.fire(this.todos);
         // Also fire title change to update progress indicator
         this.onDidChangeTitleEmitter.fire(this.getTitle());
@@ -303,6 +297,76 @@ export class TodoManager {
             this.onDidChangeTodosEmitter.fire(this.todos);
         // Also fire title change to update progress indicator
         this.onDidChangeTitleEmitter.fire(this.getTitle());
+            await this.updateInstructionsIfNeeded();
+            this.saveToStorage();
+        }
+    }
+
+    // Subtask management methods
+    public async addSubtask(todoId: string, subtask: Subtask): Promise<void> {
+        if (!this.isSubtasksEnabled()) {
+            return;
+        }
+        
+        const todo = this.todos.find(t => t.id === todoId);
+        if (todo) {
+            SubtaskManager.addSubtask(todo, subtask);
+            this.onDidChangeTodosEmitter.fire(this.todos);
+            await this.updateInstructionsIfNeeded();
+            this.saveToStorage();
+        }
+    }
+
+    public async updateSubtask(todoId: string, subtaskId: string, updates: Partial<Subtask>): Promise<void> {
+        if (!this.isSubtasksEnabled()) {
+            return;
+        }
+        
+        const todo = this.todos.find(t => t.id === todoId);
+        if (todo && SubtaskManager.updateSubtask(todo, subtaskId, updates)) {
+            this.onDidChangeTodosEmitter.fire(this.todos);
+            await this.updateInstructionsIfNeeded();
+            this.saveToStorage();
+        }
+    }
+
+    public async deleteSubtask(todoId: string, subtaskId: string): Promise<void> {
+        if (!this.isSubtasksEnabled()) {
+            return;
+        }
+        
+        const todo = this.todos.find(t => t.id === todoId);
+        if (todo && SubtaskManager.deleteSubtask(todo, subtaskId)) {
+            this.onDidChangeTodosEmitter.fire(this.todos);
+            await this.updateInstructionsIfNeeded();
+            this.saveToStorage();
+        }
+    }
+
+    public async toggleSubtaskStatus(todoId: string, subtaskId: string): Promise<void> {
+        if (!this.isSubtasksEnabled()) {
+            return;
+        }
+        
+        const todo = this.todos.find(t => t.id === todoId);
+        if (todo && SubtaskManager.toggleSubtaskStatus(todo, subtaskId)) {
+            this.onDidChangeTodosEmitter.fire(this.todos);
+            await this.updateInstructionsIfNeeded();
+            this.saveToStorage();
+        }
+    }
+
+    // Details management method
+    public async setTodoDetails(todoId: string, details: string | undefined): Promise<void> {
+        const todo = this.todos.find(t => t.id === todoId);
+        if (todo) {
+            const sanitizedDetails = TodoValidator.sanitizeDetails(details);
+            if (sanitizedDetails === undefined) {
+                delete todo.details;
+            } else {
+                todo.details = sanitizedDetails;
+            }
+            this.onDidChangeTodosEmitter.fire(this.todos);
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }

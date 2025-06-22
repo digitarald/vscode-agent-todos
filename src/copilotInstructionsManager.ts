@@ -33,41 +33,41 @@ export class CopilotInstructionsManager {
             return markdown;
         }
 
-        const todosByStatus = {
-            'pending': todos.filter(t => t.status === 'pending'),
-            'in_progress': todos.filter(t => t.status === 'in_progress'),
-            'completed': todos.filter(t => t.status === 'completed')
+        // Check if subtasks are enabled
+        const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+
+        // Helper function to format a single todo with subtasks and details
+        const formatTodo = (todo: TodoItem): string => {
+            // Determine checkbox based on status
+            const checkbox = todo.status === 'completed' ? '[x]' :
+                            todo.status === 'in_progress' ? '[-]' :
+                            '[ ]';
+            
+            const priorityBadge = todo.priority === 'high' ? ' 🔴' :
+                todo.priority === 'medium' ? ' 🟡' :
+                    ' 🟢';
+            let result = `- ${checkbox} ${todo.content}${priorityBadge}\n`;
+            
+            // Add subtasks if enabled and present
+            if (subtasksEnabled && todo.subtasks && todo.subtasks.length > 0) {
+                todo.subtasks.forEach(subtask => {
+                    const subtaskCheckbox = subtask.status === 'completed' ? '[x]' : '[ ]';
+                    result += `  - ${subtaskCheckbox} ${subtask.content}\n`;
+                });
+            }
+            
+            // Add details if present
+            if (todo.details) {
+                result += `  _${todo.details}_\n`;
+            }
+            
+            return result;
         };
 
-        // Pending items
-        if (todosByStatus.pending.length > 0) {
-            todosByStatus.pending.forEach(todo => {
-                const priorityBadge = todo.priority === 'high' ? ' 🔴' :
-                    todo.priority === 'medium' ? ' 🟡' :
-                        ' 🟢';
-                markdown += `- [ ] ${todo.content}${priorityBadge}\n`;
-            });
-        }
-
-        // In-progress items
-        if (todosByStatus.in_progress.length > 0) {
-            todosByStatus.in_progress.forEach(todo => {
-                const priorityBadge = todo.priority === 'high' ? ' 🔴' :
-                    todo.priority === 'medium' ? ' 🟡' :
-                        ' 🟢';
-                markdown += `- [⏳] ${todo.content}${priorityBadge}\n`;
-            });
-        }
-
-        // Completed items
-        if (todosByStatus.completed.length > 0) {
-            todosByStatus.completed.forEach(todo => {
-                const priorityBadge = todo.priority === 'high' ? ' 🔴' :
-                    todo.priority === 'medium' ? ' 🟡' :
-                        ' 🟢';
-                markdown += `- [x] ${todo.content}${priorityBadge}\n`;
-            });
-        }
+        // Format todos in their original order
+        todos.forEach(todo => {
+            markdown += formatTodo(todo);
+        });
 
         return markdown.trim();
     }
@@ -166,9 +166,15 @@ export class CopilotInstructionsManager {
             const todos: TodoItem[] = [];
             let title: string | undefined = titleFromAttr;
             let idCounter = 1;
+            let subtaskIdCounter = 1;
             let inComment = false;
+            let currentTodo: TodoItem | null = null;
 
-            for (const line of lines) {
+            // Check if subtasks are enabled
+            const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
                 const trimmedLine = line.trim();
 
                 // Handle multi-line HTML comments
@@ -182,8 +188,8 @@ export class CopilotInstructionsManager {
                     continue;
                 }
 
-                // Skip empty lines
-                if (trimmedLine === '') {
+                // Skip empty lines and prompt instructions
+                if (trimmedLine === '' || trimmedLine.startsWith('>')) {
                     continue;
                 }
 
@@ -191,6 +197,39 @@ export class CopilotInstructionsManager {
                 if (trimmedLine.startsWith('# ')) {
                     title = trimmedLine.substring(2).trim();
                     continue;
+                }
+
+                // Check if this is a subtask (indented with 2 spaces)
+                if (line.startsWith('  - ') && currentTodo && subtasksEnabled) {
+                    const subtaskMatch = line.match(/^  - \[([ x])\] (.+)$/);
+                    if (subtaskMatch) {
+                        const subtaskStatus = subtaskMatch[1] === 'x' ? 'completed' : 'pending';
+                        const subtaskContent = subtaskMatch[2];
+                        
+                        if (!currentTodo.subtasks) {
+                            currentTodo.subtasks = [];
+                        }
+                        
+                        currentTodo.subtasks.push({
+                            id: `subtask-${subtaskIdCounter++}-${subtaskContent.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`,
+                            content: subtaskContent,
+                            status: subtaskStatus
+                        });
+                    }
+                    continue;
+                }
+
+                // Check if this is a details line (indented with 2 spaces and italic)
+                if (line.startsWith('  _') && line.endsWith('_') && currentTodo) {
+                    const details = line.substring(3, line.length - 1).trim();
+                    currentTodo.details = details;
+                    continue;
+                }
+
+                // Save the previous todo if exists
+                if (currentTodo) {
+                    todos.push(currentTodo);
+                    currentTodo = null;
                 }
 
                 // Parse todo items
@@ -204,8 +243,8 @@ export class CopilotInstructionsManager {
                     status = 'pending';
                     content = match[1];
                 }
-                // Check for in-progress todos: - [⏳] content
-                else if ((match = trimmedLine.match(/^- \[⏳\] (.+)$/))) {
+                // Check for in-progress todos: - [-] content
+                else if ((match = trimmedLine.match(/^- \[-\] (.+)$/))) {
                     status = 'in_progress';
                     content = match[1];
                 }
@@ -233,12 +272,17 @@ export class CopilotInstructionsManager {
                 // Generate a stable ID based on content and position
                 const id = `todo-${idCounter++}-${content.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`;
 
-                todos.push({
+                currentTodo = {
                     id,
                     content,
                     status,
                     priority
-                });
+                };
+            }
+
+            // Don't forget the last todo
+            if (currentTodo) {
+                todos.push(currentTodo);
             }
 
             return { todos, title };
