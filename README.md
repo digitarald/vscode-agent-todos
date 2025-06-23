@@ -32,21 +32,66 @@ VS Code's agent mode is brilliant at writing code but lacks persistent memory be
 3. **Track** → Visual tree view shows progress; AI remembers everything
 4. **Execute** → Run todos directly in VS Code Chat with full context
 
-### � Example Workflow
+### 🔄 Example Workflow
 
 ```
 You: "Create a todo list for implementing user authentication"
 
-GitHub Copilot: "I'll create a structured plan for user authentication..."
-✅ Creates organized todos with subtasks and priorities
-✅ Todos appear in Explorer tree view  
-✅ AI remembers your plan for future sessions
+GitHub Copilot: "I'll create a structured plan for user authentication. Let me organize this into actionable tasks..."
 
-You: "What should I work on next?"
+📝 Creating todos:
+• Set up authentication routes (high priority)
+• Configure auth library integration
+• Create login/register endpoints
+• Add JWT middleware for protected routes
+• Write authentication tests
 
-GitHub Copilot: "Based on your todos, let's start with the JWT middleware..."
-✅ Suggests next action from your todo list
-✅ Updates progress as you complete tasks
+You: "Start with the first task"
+
+GitHub Copilot: "I'll help you set up the authentication routes. First, let me mark this as in-progress..."
+
+🔄 Updated todo: "Set up authentication routes" → in_progress
+
+*Creates auth.routes.ts file*
+*Implements basic route structure*
+
+✅ Marking "Set up authentication routes" as completed
+
+Now configuring the auth library integration...
+
+🔄 Updated todo: "Configure auth library integration" → in_progress
+
+*Installs passport and express-jwt packages*
+*Sets up auth configuration*
+
+✅ Completed "Configure auth library integration"
+
+You: "What's left to do?"
+
+GitHub Copilot: "Let me check your remaining todos..."
+
+📋 Authentication TODOs (2/5 completed):
+✅ Set up authentication routes
+✅ Configure auth library integration
+⏳ Create login/register endpoints (next up)
+⏳ Add JWT middleware for protected routes
+⏳ Write authentication tests
+
+You: "Use the existing auth library we have"
+
+GitHub Copilot: "I see you already have `express-jwt` and `passport` in your dependencies. Let me update our approach to leverage these existing libraries..."
+
+🔄 Updated todo: "Create login/register endpoints" → in_progress
+
+*Configures passport strategies*
+*Integrates with existing user model*
+*Creates streamlined auth endpoints using passport*
+
+✅ Completed "Create login/register endpoints"
+
+The existing auth library simplified our implementation significantly. Let me now add the JWT middleware...
+
+🔄 Updated todo: "Add JWT middleware for protected routes" → in_progress
 ```
 
 ## Quick Start
