@@ -204,17 +204,18 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
 
             // Check if this is a subtask (indented with 2 spaces)
             if (line.startsWith('  - ') && currentTodo) {
-                const subtaskMatch = line.match(/^  - \[([ x])\] (.+)$/);
+                const subtaskMatch = line.match(/^  - \[([ x])\] ([^:]+): (.+)$/);
                 if (subtaskMatch) {
                     const subtaskStatus = subtaskMatch[1] === 'x' ? 'completed' : 'pending';
-                    const subtaskContent = subtaskMatch[2];
+                    const subtaskId = subtaskMatch[2].trim();
+                    const subtaskContent = subtaskMatch[3].trim();
 
                     if (!currentTodo.subtasks) {
                         currentTodo.subtasks = [];
                     }
 
                     currentTodo.subtasks.push({
-                        id: `subtask-${subtaskIdCounter++}-${subtaskContent.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`,
+                        id: subtaskId,
                         content: subtaskContent,
                         status: subtaskStatus
                     });
@@ -235,32 +236,36 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 currentTodo = null;
             }
 
-            // Parse todo items
+            // Parse todo items with ID
             let match: RegExpMatchArray | null;
             let status: 'pending' | 'in_progress' | 'completed';
             let content: string;
             let priority: 'low' | 'medium' | 'high' = 'medium';
+            let id: string;
 
-            // Check for pending todos: - [ ] content
-            if ((match = trimmedLine.match(/^- \[ \] (.+)$/))) {
+            // Check for pending todos: - [ ] id: content
+            if ((match = trimmedLine.match(/^- \[ \] ([^:]+): (.+)$/))) {
                 status = 'pending';
-                content = match[1];
+                id = match[1].trim();
+                content = match[2].trim();
             }
-            // Check for in-progress todos: - [-] content
-            else if ((match = trimmedLine.match(/^- \[-\] (.+)$/))) {
+            // Check for in-progress todos: - [-] id: content
+            else if ((match = trimmedLine.match(/^- \[-\] ([^:]+): (.+)$/))) {
                 status = 'in_progress';
-                content = match[1];
+                id = match[1].trim();
+                content = match[2].trim();
             }
-            // Check for completed todos: - [x] content
-            else if ((match = trimmedLine.match(/^- \[x\] (.+)$/i))) {
+            // Check for completed todos: - [x] id: content
+            else if ((match = trimmedLine.match(/^- \[x\] ([^:]+): (.+)$/i))) {
                 status = 'completed';
-                content = match[1];
+                id = match[1].trim();
+                content = match[2].trim();
             }
             else {
                 continue; // Skip non-todo lines
             }
 
-            // Extract priority from emoji at the end
+            // Extract priority from emoji at the end of content
             if (content.endsWith(' 🔴')) {
                 priority = 'high';
                 content = content.slice(0, -3).trim();
@@ -271,9 +276,6 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 priority = 'low';
                 content = content.slice(0, -3).trim();
             }
-
-            // Generate a stable ID based on content and position
-            const id = `todo-${idCounter++}-${content.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`;
 
             currentTodo = {
                 id,

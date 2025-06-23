@@ -149,5 +149,55 @@ This is my custom content that should be preserved.
             assert.ok(content.includes('New todo'));
             assert.ok(!content.includes('Old todo'));
         });
+
+        test('Should parse todos with id: content format correctly', async () => {
+            // Create a file with todos in the id: content format
+            const content = `<!-- Auto-generated todo section -->
+<todos title="Test Todos" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
+- [x] todo-1-analyze-requirements: Analyze requirements and design approach for kids-friendly water tracking app 🔴
+  _Define core features, user experience, and technical approach for a simple water tracking app suitable for children_
+- [x] todo-2-create-typescript-in: Create TypeScript interfaces and types for water tracking data 🔴
+- [ ] todo-3-implement-ui: Implement the user interface components 🟡
+  - [x] subtask-1-design-layout: Design the main layout
+  - [ ] subtask-2-add-interactions: Add user interactions
+</todos>
+
+<!-- Add your custom Copilot instructions below -->
+`;
+
+            fs.mkdirSync(path.dirname(instructionsPath), { recursive: true });
+            fs.writeFileSync(instructionsPath, content);
+
+            const data = await storage.load();
+            assert.strictEqual(data.title, 'Test Todos');
+            assert.strictEqual(data.todos.length, 3);
+            
+            // Check that IDs are correctly parsed
+            assert.strictEqual(data.todos[0].id, 'todo-1-analyze-requirements');
+            assert.strictEqual(data.todos[0].content, 'Analyze requirements and design approach for kids-friendly water tracking app');
+            assert.strictEqual(data.todos[0].status, 'completed');
+            assert.strictEqual(data.todos[0].priority, 'high');
+            assert.strictEqual(data.todos[0].details, 'Define core features, user experience, and technical approach for a simple water tracking app suitable for children');
+            
+            assert.strictEqual(data.todos[1].id, 'todo-2-create-typescript-in');
+            assert.strictEqual(data.todos[1].content, 'Create TypeScript interfaces and types for water tracking data');
+            assert.strictEqual(data.todos[1].status, 'completed');
+            assert.strictEqual(data.todos[1].priority, 'high');
+            
+            assert.strictEqual(data.todos[2].id, 'todo-3-implement-ui');
+            assert.strictEqual(data.todos[2].content, 'Implement the user interface components');
+            assert.strictEqual(data.todos[2].status, 'pending');
+            assert.strictEqual(data.todos[2].priority, 'medium');
+            
+            // Check subtasks are correctly parsed
+            assert.ok(data.todos[2].subtasks);
+            assert.strictEqual(data.todos[2].subtasks?.length, 2);
+            assert.strictEqual(data.todos[2].subtasks?.[0].id, 'subtask-1-design-layout');
+            assert.strictEqual(data.todos[2].subtasks?.[0].content, 'Design the main layout');
+            assert.strictEqual(data.todos[2].subtasks?.[0].status, 'completed');
+            assert.strictEqual(data.todos[2].subtasks?.[1].id, 'subtask-2-add-interactions');
+            assert.strictEqual(data.todos[2].subtasks?.[1].content, 'Add user interactions');
+            assert.strictEqual(data.todos[2].subtasks?.[1].status, 'pending');
+        });
     });
 });
