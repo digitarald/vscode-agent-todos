@@ -44,19 +44,19 @@ export class CopilotInstructionsManager {
         const formatTodo = (todo: TodoItem): string => {
             // Determine checkbox based on status
             const checkbox = todo.status === 'completed' ? '[x]' :
-                            todo.status === 'in_progress' ? '[-]' :
-                            '[ ]';
-            
+                todo.status === 'in_progress' ? '[-]' :
+                    '[ ]';
+
             const priorityBadge = todo.priority === 'high' ? ' 🔴' :
                 todo.priority === 'medium' ? ' 🟡' :
                     ' 🟢';
             let result = `- ${checkbox} ${todo.id}: ${todo.content}${priorityBadge}\n`;
-            
+
             // Add details if present (before subtasks)
             if (todo.details) {
                 result += `  _${todo.details}_\n`;
             }
-            
+
             // Add subtasks if enabled and present
             if (subtasksEnabled && todo.subtasks && todo.subtasks.length > 0) {
                 todo.subtasks.forEach(subtask => {
@@ -64,7 +64,7 @@ export class CopilotInstructionsManager {
                     result += `  - ${subtaskCheckbox} ${subtask.id}: ${subtask.content}\n`;
                 });
             }
-            
+
             return result;
         };
 
@@ -216,11 +216,11 @@ export class CopilotInstructionsManager {
                         const subtaskStatus = subtaskMatch[1] === 'x' ? 'completed' : 'pending';
                         const subtaskId = subtaskMatch[2].trim();
                         const subtaskContent = subtaskMatch[3].trim();
-                        
+
                         if (!currentTodo.subtasks) {
                             currentTodo.subtasks = [];
                         }
-                        
+
                         currentTodo.subtasks.push({
                             id: subtaskId,
                             content: subtaskContent,

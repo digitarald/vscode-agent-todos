@@ -24,10 +24,10 @@ suite('Storage Tests', () => {
             const todos: TodoItem[] = [
                 { id: '1', content: 'Test todo', status: 'pending', priority: 'medium' }
             ];
-            
+
             await storage.save(todos, 'Test Title');
             const data = await storage.load();
-            
+
             assert.deepStrictEqual(data.todos, todos);
             assert.strictEqual(data.title, 'Test Title');
         });
@@ -36,10 +36,10 @@ suite('Storage Tests', () => {
             const todos: TodoItem[] = [
                 { id: '1', content: 'Test todo', status: 'pending', priority: 'medium' }
             ];
-            
+
             await storage.save(todos, 'Test Title');
             await storage.clear();
-            
+
             const data = await storage.load();
             assert.deepStrictEqual(data.todos, []);
             assert.strictEqual(data.title, 'Todos');
@@ -47,7 +47,7 @@ suite('Storage Tests', () => {
 
         test('Should notify on changes', (done) => {
             let changeCount = 0;
-            
+
             const disposable = storage.onDidChange(() => {
                 changeCount++;
                 if (changeCount === 2) {
@@ -55,7 +55,7 @@ suite('Storage Tests', () => {
                     done();
                 }
             });
-            
+
             storage.save([], 'Test').then(() => {
                 return storage.clear();
             });
@@ -92,9 +92,9 @@ suite('Storage Tests', () => {
             const todos: TodoItem[] = [
                 { id: '1', content: 'Test todo', status: 'pending', priority: 'high' }
             ];
-            
+
             await storage.save(todos, 'Test Title');
-            
+
             assert.ok(fs.existsSync(instructionsPath));
             const content = fs.readFileSync(instructionsPath, 'utf8');
             assert.ok(content.includes('<todos title="Test Title"'));
@@ -113,10 +113,10 @@ suite('Storage Tests', () => {
 
 <!-- Add your custom Copilot instructions below -->
 `;
-            
+
             fs.mkdirSync(path.dirname(instructionsPath), { recursive: true });
             fs.writeFileSync(instructionsPath, content);
-            
+
             const data = await storage.load();
             assert.strictEqual(data.title, 'Existing Todos');
             assert.strictEqual(data.todos.length, 3);
@@ -134,16 +134,16 @@ suite('Storage Tests', () => {
 <!-- Add your custom Copilot instructions below -->
 This is my custom content that should be preserved.
 `;
-            
+
             fs.mkdirSync(path.dirname(instructionsPath), { recursive: true });
             fs.writeFileSync(instructionsPath, existingContent);
-            
+
             const todos: TodoItem[] = [
                 { id: '1', content: 'New todo', status: 'pending', priority: 'medium' }
             ];
-            
+
             await storage.save(todos, 'New Title');
-            
+
             const content = fs.readFileSync(instructionsPath, 'utf8');
             assert.ok(content.includes('This is my custom content that should be preserved.'));
             assert.ok(content.includes('New todo'));

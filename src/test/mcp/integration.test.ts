@@ -167,4 +167,61 @@ suite('MCP Integration Tests', () => {
             assert.ok(result.content.length > 0);
         });
     });
+
+    test('Should update tool list when auto-inject setting changes', async () => {
+        const server = provider.getServer();
+        assert.ok(server);
+        await server.initialize();
+        
+        // Initially, both tools should be available (auto-inject disabled by default)
+        let tools = await server.getTodoTools().getAvailableTools();
+        assert.strictEqual(tools.length, 2);
+        assert.ok(tools.some((t: any) => t.name === 'todo_read'));
+        assert.ok(tools.some((t: any) => t.name === 'todo_write'));
+        
+        // Simulate enabling auto-inject
+        const config = vscode.workspace.getConfiguration('todoManager');
+        await config.update('autoInject', true, vscode.ConfigurationTarget.Workspace);
+        
+        // Give time for configuration change to propagate
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Now only todo_write should be available
+        tools = await server.getTodoTools().getAvailableTools();
+        assert.strictEqual(tools.length, 1);
+        assert.ok(!tools.some((t: any) => t.name === 'todo_read'));
+        assert.ok(tools.some((t: any) => t.name === 'todo_write'));
+        
+        // Disable auto-inject again
+        await config.update('autoInject', false, vscode.ConfigurationTarget.Workspace);
+        
+        // Give time for configuration change to propagate
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Both tools should be available again
+        tools = await server.getTodoTools().getAvailableTools();
+        assert.strictEqual(tools.length, 2);
+        assert.ok(tools.some((t: any) => t.name === 'todo_read'));
+        assert.ok(tools.some((t: any) => t.name === 'todo_write'));
+    });
+
+    test('Should fire server definition change event when configuration changes', async () => {
+        let eventFired = false;
+        const disposable = provider.onDidChangeMcpServerDefinitions(() => {
+            eventFired = true;
+        });
+        
+        try {
+            // Change auto-inject setting
+            const config = vscode.workspace.getConfiguration('todoManager');
+            await config.update('autoInject', true, vscode.ConfigurationTarget.Workspace);
+            
+            // Give time for event to fire
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            assert.ok(eventFired, 'onDidChangeMcpServerDefinitions event should have fired');
+        } finally {
+            disposable.dispose();
+        }
+    });
 });

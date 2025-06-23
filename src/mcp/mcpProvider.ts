@@ -119,8 +119,8 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
   }
 
   private setupConfigurationHandling(): void {
-    // Listen for configuration changes
-    const disposable = vscode.workspace.onDidChangeConfiguration((e) => {
+    // Listen for configuration changes from VS Code settings
+    const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('todoManager')) {
         // Handle auto-inject setting change
         if (e.affectsConfiguration('todoManager.autoInject') && this.server) {
@@ -144,7 +144,36 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       }
     });
 
-    this.context.subscriptions.push(disposable);
+    // Also listen for configuration changes from TodoManager
+    const todoManager = TodoManager.getInstance();
+    const todoConfigDisposable = todoManager.onDidChangeConfiguration((config) => {
+      if (this.server) {
+        // Broadcast configuration change to MCP server
+        this.server.broadcastUpdate({
+          type: 'configuration-changed',
+          config: {
+            autoInject: config.autoInject,
+            enableSubtasks: config.enableSubtasks
+          },
+          timestamp: Date.now()
+        });
+
+        // Update storage if auto-inject setting changed
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+        let storage: ITodoStorage;
+        if (config.autoInject) {
+          storage = new CopilotInstructionsStorage(workspaceRoot);
+        } else {
+          storage = new WorkspaceStateStorage(this.context);
+        }
+        this.server.setStorage(storage);
+      }
+
+      // Notify that server definitions might have changed
+      this._onDidChangeMcpServerDefinitions.fire();
+    });
+
+    this.context.subscriptions.push(configDisposable, todoConfigDisposable);
   }
 
 

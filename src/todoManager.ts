@@ -14,6 +14,9 @@ export class TodoManager {
     public readonly onDidChangeTitle = this.onDidChangeTitleEmitter.event;
     private readonly onShouldOpenViewEmitter = new vscode.EventEmitter<void>();
     public readonly onShouldOpenView = this.onShouldOpenViewEmitter.event;
+    // Add configuration change event emitter
+    private readonly onDidChangeConfigurationEmitter = new vscode.EventEmitter<{ autoInject: boolean; enableSubtasks: boolean }>();
+    public readonly onDidChangeConfiguration = this.onDidChangeConfigurationEmitter.event;
     private copilotInstructionsManager: CopilotInstructionsManager;
     private configurationDisposable: vscode.Disposable | undefined;
     private fileWatcher: vscode.FileSystemWatcher | undefined;
@@ -29,6 +32,13 @@ export class TodoManager {
             this.configurationDisposable = vscode.workspace.onDidChangeConfiguration(async (event) => {
                 if (event.affectsConfiguration('todoManager.autoInject')) {
                     await this.handleAutoInjectSettingChange();
+                }
+                // Also broadcast changes for other configuration settings that affect MCP tools
+                if (event.affectsConfiguration('todoManager.enableSubtasks')) {
+                    this.onDidChangeConfigurationEmitter.fire({
+                        autoInject: this.isAutoInjectEnabled(),
+                        enableSubtasks: this.isSubtasksEnabled()
+                    });
                 }
             });
 
@@ -98,6 +108,12 @@ export class TodoManager {
             // Save current todos to storage
             this.saveToStorage();
         }
+
+        // Broadcast configuration change event
+        this.onDidChangeConfigurationEmitter.fire({
+            autoInject: this.isAutoInjectEnabled(),
+            enableSubtasks: this.isSubtasksEnabled()
+        });
     }
 
     private async updateInstructionsIfNeeded(): Promise<void> {
@@ -430,13 +446,13 @@ export class TodoManager {
     }
 
     public dispose(): void {
+        if (this.configurationDisposable) {
+            this.configurationDisposable.dispose();
+        }
+        this.stopWatchingInstructionsFile();
         this.onDidChangeTodosEmitter.dispose();
         this.onDidChangeTitleEmitter.dispose();
         this.onShouldOpenViewEmitter.dispose();
-        this.configurationDisposable?.dispose();
-        this.stopWatchingInstructionsFile();
-        if (this.updateDebounceTimer) {
-            clearTimeout(this.updateDebounceTimer);
-        }
+        this.onDidChangeConfigurationEmitter.dispose();
     }
 }

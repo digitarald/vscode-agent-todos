@@ -1,112 +1,309 @@
 {
-  "commands": [
-    {
-      "command": "todoManager.clearTodos",
-      "title": "Clear All Todos",
-      "category": "Agent TODOs",
-      "icon": "$(clear-all)"
+  "name": "agent-todos",
+  "displayName": "Agent TODOs",
+  "description": "Gives VS Code agent mode planning superpowers with dynamic todo lists",
+  "version": "0.0.2",
+  "publisher": "digitarald",
+  "preview": true,
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digitarald/vscode-agent-todos"
+  },
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.101.0",
+    "node": ">=22.0.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onMcpServerDefinitionProvider:todos-mcp-provider"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "todoManager.clearTodos",
+        "title": "Clear All Todos",
+        "category": "Agent TODOs",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "todoManager.refreshTodos",
+        "title": "Refresh Todos",
+        "category": "Agent TODOs",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "todoManager.toggleTodoStatus",
+        "title": "Toggle Todo Status",
+        "category": "Agent TODOs",
+        "icon": "$(check)"
+      },
+      {
+        "command": "todoManager.toggleAutoInject",
+        "title": "Toggle Auto-inject",
+        "category": "Agent TODOs",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "todoManager.toggleAutoOpenView",
+        "title": "Toggle Auto-open View",
+        "category": "Agent TODOs",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "todoManager.deleteTodo",
+        "title": "Delete Todo",
+        "category": "Agent TODOs",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "todoManager.setStatusPending",
+        "title": "Set Status: Pending",
+        "category": "Agent TODOs",
+        "icon": "$(circle-outline)"
+      },
+      {
+        "command": "todoManager.setStatusInProgress",
+        "title": "Set Status: In Progress",
+        "category": "Agent TODOs",
+        "icon": "$(sync~spin)"
+      },
+      {
+        "command": "todoManager.setStatusCompleted",
+        "title": "Set Status: Completed",
+        "category": "Agent TODOs",
+        "icon": "$(pass-filled)"
+      },
+      {
+        "command": "todoManager.setPriorityHigh",
+        "title": "Set Priority: High",
+        "category": "Agent TODOs",
+        "icon": "$(flame)"
+      },
+      {
+        "command": "todoManager.setPriorityMedium",
+        "title": "Set Priority: Medium",
+        "category": "Agent TODOs",
+        "icon": "$(dash)"
+      },
+      {
+        "command": "todoManager.setPriorityLow",
+        "title": "Set Priority: Low",
+        "category": "Agent TODOs",
+        "icon": "$(chevron-down)"
+      },
+      {
+        "command": "todoManager.addSubtask",
+        "title": "Add Subtask",
+        "category": "Agent TODOs",
+        "icon": "$(add)"
+      },
+      {
+        "command": "todoManager.toggleSubtask",
+        "title": "Toggle Subtask",
+        "category": "Agent TODOs",
+        "icon": "$(check)"
+      },
+      {
+        "command": "todoManager.deleteSubtask",
+        "title": "Delete Subtask",
+        "category": "Agent TODOs",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "todoManager.addEditDetails",
+        "title": "Add/Edit Details",
+        "category": "Agent TODOs",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "todoManager.clearDetails",
+        "title": "Clear Details",
+        "category": "Agent TODOs",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "todoManager.runTodo",
+        "title": "Run Todo in Chat",
+        "category": "Agent TODOs",
+        "icon": "$(play)"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "todoManager",
+          "name": "Agent TODOs",
+          "when": "true",
+          "icon": "$(checklist)"
+        }
+      ]
     },
-    {
-      "command": "todoManager.refreshTodos",
-      "title": "Refresh Todos",
-      "category": "Agent TODOs",
-      "icon": "$(refresh)"
+    "menus": {
+      "view/title": [
+        {
+          "command": "todoManager.clearTodos",
+          "when": "view == todoManager",
+          "group": "navigation"
+        },
+        {
+          "command": "todoManager.refreshTodos",
+          "when": "view == todoManager",
+          "group": "navigation"
+        },
+        {
+          "command": "todoManager.toggleAutoInject",
+          "when": "view == todoManager",
+          "group": "navigation"
+        },
+        {
+          "command": "todoManager.toggleAutoOpenView",
+          "when": "view == todoManager",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "todoManager.runTodo",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "inline@1"
+        },
+        {
+          "command": "todoManager.toggleTodoStatus",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "inline@2"
+        },
+        {
+          "command": "todoManager.deleteTodo",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "inline@3"
+        },
+        {
+          "command": "todoManager.deleteTodo",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "3_modification"
+        },
+        {
+          "command": "todoManager.setStatusPending",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "1_status"
+        },
+        {
+          "command": "todoManager.setStatusInProgress",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "1_status"
+        },
+        {
+          "command": "todoManager.setStatusCompleted",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "1_status"
+        },
+        {
+          "command": "todoManager.setPriorityHigh",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "2_priority"
+        },
+        {
+          "command": "todoManager.setPriorityMedium",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "2_priority"
+        },
+        {
+          "command": "todoManager.setPriorityLow",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "2_priority"
+        },
+        {
+          "command": "todoManager.addSubtask",
+          "when": "view == todoManager && viewItem =~ /^todoItem/ && config.todoManager.enableSubtasks",
+          "group": "4_subtasks"
+        },
+        {
+          "command": "todoManager.addEditDetails",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "5_details"
+        },
+        {
+          "command": "todoManager.clearDetails",
+          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "group": "5_details"
+        },
+        {
+          "command": "todoManager.toggleSubtask",
+          "when": "view == todoManager && viewItem =~ /^subtaskItem/ && config.todoManager.enableSubtasks",
+          "group": "inline"
+        },
+        {
+          "command": "todoManager.deleteSubtask",
+          "when": "view == todoManager && viewItem =~ /^subtaskItem/ && config.todoManager.enableSubtasks",
+          "group": "inline"
+        }
+      ]
     },
-    {
-      "command": "todoManager.toggleTodoStatus",
-      "title": "Toggle Todo Status",
-      "category": "Agent TODOs",
-      "icon": "$(check)"
+    "configuration": {
+      "title": "Todos",
+      "properties": {
+        "todoManager.autoInject": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically inject todo list into .github/copilot-instructions.md and disable the List Todos tool"
+        },
+        "todoManager.autoOpenView": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open the Todos view when the todo list changes"
+        },
+        "todoManager.enableSubtasks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable subtasks feature for breaking down complex tasks"
+        }
+      }
     },
-    {
-      "command": "todoManager.toggleAutoInject",
-      "title": "Toggle Auto-inject",
-      "category": "Agent TODOs",
-      "icon": "$(sync)"
-    },
-    {
-      "command": "todoManager.toggleAutoOpenView",
-      "title": "Toggle Auto-open View",
-      "category": "Agent TODOs",
-      "icon": "$(open-preview)"
-    },
-    {
-      "command": "todoManager.deleteTodo",
-      "title": "Delete Todo",
-      "category": "Agent TODOs",
-      "icon": "$(trash)"
-    },
-    {
-      "command": "todoManager.setStatusPending",
-      "title": "Set Status: Pending",
-      "category": "Agent TODOs",
-      "icon": "$(circle-outline)"
-    },
-    {
-      "command": "todoManager.setStatusInProgress",
-      "title": "Set Status: In Progress",
-      "category": "Agent TODOs",
-      "icon": "$(sync~spin)"
-    },
-    {
-      "command": "todoManager.setStatusCompleted",
-      "title": "Set Status: Completed",
-      "category": "Agent TODOs",
-      "icon": "$(pass-filled)"
-    },
-    {
-      "command": "todoManager.setPriorityHigh",
-      "title": "Set Priority: High",
-      "category": "Agent TODOs",
-      "icon": "$(flame)"
-    },
-    {
-      "command": "todoManager.setPriorityMedium",
-      "title": "Set Priority: Medium",
-      "category": "Agent TODOs",
-      "icon": "$(dash)"
-    },
-    {
-      "command": "todoManager.setPriorityLow",
-      "title": "Set Priority: Low",
-      "category": "Agent TODOs",
-      "icon": "$(chevron-down)"
-    },
-    {
-      "command": "todoManager.addSubtask",
-      "title": "Add Subtask",
-      "category": "Agent TODOs",
-      "icon": "$(add)"
-    },
-    {
-      "command": "todoManager.toggleSubtask",
-      "title": "Toggle Subtask",
-      "category": "Agent TODOs",
-      "icon": "$(check)"
-    },
-    {
-      "command": "todoManager.deleteSubtask",
-      "title": "Delete Subtask",
-      "category": "Agent TODOs",
-      "icon": "$(trash)"
-    },
-    {
-      "command": "todoManager.addEditDetails",
-      "title": "Add/Edit Details",
-      "category": "Agent TODOs",
-      "icon": "$(edit)"
-    },
-    {
-      "command": "todoManager.clearDetails",
-      "title": "Clear Details",
-      "category": "Agent TODOs",
-      "icon": "$(clear-all)"
-    },
-    {
-      "command": "todoManager.runTodo",
-      "title": "Run Todo in Chat",
-      "category": "Agent TODOs",
-      "icon": "$(play)"
-    }
-  ]
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "todos-mcp-provider",
+        "label": "Todos"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "mcp-server": "node dist/mcp/standalone.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "eventsource": "^2.0.2",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.101.0",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.16.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.2"
+  }
 }

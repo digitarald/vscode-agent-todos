@@ -24,9 +24,9 @@ This directory contains the Model Context Protocol (MCP) server implementation f
    - Support for POST (messages), GET (SSE), and DELETE (cleanup)
 
 2. **Dynamic Tool Registration**
-   - Tools adapt based on configuration
-   - `todo_read` hidden when auto-inject is enabled
-   - Schema changes based on subtasks setting
+   - Tools adapt based on configuration in real-time
+   - `todo_read` tool is hidden when auto-inject is enabled
+   - `todo_write` schema changes based on subtasks setting
 
 3. **Bidirectional Communication**
    - Real-time todo updates via SSE
@@ -78,9 +78,9 @@ npm test
 
 ## Configuration
 
-The server respects VS Code settings:
+The server respects VS Code settings and updates dynamically:
 - `todoManager.autoInject` - Controls todo_read tool visibility
-- `todoManager.enableSubtasks` - Enables/disables subtask features
+- `todoManager.enableSubtasks` - Enables/disables subtask features  
 - `todoManager.autoOpenView` - Controls view auto-opening
 
 ## Protocol Details

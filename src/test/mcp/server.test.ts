@@ -91,4 +91,39 @@ suite('MCP Server Tests', () => {
         assert.strictEqual(config.standalone, false);
         assert.ok(config.workspaceRoot);
     });
+
+    test('Should support dynamic tool configuration in standalone mode', async () => {
+        // Test configuration with auto-inject disabled
+        const standaloneServer = new TodoMCPServer({
+            port: 3001,
+            standalone: true,
+            autoInject: false
+        });
+
+        await standaloneServer.initialize();
+        
+        // Should have both tools
+        let tools = await standaloneServer.getTodoTools().getAvailableTools();
+        assert.strictEqual(tools.length, 2);
+        assert.ok(tools.some((t: any) => t.name === 'todo_read'));
+        assert.ok(tools.some((t: any) => t.name === 'todo_write'));
+
+        // Test configuration with auto-inject enabled
+        const standaloneServerAutoInject = new TodoMCPServer({
+            port: 3002,
+            standalone: true,
+            autoInject: true
+        });
+
+        await standaloneServerAutoInject.initialize();
+        
+        // Should have both tools in standalone mode (auto-inject doesn't affect standalone)
+        tools = await standaloneServerAutoInject.getTodoTools().getAvailableTools();
+        assert.strictEqual(tools.length, 2);
+        assert.ok(tools.some((t: any) => t.name === 'todo_read'));
+        assert.ok(tools.some((t: any) => t.name === 'todo_write'));
+
+        await standaloneServer.stop();
+        await standaloneServerAutoInject.stop();
+    });
 });

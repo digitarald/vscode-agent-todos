@@ -204,9 +204,12 @@ export class TodoMCPServer {
       return { tools };
     });
 
-    server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request: any, extra: any) => {
       const { name, arguments: args } = request.params;
-      return await this.todoTools!.handleToolCall(name, args);
+      return await this.todoTools!.handleToolCall(name, args, {
+        sendNotification: extra?.sendNotification,
+        _meta: request.params._meta
+      });
     });
   }
 
@@ -239,6 +242,14 @@ export class TodoMCPServer {
     // In HTTP mode with sessions, updates aren't broadcast
     // Each session maintains its own state
     console.log('Update event:', event);
+    
+    // If this is a configuration change event, we should reinitialize tools
+    // to ensure they reflect the latest configuration
+    if (event.type === 'configuration-changed' && this.todoTools && this.todoManager) {
+      // Recreate tools with updated configuration
+      this.todoTools = new TodoTools(this.todoManager, this);
+      console.log('MCP tools reinitialized due to configuration change');
+    }
   }
 
   public async start(port?: number): Promise<void> {

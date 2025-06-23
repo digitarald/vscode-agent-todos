@@ -8,6 +8,13 @@ interface TodoWriteParams {
   title?: string;
 }
 
+interface ToolContext {
+  sendNotification?: (notification: any) => Promise<void>;
+  _meta?: {
+    progressToken?: string;
+  };
+}
+
 interface MCPServerLike {
   isStandalone(): boolean;
   broadcastUpdate(event: any): void;
@@ -38,11 +45,15 @@ export class TodoTools {
     if (!autoInject) {
       tools.push({
         name: 'todo_read',
-        description: 'Read the current task list including subtasks and implementation details',
+        description: 'Read the current task list including subtasks and implementation details to track progress and plan next steps. IMPORTANT: Use PROACTIVELY and FREQUENTLY: at conversation start to see pending work, before starting new tasks to prioritize, when user asks about previous tasks, whenever uncertain about next steps, after completing tasks to update understanding, every few messages to stay on track. Returns all todos with status/priority/content plus any subtasks (when enabled) and implementation details. Empty list if no todos exist yet. Essential for maintaining context and avoiding duplicate work.',
         inputSchema: {
           type: 'object',
           properties: {},
           required: []
+        },
+        annotations: {
+          title: 'Check Todos',
+          readOnlyHint: true
         }
       });
     }
@@ -50,19 +61,22 @@ export class TodoTools {
     // Always add todo_write
     tools.push({
       name: 'todo_write',
-      description: 'Write/update the task list with optional subtasks',
-      inputSchema: this.getTodoWriteSchema(subtasksEnabled)
+      description: 'Creates and manages a structured task list with optional subtasks for tracking progress and organizing work. Use PROACTIVELY for: complex multi-step tasks (3+ steps), non-trivial tasks requiring planning, multiple user requests, capturing new instructions, marking tasks in_progress BEFORE starting work, and marking completed IMMEDIATELY after finishing. SKIP for: single straightforward tasks, trivial operations (<3 steps), purely conversational requests. RULES: Only ONE task can be in_progress at a time, update status in real-time, complete current tasks before starting new ones, break complex tasks into specific actionable items. Each todo requires: id (unique), content (clear action, min 1 char), status (pending/in_progress/completed), priority (high/medium/low). SUBTASKS (when enabled): Granular Tasks - Break down complex tasks into manageable subtasks; Clear Dependencies - Define subtask dependencies to show implementation order; Implementation Notes - Use details field to track progress and decisions; Status Tracking - Keep subtask status updated as work progresses. Each subtask requires: id, content, status (pending/completed). This replaces the entire list, so include all existing todos to keep.',
+      inputSchema: this.getTodoWriteSchema(subtasksEnabled),
+      annotations: {
+        title: 'Update Todos'
+      }
     });
     
     return tools;
   }
 
-  async handleToolCall(name: string, args: any): Promise<ToolResult> {
+  async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
     switch (name) {
       case 'todo_read':
         return await this.handleRead();
       case 'todo_write':
-        return await this.handleWrite(args);
+        return await this.handleWrite(args, context);
       default:
         return {
           content: [{
@@ -102,8 +116,11 @@ export class TodoTools {
     };
   }
 
-  private async handleWrite(params: TodoWriteParams): Promise<ToolResult> {
+  private async handleWrite(params: TodoWriteParams, context?: ToolContext): Promise<ToolResult> {
     const { todos, title } = params;
+    
+    // Get current state before update for comparison
+    const previousTodos = this.todoManager.getTodos();
     
     // Validate input
     if (!Array.isArray(todos)) {
@@ -204,6 +221,56 @@ export class TodoTools {
       timestamp: Date.now()
     });
     
+    // Send smart completion notification
+    if (context?.sendNotification && context._meta?.progressToken) {
+      let notificationLabel = "";
+      
+      // Determine what changed
+      const totalTodos = todos.length;
+      const completedTodos = todos.filter(t => t.status === 'completed');
+      const completedCount = completedTodos.length;
+      
+      // Check if this is initialization (no previous todos)
+      if (previousTodos.length === 0 && todos.length > 0) {
+        notificationLabel = `Initialized todos for ${title || 'untitled'}`;
+      }
+      // Check if all todos are completed
+      else if (completedCount === totalTodos && totalTodos > 0) {
+        notificationLabel = `Completed all todos for ${title || 'untitled'}`;
+      }
+      // Find newly completed tasks by comparing with previous state
+      else {
+        // Create a map of previous todos by ID for quick lookup
+        const previousTodoMap = new Map(previousTodos.map(t => [t.id, t]));
+        
+        // Find tasks that were just completed (not completed before, completed now)
+        const newlyCompleted = todos.filter(todo => {
+          const prevTodo = previousTodoMap.get(todo.id);
+          return todo.status === 'completed' && 
+                 prevTodo && 
+                 prevTodo.status !== 'completed';
+        });
+        
+        if (newlyCompleted.length > 0) {
+          // Get the most recently completed task
+          const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
+          notificationLabel = `Completed (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
+        }
+      }
+      
+      // Only send notification if we have a meaningful message
+      if (notificationLabel) {
+        await context.sendNotification({
+          method: "notifications/progress",
+          params: { 
+            progress: 1, 
+            progressToken: context._meta.progressToken,
+            label: notificationLabel
+          }
+        });
+      }
+    }
+    
     return {
       content: [{
         type: 'text',
@@ -224,22 +291,22 @@ export class TodoTools {
             properties: {
               id: {
                 type: 'string',
-                description: 'Unique identifier for the todo'
+                description: 'Unique identifier string'
               },
               content: {
                 type: 'string',
                 minLength: 1,
-                description: 'Description of the task'
+                description: 'Clear, actionable description of what needs to be done'
               },
               status: {
                 type: 'string',
                 enum: ['pending', 'in_progress', 'completed'],
-                description: 'Current status of the task'
+                description: 'Current state of the task (only ONE task should be in_progress at a time)'
               },
               priority: {
                 type: 'string',
                 enum: ['low', 'medium', 'high'],
-                description: 'Priority level of the task'
+                description: 'Task urgency: high (critical/blocking), medium (important), low (nice-to-have)'
               }
             },
             required: ['id', 'content', 'status', 'priority']
@@ -257,13 +324,24 @@ export class TodoTools {
     if (subtasksEnabled) {
       schema.properties.todos.items.properties.subtasks = {
         type: 'array',
-        description: 'Optional subtasks',
+        description: 'Optional subtasks for breaking down complex tasks',
         items: {
           type: 'object',
           properties: {
-            id: { type: 'string' },
-            content: { type: 'string', minLength: 1 },
-            status: { type: 'string', enum: ['pending', 'completed'] }
+            id: { 
+              type: 'string',
+              description: 'Unique identifier for subtask'
+            },
+            content: { 
+              type: 'string', 
+              minLength: 1,
+              description: 'Subtask description'
+            },
+            status: { 
+              type: 'string', 
+              enum: ['pending', 'completed'],
+              description: 'Subtask completion status'
+            }
           },
           required: ['id', 'content', 'status']
         }

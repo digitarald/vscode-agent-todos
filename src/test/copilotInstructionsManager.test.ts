@@ -12,7 +12,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
 
     test('Should format todos with subtasks in markdown', async () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
-        
+
         const todos: TodoItem[] = [
             {
                 id: 'todo-1',
@@ -25,11 +25,11 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 ]
             }
         ];
-        
+
         // Test private method through reflection (not ideal but works for testing)
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
-        
+
         assert.ok(markdown.includes('- [ ] todo-1: Main task 🔴'));
         assert.ok(markdown.includes('  - [ ] sub-1: Subtask 1'));
         assert.ok(markdown.includes('  - [x] sub-2: Subtask 2'));
@@ -45,17 +45,17 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 details: 'Used async/await pattern for better error handling'
             }
         ];
-        
+
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
-        
+
         assert.ok(markdown.includes('- [x] todo-1: Main task 🟡'));
         assert.ok(markdown.includes('  _Used async/await pattern for better error handling_'));
     });
 
     test('Should not include subtasks when disabled', async () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', false);
-        
+
         const todos: TodoItem[] = [
             {
                 id: 'todo-1',
@@ -67,17 +67,17 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 ]
             }
         ];
-        
+
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
-        
+
         assert.ok(markdown.includes('- [ ] todo-1: Main task 🟢'));
         assert.ok(!markdown.includes('Subtask 1'));
     });
 
     test('Should handle todos with both subtasks and details', async () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
-        
+
         const todos: TodoItem[] = [
             {
                 id: 'todo-1',
@@ -91,10 +91,10 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 details: 'Using new API approach'
             }
         ];
-        
+
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
-        
+
         assert.ok(markdown.includes('- [-] todo-1: Complex task 🔴'));
         assert.ok(markdown.includes('  _Using new API approach_'));
         assert.ok(markdown.includes('  - [x] sub-1: Research'));
@@ -103,7 +103,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
 
     test('Should parse todos with subtasks from markdown', async () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
-        
+
         // Mock file system for testing
         const mockContent = `<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
 - [ ] todo-1: Main task 🔴
@@ -112,7 +112,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
   - [x] subtask-2: Subtask 2
 - [x] todo-2: Another task 🟡
 </todos>`;
-        
+
         // We would need to mock vscode.workspace.fs for a complete test
         // For now, we'll test the parsing logic conceptually
         // In a real test environment, you'd mock the file system operations
@@ -120,7 +120,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
 
     test('Should handle empty subtasks array', async () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
-        
+
         const todos: TodoItem[] = [
             {
                 id: 'todo-1',
@@ -130,10 +130,10 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 subtasks: []
             }
         ];
-        
+
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
-        
+
         assert.ok(markdown.includes('- [ ] todo-1: Task without subtasks 🟡'));
         // Should not include any subtask lines
         assert.ok(!markdown.includes('  - ['));
@@ -141,7 +141,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
 
     test('Should preserve IDs through format and parse cycle', async () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
-        
+
         const originalTodos: TodoItem[] = [
             {
                 id: 'custom-todo-123',
@@ -161,23 +161,23 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 priority: 'low'
             }
         ];
-        
+
         // Format to markdown
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(originalTodos);
-        
+
         // Verify formatted output contains IDs
         assert.ok(markdown.includes('custom-todo-123:'));
         assert.ok(markdown.includes('custom-sub-456:'));
         assert.ok(markdown.includes('custom-sub-789:'));
         assert.ok(markdown.includes('another-id-999:'));
-        
+
         // Verify order: details before subtasks
         const lines = markdown.split('\n');
         const taskIndex = lines.findIndex((l: string) => l.includes('Task with custom ID'));
         const detailsIndex = lines.findIndex((l: string) => l.includes('Important implementation note'));
         const subtask1Index = lines.findIndex((l: string) => l.includes('First step'));
-        
+
         assert.ok(taskIndex < detailsIndex, 'Task should come before details');
         assert.ok(detailsIndex < subtask1Index, 'Details should come before subtasks');
     });
