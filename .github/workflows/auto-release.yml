@@ -145,10 +145,14 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Publish to VS Code Marketplace
-      if: steps.check_changes.outputs.has_changes == 'true' && secrets.VSCE_PAT != ''
+      if: steps.check_changes.outputs.has_changes == 'true'
       run: |
-        echo "Publishing version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
-        vsce publish --packagePath "${{ env.VSIX_FILE }}"
+        if [[ -n "$VSCE_PAT" ]]; then
+          echo "Publishing version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
+          vsce publish --packagePath "${{ env.VSIX_FILE }}"
+        else
+          echo "VSCE_PAT secret not configured. Skipping VS Code Marketplace publish."
+        fi
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
     
