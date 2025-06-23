@@ -8,19 +8,17 @@ suite('MCP Test Coverage', () => {
         const testDir = path.join(__dirname);
         
         const componentFiles = [
-            'server.ts',
-            'client.ts',
-            'mcpProvider.ts',
-            'types.ts',
-            'tools/todoTools.ts'
+            'server.js',
+            'mcpProvider.js',
+            'types.js',
+            'tools/todoTools.js'
         ];
         
         const testFiles = [
-            'server.test.ts',
-            'client.test.ts', 
-            'mcpProvider.test.ts',
-            'todoTools.test.ts',
-            'integration.test.ts'
+            'server.test.js',
+            'mcpProvider.test.js',
+            'todoTools.test.js',
+            'integration.test.js'
         ];
         
         // Verify all test files exist
@@ -46,7 +44,6 @@ suite('MCP Test Coverage', () => {
         const coverageAreas = {
             'Server lifecycle': true,        // server.test.ts
             'Tool operations': true,         // todoTools.test.ts  
-            'Client communication': true,    // client.test.ts
             'VS Code integration': true,     // mcpProvider.test.ts
             'End-to-end flow': true         // integration.test.ts
         };

@@ -4,7 +4,7 @@ import * as fs from 'fs';
 
 suite('Standalone Server Tests', () => {
     test('Standalone entry point should exist', () => {
-        const standalonePath = path.join(__dirname, '..', '..', 'mcp', 'standalone.ts');
+        const standalonePath = path.join(__dirname, '..', '..', 'mcp', 'standalone.js');
         assert.ok(
             fs.existsSync(standalonePath),
             'Standalone server entry point should exist'

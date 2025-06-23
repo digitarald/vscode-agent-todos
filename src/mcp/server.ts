@@ -29,7 +29,7 @@ export class TodoMCPServer {
     this.config = {
       port: config.port || 3000,
       workspaceRoot: config.workspaceRoot || process.cwd(),
-      standalone: config.standalone !== false,
+      standalone: config.standalone === true,
       autoInject: config.autoInject || false
     };
 
@@ -81,7 +81,7 @@ export class TodoMCPServer {
 
   private setupBasicRoutes(): void {
     // Health check endpoint
-    this.app.get('/health', (req: Request, res: Response) => {
+    this.app.get('/health', (_req: Request, res: Response) => {
       res.json({
         status: 'healthy',
         version: '1.0.0',
@@ -314,6 +314,20 @@ export class TodoMCPServer {
     // Re-initialize tools if they exist
     if (this.todoTools) {
       this.todoTools = new TodoTools(this.todoManager, this);
+    }
+    
+    // Listen for todo changes to broadcast updates
+    if (this.todoManager && this.todoManager.onDidChangeTodos) {
+      this.todoManager.onDidChangeTodos(() => {
+        const todos = this.todoManager.getTodos();
+        const title = this.todoManager.getTitle ? this.todoManager.getTitle() : 'Todos';
+        this.broadcastUpdate({
+          type: 'todos-updated',
+          todos,
+          title,
+          timestamp: Date.now()
+        });
+      });
     }
   }
 

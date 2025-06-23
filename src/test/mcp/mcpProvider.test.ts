@@ -7,9 +7,16 @@ suite('MCP Provider Tests', () => {
     let context: vscode.ExtensionContext;
 
     setup(() => {
-        // Create a mock context
+        // Create a mock context with workspaceState
+        const workspaceState = new Map<string, any>();
         context = {
-            subscriptions: []
+            subscriptions: [],
+            workspaceState: {
+                get: (key: string) => workspaceState.get(key),
+                update: async (key: string, value: any) => {
+                    workspaceState.set(key, value);
+                }
+            }
         } as any;
         
         provider = new TodoMCPServerProvider(context);

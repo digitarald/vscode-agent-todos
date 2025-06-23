@@ -13,9 +13,16 @@ suite('MCP Integration Tests', () => {
     setup(async function() {
         this.timeout(10000);
         
-        // Mock context
+        // Mock context with workspaceState
+        const workspaceState = new Map<string, any>();
         context = {
-            subscriptions: []
+            subscriptions: [],
+            workspaceState: {
+                get: (key: string) => workspaceState.get(key),
+                update: async (key: string, value: any) => {
+                    workspaceState.set(key, value);
+                }
+            }
         } as any;
         
         todoManager = TodoManager.getInstance();
