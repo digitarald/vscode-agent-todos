@@ -60,8 +60,10 @@ jobs:
           # Parse version components
           IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
-          # Generate timestamp-based patch version (YYYYMMDDHHMM) to ensure uniqueness
-          TIMESTAMP_PATCH=$(date -u +"%Y%m%d%H%M")
+          # Generate timestamp-based patch version that conforms to VS Code Marketplace limits
+          # Format: MMDDHHMM (8 digits max, fits within 2147483647 limit)
+          # This ensures uniqueness while staying within valid range
+          TIMESTAMP_PATCH=$(date -u +"%m%d%H%M")
 
           # For auto-release, we create pre-release versions using odd minor numbers
           # Release versions use even minor numbers (e.g., 0.2.x for release, 0.3.x for pre-release)
