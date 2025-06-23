@@ -2,7 +2,7 @@
   "name": "agent-todos",
   "displayName": "Agent TODOs",
   "description": "Gives VS Code agent mode planning superpowers with dynamic todo lists",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "digitarald",
   "preview": true,
   "icon": "icon.png",
