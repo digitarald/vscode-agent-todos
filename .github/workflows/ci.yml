@@ -9,9 +9,36 @@ on:
       - "release/**"
   workflow_call:
 
+# Skip CI if auto-release will run (avoid duplicate runs)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # Skip standalone CI for main branch pushes when auto-release will handle it
+  check-skip:
+    name: Check if CI should run
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - name: Determine if CI should run
+        id: check
+        run: |
+          # Skip CI on main branch pushes (auto-release will handle it)
+          # Always run CI for PRs and other branches
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "should_run=false" >> $GITHUB_OUTPUT
+            echo "Skipping standalone CI - auto-release will handle it"
+          else
+            echo "should_run=true" >> $GITHUB_OUTPUT
+            echo "Running CI"
+          fi
+
   test:
     name: CI Test on ${{ matrix.os }} with Node ${{ matrix.node }}
+    needs: check-skip
+    if: needs.check-skip.outputs.should-run == 'true' || github.event_name == 'workflow_call'
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
