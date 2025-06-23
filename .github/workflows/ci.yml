@@ -12,6 +12,8 @@ jobs:
   test:
     name: CI Test on ${{ matrix.os }} with Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +83,8 @@ jobs:
     name: Test Summary
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     if: always()
 
     steps:

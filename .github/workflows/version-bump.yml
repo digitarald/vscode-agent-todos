@@ -26,6 +26,9 @@ on:
 jobs:
   bump-version:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     
     steps:
     - uses: actions/checkout@v4
@@ -89,7 +92,7 @@ jobs:
         git push origin "v${{ steps.bump.outputs.new_version }}"
     
     - name: Create pull request
-      if: "!inputs.commit_and_tag"
+      if: ${{ !inputs.commit_and_tag }}
       uses: peter-evans/create-pull-request@v6
       with:
         title: "chore: bump version to ${{ steps.bump.outputs.new_version }}"
