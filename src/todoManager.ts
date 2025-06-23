@@ -63,7 +63,7 @@ export class TodoManager {
 
     public initialize(context?: vscode.ExtensionContext): void {
         this.context = context;
-        
+
         // Load todos from storage if auto-inject is disabled
         if (!this.isAutoInjectEnabled() && context) {
             this.loadFromStorage();
@@ -154,8 +154,8 @@ export class TodoManager {
             if (!this.isUpdatingFile) {
                 this.todos = [];
                 this.onDidChangeTodosEmitter.fire(this.todos);
-        // Also fire title change to update progress indicator
-        this.onDidChangeTitleEmitter.fire(this.getTitle());
+                // Also fire title change to update progress indicator
+                this.onDidChangeTitleEmitter.fire(this.getTitle());
             }
         });
 
@@ -225,11 +225,11 @@ export class TodoManager {
     public getTitle(): string {
         const completedCount = this.todos.filter(todo => todo.status === 'completed').length;
         const totalCount = this.todos.length;
-        
+
         if (totalCount === 0) {
             return this.title;
         }
-        
+
         return `${this.title} (${completedCount}/${totalCount})`;
     }
 
@@ -248,9 +248,9 @@ export class TodoManager {
     public async setTodos(todos: TodoItem[], title?: string): Promise<void> {
         const hadTodos = this.todos.length > 0;
         const previousTodoCount = this.todos.length;
-        
+
         console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
-        
+
         this.todos = [...todos];
         if (title !== undefined && title !== this.title) {
             this.title = title;
@@ -258,15 +258,15 @@ export class TodoManager {
         this.onDidChangeTodosEmitter.fire(this.todos);
         // Also fire title change to update progress indicator
         this.onDidChangeTitleEmitter.fire(this.getTitle());
-        
+
         // Check if we should open the view
         const hasTodos = this.todos.length > 0;
         const todosChanged = previousTodoCount !== this.todos.length || !this.areTodosEqual(this.todos, todos);
-        
+
         if (this.isAutoOpenViewEnabled() && hasTodos && todosChanged) {
             this.onShouldOpenViewEmitter.fire();
         }
-        
+
         await this.updateInstructionsIfNeeded();
         this.saveToStorage();
     }
@@ -301,7 +301,7 @@ export class TodoManager {
                     return;
                 }
             }
-            
+
             todo.status = status;
             this.onDidChangeTodosEmitter.fire(this.todos);
             this.onDidChangeTitleEmitter.fire(this.getTitle());
@@ -342,8 +342,8 @@ export class TodoManager {
                     break;
             }
             this.onDidChangeTodosEmitter.fire(this.todos);
-        // Also fire title change to update progress indicator
-        this.onDidChangeTitleEmitter.fire(this.getTitle());
+            // Also fire title change to update progress indicator
+            this.onDidChangeTitleEmitter.fire(this.getTitle());
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -354,7 +354,7 @@ export class TodoManager {
         if (!this.isSubtasksEnabled()) {
             return;
         }
-        
+
         const todo = this.todos.find(t => t.id === todoId);
         if (todo) {
             SubtaskManager.addSubtask(todo, subtask);
@@ -368,7 +368,7 @@ export class TodoManager {
         if (!this.isSubtasksEnabled()) {
             return;
         }
-        
+
         const todo = this.todos.find(t => t.id === todoId);
         if (todo && SubtaskManager.updateSubtask(todo, subtaskId, updates)) {
             this.onDidChangeTodosEmitter.fire(this.todos);
@@ -381,7 +381,7 @@ export class TodoManager {
         if (!this.isSubtasksEnabled()) {
             return;
         }
-        
+
         const todo = this.todos.find(t => t.id === todoId);
         if (todo && SubtaskManager.deleteSubtask(todo, subtaskId)) {
             this.onDidChangeTodosEmitter.fire(this.todos);
@@ -394,7 +394,7 @@ export class TodoManager {
         if (!this.isSubtasksEnabled()) {
             return;
         }
-        
+
         const todo = this.todos.find(t => t.id === todoId);
         if (todo && SubtaskManager.toggleSubtaskStatus(todo, subtaskId)) {
             this.onDidChangeTodosEmitter.fire(this.todos);
@@ -423,17 +423,17 @@ export class TodoManager {
         if (this.isAutoInjectEnabled()) {
             return; // Don't save to storage if auto-inject is enabled
         }
-        
+
         if (!this.context) {
             console.warn('[TodoManager] Cannot save to storage: context not initialized');
             return;
         }
-        
+
         const storageData = {
             todos: this.todos,
             title: this.title
         };
-        
+
         try {
             this.context.workspaceState.update('todoManager.todos', storageData);
             console.log('[TodoManager] Saved todos to workspace storage');
@@ -446,9 +446,9 @@ export class TodoManager {
         if (!this.context) {
             return;
         }
-        
+
         const storageData = this.context.workspaceState.get<{ todos: TodoItem[], title: string }>('todoManager.todos');
-        
+
         if (storageData) {
             this.todos = storageData.todos || [];
             this.title = storageData.title || 'Todos';
@@ -466,5 +466,9 @@ export class TodoManager {
         this.onDidChangeTitleEmitter.dispose();
         this.onShouldOpenViewEmitter.dispose();
         this.onDidChangeConfigurationEmitter.dispose();
+    }
+
+    public getNotCompletedCount(): number {
+        return this.todos.filter(todo => todo.status !== 'completed').length;
     }
 }

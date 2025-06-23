@@ -133,8 +133,17 @@
         "icon": "$(play)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "todos-container",
+          "title": "Agent TODOs",
+          "icon": "$(checklist)"
+        }
+      ]
+    },
     "views": {
-      "explorer": [
+      "todos-container": [
         {
           "id": "todoManager",
           "name": "Agent TODOs",
