@@ -1,6 +1,6 @@
 {
   "name": "agent-todos",
-  "displayName": "Todos",
+  "displayName": "Agent TODOs",
   "description": "Gives VS Code agent mode planning superpowers with dynamic todo lists",
   "version": "0.0.1",
   "publisher": "digitarald",

@@ -1,4 +1,4 @@
-# Agent Todos
+# Agent TODOs
 
 [![CI](https://github.com/digitarald/vscode-agent-todos/actions/workflows/ci.yml/badge.svg)](https://github.com/digitarald/vscode-agent-todos/actions/workflows/ci.yml)
 [![Release](https://github.com/digitarald/vscode-agent-todos/actions/workflows/release.yml/badge.svg)](https://github.com/digitarald/vscode-agent-todos/actions/workflows/release.yml)
@@ -9,11 +9,11 @@
 
 > *"Finally, an AI assistant that remembers what we planned to do next."*
 
-## Why Agent Todos?
+## Why Agent TODOs?
 
 VS Code's agent mode is brilliant at writing code but lacks persistent memory between sessions. AI can spot TODO comments but can't maintain an actionable task list that evolves with your project.
 
-**Agent Todos bridges this gap** by giving VS Code's AI ecosystem a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
+**Agent TODOs bridges this gap** by giving VS Code's AI ecosystem a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
 
 ## Key Features
 
@@ -69,7 +69,7 @@ GitHub Copilot: "Based on your todos, let's start with the JWT middleware..."
 
 1. **Install** from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
 2. **Open VS Code Chat** and start planning with GitHub Copilot
-3. **Enable Auto-sync** (optional): `Settings > Extensions > Agent Todos > Auto-inject`
+3. **Enable Auto-sync** (optional): `Settings > Extensions > Agent TODOs > Auto-inject`
 
 ### Try These Commands
 
