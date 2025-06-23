@@ -51,12 +51,12 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             }
 
             const todoMarkdown = this.formatTodosAsMarkdown(todos, title);
-            const planSection = `<todo${title && title !== 'Todos' ? ` title="${title}"` : ''}>\n${todoMarkdown}\n</todo>\n\n`;
+            const planSection = `<todos${title && title !== 'Todos' ? ` title="${title}"` : ''} rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">\n${todoMarkdown}\n</todos>\n\n`;
 
             let newContent: string;
             if (existingContent) {
                 // Remove existing todo section if it exists
-                const todoRegex = /<todo[^>]*>[\s\S]*?<\/todo>\s*\n?/;
+                const todoRegex = /<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/;
                 const contentWithoutTodo = existingContent.replace(todoRegex, '');
                 // Prepend the new todo section
                 newContent = planSection + contentWithoutTodo;
@@ -117,12 +117,8 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
     }
 
     private formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
-        let markdown = '';
-        markdown += `> IMPORTANT: Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.\n\n`;
-
         if (todos.length === 0) {
-            markdown += '- No current todos';
-            return markdown;
+            return '- No current todos';
         }
 
         // Helper function to format a single todo with subtasks and details
@@ -154,6 +150,7 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
         };
 
         // Format todos in their original order
+        let markdown = '';
         todos.forEach(todo => {
             markdown += formatTodo(todo);
         });
@@ -162,8 +159,8 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
     }
 
     private parseTodosFromContent(content: string): { todos: TodoItem[], title: string } {
-        // Extract todo section
-        const todoMatch = content.match(/<todo(?:\s+title="([^"]+)")?>([\s\S]*?)<\/todo>/);
+        // Extract todos section
+        const todoMatch = content.match(/<todos(?:\s+title="([^"]+)")?[^>]*>([\s\S]*?)<\/todos>/);
         if (!todoMatch) {
             return { todos: [], title: 'Todos' };
         }

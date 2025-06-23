@@ -105,15 +105,13 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
         
         // Mock file system for testing
-        const mockContent = `<todo>
-> IMPORTANT: You don't need to use todo_read tool, as the list is already available below.
-
+        const mockContent = `<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
 - [ ] todo-1: Main task 🔴
   _Implementation details here_
   - [ ] subtask-1: Subtask 1
   - [x] subtask-2: Subtask 2
 - [x] todo-2: Another task 🟡
-</todo>`;
+</todos>`;
         
         // We would need to mock vscode.workspace.fs for a complete test
         // For now, we'll test the parsing logic conceptually

@@ -28,13 +28,8 @@ export class CopilotInstructionsManager {
     }
 
     private formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
-        let markdown = '';
-        // Add prompt instructions based on system prompt best practices
-        markdown += `> IMPORTANT: You don't need to use todo_read tool, as the list is already available below. Review it frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.\n\n`;
-
         if (todos.length === 0) {
-            markdown += '- No current todos';
-            return markdown;
+            return '- No current todos';
         }
 
         // Check if subtasks are enabled
@@ -74,6 +69,7 @@ export class CopilotInstructionsManager {
         };
 
         // Format todos in their original order
+        let markdown = '';
         todos.forEach(todo => {
             markdown += formatTodo(todo);
         });
@@ -90,7 +86,7 @@ export class CopilotInstructionsManager {
 
         try {
             const todoMarkdown = this.formatTodosAsMarkdown(todos, title);
-            const planSection = title ? `<todo title="${title}">\n${todoMarkdown}\n</todo>\n\n` : `<todo>\n${todoMarkdown}\n</todo>\n\n`;
+            const planSection = title ? `<todos title="${title}" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">\n${todoMarkdown}\n</todos>\n\n` : `<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">\n${todoMarkdown}\n</todos>\n\n`;
 
             let existingContent = '';
             try {
@@ -105,7 +101,7 @@ export class CopilotInstructionsManager {
 
             if (existingContent) {
                 // Remove existing todo section if it exists
-                const todoRegex = /<todo[^>]*>[\s\S]*?<\/todo>\s*\n?/;
+                const todoRegex = /<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/;
                 const contentWithoutTodo = existingContent.replace(todoRegex, '');
 
                 // Prepend the new todo section
@@ -137,7 +133,7 @@ export class CopilotInstructionsManager {
             const existingContent = Buffer.from(fileContent).toString('utf8');
 
             // Remove the todo section
-            const todoRegex = /<todo[^>]*>[\s\S]*?<\/todo>\s*\n?/;
+            const todoRegex = /<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/;
             const newContent = existingContent.replace(todoRegex, '');
 
             // Only write if content changed
@@ -162,8 +158,8 @@ export class CopilotInstructionsManager {
             const fileContent = await vscode.workspace.fs.readFile(fileUri);
             const content = Buffer.from(fileContent).toString('utf8');
 
-            // Extract todo section
-            const todoMatch = content.match(/<todo(?:\s+title="([^"]+)")?>([\s\S]*?)<\/todo>/);
+            // Extract todos section
+            const todoMatch = content.match(/<todos(?:\s+title="([^"]+)")?[^>]*>([\s\S]*?)<\/todos>/);
             if (!todoMatch) {
                 return { todos: [], title: undefined };
             }

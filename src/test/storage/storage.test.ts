@@ -97,20 +97,19 @@ suite('Storage Tests', () => {
             
             assert.ok(fs.existsSync(instructionsPath));
             const content = fs.readFileSync(instructionsPath, 'utf8');
-            assert.ok(content.includes('<todo title="Test Title">'));
+            assert.ok(content.includes('<todos title="Test Title"'));
+            assert.ok(content.includes('rule="Review steps frequently'));
             assert.ok(content.includes('- [ ] Test todo 🔴'));
         });
 
         test('Should parse todos from existing file', async () => {
             // Create a file with todos
             const content = `<!-- Auto-generated todo section -->
-<todo title="Existing Todos">
-> IMPORTANT: You don't need to use todo_read tool, as the list is already available below. Review it frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.
-
+<todos title="Existing Todos" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
 - [x] Completed task 🟢
 - [-] In progress task 🟡
 - [ ] Pending task 🔴
-</todo>
+</todos>
 
 <!-- Add your custom Copilot instructions below -->
 `;
@@ -128,9 +127,9 @@ suite('Storage Tests', () => {
 
         test('Should preserve existing content when updating todos', async () => {
             const existingContent = `<!-- Auto-generated todo section -->
-<todo>
+<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
 - [ ] Old todo
-</todo>
+</todos>
 
 <!-- Add your custom Copilot instructions below -->
 This is my custom content that should be preserved.
