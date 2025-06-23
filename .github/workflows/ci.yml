@@ -46,6 +46,9 @@ jobs:
       - name: Build extension
         run: npm run compile
 
+      - name: Create test workspace
+        run: mkdir -p test-workspace
+
       - name: Run unit tests (Linux)
         if: runner.os == 'Linux'
         run: xvfb-run -a npm test
