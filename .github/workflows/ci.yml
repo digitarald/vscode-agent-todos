@@ -1,54 +1,106 @@
 name: CI
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - "release/**"
 
 jobs:
-  build:
+  test:
+    name: CI Test on ${{ matrix.os }} with Node ${{ matrix.node }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: [18.x, 20.x]
-    
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["18.x", "20.x"]
+        include:
+          - os: ubuntu-latest
+            os_name: Linux
+          - os: windows-latest
+            os_name: Windows
+          - os: macos-latest
+            os_name: macOS
+
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ matrix.node-version }}
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Type check
-      run: npm run check-types
-    
-    - name: Lint
-      run: npm run lint
-    
-    - name: Build
-      run: npm run compile
-    
-    - name: Test (Linux)
-      if: runner.os == 'Linux'
-      run: xvfb-run -a npm test
-    
-    - name: Test (macOS/Windows)
-      if: runner.os != 'Linux'
-      run: npm test
-    
-    - name: Package extension
-      run: npm run package
-    
-    - name: Upload extension artifact
-      if: matrix.os == 'ubuntu-latest' && matrix.node-version == '20.x'
-      uses: actions/upload-artifact@v4
-      with:
-        name: vscode-extension
-        path: '*.vsix'
+      - uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check types
+        run: npm run check-types
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Build extension
+        run: npm run compile
+
+      - name: Run unit tests (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm test
+        env:
+          CI: true
+
+      - name: Run unit tests (macOS/Windows)
+        if: runner.os != 'Linux'
+        run: npm test
+        env:
+          CI: true
+
+      - name: Package extension
+        run: npm run package
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os_name }}-node${{ matrix.node }}
+          path: |
+            test-results/
+            coverage/
+          retention-days: 7
+
+      - name: Upload extension package
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '20.x'
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension-package
+          path: "*.vsix"
+          retention-days: 7
+
+  test-summary:
+    name: Test Summary
+    needs: test
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Check test results
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ needs.test.result }}" == "success" ]]; then
+            echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Some tests failed. Please check the logs." >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Matrix Results" >> $GITHUB_STEP_SUMMARY
+          echo "| OS | Node Version | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+
+          # This is a placeholder - in a real scenario, you'd parse actual results
+          echo "See individual job results above for details." >> $GITHUB_STEP_SUMMARY

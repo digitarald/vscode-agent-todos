@@ -73,7 +73,7 @@ jobs:
         echo "Version in package.json has been updated to ${{ steps.bump.outputs.new_version }}"
     
     - name: Run tests
-      run: npm test
+      run: xvfb-run -a npm test
     
     - name: Commit and tag
       if: inputs.commit_and_tag

@@ -34,3 +34,6 @@ lerna-debug.log*
 coverage
 *.lcov
 .nyc_output
+
+# Test workspace
+test-workspace/
