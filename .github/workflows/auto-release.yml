@@ -6,170 +6,175 @@ on:
       - main
   schedule:
     # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
+  ci:
+    name: Run CI
+    uses: ./.github/workflows/ci.yml
+
   release:
+    name: Create Release
+    needs: ci
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Check for changes since last release
-      id: check_changes
-      run: |
-        # Get the latest release tag
-        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-        
-        if [[ -z "$LATEST_TAG" ]]; then
-          echo "No previous release found. Will create first release."
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-        else
-          # Check if there are new commits since the last tag
-          COMMITS_SINCE_TAG=$(git rev-list --count "$LATEST_TAG"..HEAD)
-          
-          if [[ $COMMITS_SINCE_TAG -gt 0 ]]; then
-            echo "Found $COMMITS_SINCE_TAG new commits since $LATEST_TAG"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes since last release
+        id: check_changes
+        run: |
+          # Get the latest release tag
+          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          if [[ -z "$LATEST_TAG" ]]; then
+            echo "No previous release found. Will create first release."
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            echo "No new commits since $LATEST_TAG"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
+            # Check if there are new commits since the last tag
+            COMMITS_SINCE_TAG=$(git rev-list --count "$LATEST_TAG"..HEAD)
+            
+            if [[ $COMMITS_SINCE_TAG -gt 0 ]]; then
+              echo "Found $COMMITS_SINCE_TAG new commits since $LATEST_TAG"
+              echo "has_changes=true" >> $GITHUB_OUTPUT
+            else
+              echo "No new commits since $LATEST_TAG"
+              echo "has_changes=false" >> $GITHUB_OUTPUT
+            fi
           fi
-        fi
-    
-    - name: Generate version
-      if: steps.check_changes.outputs.has_changes == 'true'
-      id: version
-      run: |
-        # Get the latest tag (base version)
-        LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        BASE_VERSION=${LATEST_TAG#v}  # Remove 'v' prefix
-        
-        echo "Latest tag: $LATEST_TAG"
-        echo "Base version: $BASE_VERSION"
-        
-        # Find the next increment
-        COUNTER=1
-        VERSION="${BASE_VERSION}-${COUNTER}"
-        
-        while git rev-parse "v${VERSION}" >/dev/null 2>&1; do
-          echo "v${VERSION} already exists, incrementing..."
-          COUNTER=$((COUNTER + 1))
-          VERSION="${BASE_VERSION}-${COUNTER}"
-        done
-        
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "Will create version: v$VERSION"
-    
-    - name: Use Node.js
-      if: steps.check_changes.outputs.has_changes == 'true'
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22.x'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: npm ci
-    
-    - name: Run tests
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: xvfb-run -a npm test
-    
-    - name: Build extension
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: npm run compile
-    
-    - name: Install vsce
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: npm install -g @vscode/vsce
-    
-    - name: Update package.json version
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: |
-        npm version ${{ steps.version.outputs.version }} --no-git-tag-version
-    
-    - name: Package VSIX
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: |
-        vsce package --no-git-tag-version
-        echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_ENV
-    
-    - name: Create tag
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: |
-        git config user.name github-actions
-        git config user.email github-actions@github.com
-        git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-        git push origin "v${{ steps.version.outputs.version }}"
-    
-    - name: Generate changelog
-      if: steps.check_changes.outputs.has_changes == 'true'
-      id: changelog
-      run: |
-        # Get the previous tag
-        PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-        
-        echo "## What's Changed" > changelog.md
-        echo "" >> changelog.md
-        
-        if [[ -n "$PREV_TAG" ]]; then
-          # Get commit messages since last tag
-          git log --pretty=format:"* %s (%h)" "$PREV_TAG"..HEAD >> changelog.md
-        else
-          # First release - show all commits
-          git log --pretty=format:"* %s (%h)" >> changelog.md
-        fi
-        
-        echo "" >> changelog.md
-        echo "" >> changelog.md
-        echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...v${{ steps.version.outputs.version }}" >> changelog.md
-    
-    - name: Create GitHub Release
-      if: steps.check_changes.outputs.has_changes == 'true'
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ steps.version.outputs.version }}
-        name: v${{ steps.version.outputs.version }}
-        files: '*.vsix'
-        body_path: changelog.md
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Publish to VS Code Marketplace
-      if: steps.check_changes.outputs.has_changes == 'true'
-      run: |
-        if [[ -n "$VSCE_PAT" ]]; then
-          echo "Publishing version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
-          vsce publish --packagePath "${{ env.VSIX_FILE }}"
-        else
-          echo "VSCE_PAT secret not configured. Skipping VS Code Marketplace publish."
-        fi
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
-    
-    - name: Summary
-      run: |
-        if [[ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]]; then
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ Successfully created release v${{ steps.version.outputs.version }}!" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **GitHub Release:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          if [[ -n "${{ secrets.VSCE_PAT }}" ]]; then
-            echo "- **VS Code Marketplace:** [Published](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Generate version
+        if: steps.check_changes.outputs.has_changes == 'true'
+        id: version
+        run: |
+          # Get current version from package.json
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          # For auto-release, we create pre-release versions using odd minor numbers
+          # Release versions use even minor numbers (e.g., 0.2.x for release, 0.3.x for pre-release)
+
+          # Check if current version is already a pre-release (odd minor)
+          if (( MINOR % 2 == 1 )); then
+            # Already a pre-release version, increment patch
+            NEW_PATCH=$((PATCH + 1))
+            NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+          else
+            # Release version, create new pre-release by incrementing minor to next odd number
+            NEW_MINOR=$((MINOR + 1))
+            NEW_VERSION="${MAJOR}.${NEW_MINOR}.0"
           fi
-        else
-          echo "## No Release Needed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "No changes detected since the last release. Skipping release." >> $GITHUB_STEP_SUMMARY
-        fi
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Will create pre-release version: v$NEW_VERSION"
+
+      - name: Use Node.js
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm ci
+
+      - name: Build extension
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm run compile
+
+      - name: Install vsce
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: npm install -g @vscode/vsce
+
+      - name: Update package.json version
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Package VSIX
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          vsce package --pre-release --no-git-tag-version
+
+      - name: Create tag
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Pre-release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Generate changelog
+        if: steps.check_changes.outputs.has_changes == 'true'
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          echo "## What's Changed" > changelog.md
+          echo "" >> changelog.md
+
+          if [[ -n "$PREV_TAG" ]]; then
+            # Get commit messages since last tag
+            git log --pretty=format:"* %s (%h)" "$PREV_TAG"..HEAD >> changelog.md
+          else
+            # First release - show all commits
+            git log --pretty=format:"* %s (%h)" >> changelog.md
+          fi
+
+          echo "" >> changelog.md
+          echo "" >> changelog.md
+          echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...v${{ steps.version.outputs.version }}" >> changelog.md
+
+      - name: Create GitHub Release
+        if: steps.check_changes.outputs.has_changes == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }} (Pre-release)
+          files: "*.vsix"
+          body_path: changelog.md
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to VS Code Marketplace
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          if [[ -n "$VSCE_PAT" ]]; then
+            echo "Publishing pre-release version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
+            vsce publish --pre-release --packagePath "$(ls *.vsix)"
+          else
+            echo "VSCE_PAT secret not configured. Skipping VS Code Marketplace publish."
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Summary
+        run: |
+          if [[ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]]; then
+            echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Successfully created pre-release v${{ steps.version.outputs.version }}!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "- **Version:** v${{ steps.version.outputs.version }} (Pre-release)" >> $GITHUB_STEP_SUMMARY
+            echo "- **GitHub Release:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+            if [[ -n "${{ secrets.VSCE_PAT }}" ]]; then
+              echo "- **VS Code Marketplace:** [Published](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "## No Release Needed" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "No changes detected since the last release. Skipping release." >> $GITHUB_STEP_SUMMARY
+          fi

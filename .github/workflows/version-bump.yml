@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       bump_type:
-        description: 'Version bump type'
+        description: "Version bump type"
         required: true
         type: choice
         options:
@@ -13,12 +13,12 @@ on:
           - major
           - prerelease
       prerelease_id:
-        description: 'Pre-release identifier (e.g., beta, alpha, rc)'
+        description: "Pre-release identifier (e.g., beta, alpha, rc)"
         required: false
         type: string
-        default: 'beta'
+        default: "beta"
       commit_and_tag:
-        description: 'Create commit and tag'
+        description: "Create commit and tag"
         required: true
         type: boolean
         default: true
@@ -29,101 +29,138 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        fetch-depth: 0
-    
-    - name: Configure Git
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22.x'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Get current version
-      id: current_version
-      run: |
-        CURRENT_VERSION=$(node -p "require('./package.json').version")
-        echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
-        echo "Current version: $CURRENT_VERSION"
-    
-    - name: Bump version
-      id: bump
-      run: |
-        if [[ "${{ inputs.bump_type }}" == "prerelease" ]]; then
-          npm version prerelease --preid="${{ inputs.prerelease_id }}" --no-git-tag-version
-        else
-          npm version ${{ inputs.bump_type }} --no-git-tag-version
-        fi
-        
-        NEW_VERSION=$(node -p "require('./package.json').version")
-        echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-        echo "New version: $NEW_VERSION"
-    
-    - name: Update VS Code extension version
-      run: |
-        # vsce requires version to be updated in package.json
-        echo "Version in package.json has been updated to ${{ steps.bump.outputs.new_version }}"
-    
-    - name: Run tests
-      run: xvfb-run -a npm test
-    
-    - name: Commit and tag
-      if: inputs.commit_and_tag
-      run: |
-        git add package.json package-lock.json
-        git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
-        git tag -a "v${{ steps.bump.outputs.new_version }}" -m "Version ${{ steps.bump.outputs.new_version }}"
-    
-    - name: Push changes
-      if: inputs.commit_and_tag
-      run: |
-        git push origin HEAD
-        git push origin "v${{ steps.bump.outputs.new_version }}"
-    
-    - name: Create pull request
-      if: ${{ !inputs.commit_and_tag }}
-      uses: peter-evans/create-pull-request@v6
-      with:
-        title: "chore: bump version to ${{ steps.bump.outputs.new_version }}"
-        body: |
-          ## Version Bump
-          
-          This PR bumps the version from `${{ steps.current_version.outputs.version }}` to `${{ steps.bump.outputs.new_version }}`.
-          
-          ### Type: ${{ inputs.bump_type }}
-          
-          After merging this PR, create a new tag:
-          ```bash
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get current version
+        id: current_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          echo "Current version: $CURRENT_VERSION"
+
+      - name: Bump version
+        id: bump
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+
+          case "${{ inputs.bump_type }}" in
+            "major")
+              NEW_MAJOR=$((MAJOR + 1))
+              NEW_VERSION="${NEW_MAJOR}.0.0"
+              ;;
+            "minor")
+              NEW_MINOR=$((MINOR + 1))
+              # For manual minor bumps, use even numbers for releases
+              if (( NEW_MINOR % 2 == 1 )); then
+                NEW_MINOR=$((NEW_MINOR + 1))
+              fi
+              NEW_VERSION="${MAJOR}.${NEW_MINOR}.0"
+              ;;
+            "patch")
+              NEW_PATCH=$((PATCH + 1))
+              NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+              ;;
+            "prerelease")
+              # For pre-release, ensure we use odd minor numbers
+              if (( MINOR % 2 == 0 )); then
+                # Even minor (release), increment to next odd for pre-release
+                NEW_MINOR=$((MINOR + 1))
+                NEW_VERSION="${MAJOR}.${NEW_MINOR}.0"
+              else
+                # Already odd minor (pre-release), increment patch
+                NEW_PATCH=$((PATCH + 1))
+                NEW_VERSION="${MAJOR}.${MINOR}.${NEW_PATCH}"
+              fi
+              ;;
+          esac
+
+          # Update package.json with new version
+          npm version "$NEW_VERSION" --no-git-tag-version
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "New version: $NEW_VERSION"
+
+          # Set pre-release flag for later steps
+          if (( $(echo "$NEW_VERSION" | cut -d'.' -f2) % 2 == 1 )); then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Update VS Code extension version
+        run: |
+          # vsce requires version to be updated in package.json
+          echo "Version in package.json has been updated to ${{ steps.bump.outputs.new_version }}"
+
+      - name: Run tests
+        run: xvfb-run -a npm test
+
+      - name: Commit and tag
+        if: inputs.commit_and_tag
+        run: |
+          git add package.json package-lock.json
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }}"
           git tag -a "v${{ steps.bump.outputs.new_version }}" -m "Version ${{ steps.bump.outputs.new_version }}"
+
+      - name: Push changes
+        if: inputs.commit_and_tag
+        run: |
+          git push origin HEAD
           git push origin "v${{ steps.bump.outputs.new_version }}"
-          ```
-        branch: version-bump-${{ steps.bump.outputs.new_version }}
-        commit-message: "chore: bump version to ${{ steps.bump.outputs.new_version }}"
-    
-    - name: Summary
-      run: |
-        echo "## Version Bump Summary" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "- **Previous version:** ${{ steps.current_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **New version:** ${{ steps.bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Bump type:** ${{ inputs.bump_type }}" >> $GITHUB_STEP_SUMMARY
-        if [[ "${{ inputs.bump_type }}" == "prerelease" ]]; then
-          echo "- **Pre-release ID:** ${{ inputs.prerelease_id }}" >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "" >> $GITHUB_STEP_SUMMARY
-        if [[ "${{ inputs.commit_and_tag }}" == "true" ]]; then
-          echo "✅ Version has been bumped and tagged. The release workflow will be triggered automatically." >> $GITHUB_STEP_SUMMARY
-        else
-          echo "📝 A pull request has been created for the version bump." >> $GITHUB_STEP_SUMMARY
-        fi
+
+      - name: Create pull request
+        if: ${{ !inputs.commit_and_tag }}
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: "chore: bump version to ${{ steps.bump.outputs.new_version }}"
+          body: |
+            ## Version Bump
+
+            This PR bumps the version from `${{ steps.current_version.outputs.version }}` to `${{ steps.bump.outputs.new_version }}`.
+
+            ### Type: ${{ inputs.bump_type }}
+
+            After merging this PR, create a new tag:
+            ```bash
+            git tag -a "v${{ steps.bump.outputs.new_version }}" -m "Version ${{ steps.bump.outputs.new_version }}"
+            git push origin "v${{ steps.bump.outputs.new_version }}"
+            ```
+          branch: version-bump-${{ steps.bump.outputs.new_version }}
+          commit-message: "chore: bump version to ${{ steps.bump.outputs.new_version }}"
+
+      - name: Summary
+        run: |
+          echo "## Version Bump Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Previous version:** ${{ steps.current_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New version:** ${{ steps.bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bump type:** ${{ inputs.bump_type }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.bump_type }}" == "prerelease" ]]; then
+            echo "- **Pre-release ID:** ${{ inputs.prerelease_id }}" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ inputs.commit_and_tag }}" == "true" ]]; then
+            echo "✅ Version has been bumped and tagged. The release workflow will be triggered automatically." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "📝 A pull request has been created for the version bump." >> $GITHUB_STEP_SUMMARY
+          fi
