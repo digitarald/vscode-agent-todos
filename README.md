@@ -1,6 +1,6 @@
 # Agent TODOs
 
-[![CI](https://github.com/digitarald/vscode-agent-todos/actions/workflows/ci.yml/badge.svg)](https://github.com/digitarald/vscode-agent-todos/actions/workflows/ci.yml)
+[![CI](https://github.com/digitarald/vscode-agent-todos/actions/workflows/auto-release.yml/badge.svg)](https://github.com/digitarald/vscode-agent-todos/actions/workflows/auto-release.yml)
 [![Release](https://github.com/digitarald/vscode-agent-todos/actions/workflows/release.yml/badge.svg)](https://github.com/digitarald/vscode-agent-todos/actions/workflows/release.yml)
 [![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/digitarald.agent-todos)](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
 [![Downloads](https://img.shields.io/visual-studio-marketplace/d/digitarald.agent-todos)](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
