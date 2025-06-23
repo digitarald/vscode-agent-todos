@@ -3,26 +3,26 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.0.0)'
+        description: "Version to release (e.g., 1.2.0 for release, 1.3.0 for pre-release)"
         required: true
         type: string
       prerelease:
-        description: 'Mark as pre-release'
+        description: "Mark as pre-release"
         required: false
         type: boolean
         default: false
       marketplace_release_type:
-        description: 'VS Code Marketplace release type'
+        description: "VS Code Marketplace release type"
         required: false
         type: choice
-        default: 'auto'
+        default: "auto"
         options:
-          - auto      # Automatically determine based on version
-          - stable    # Force stable release
+          - auto # Automatically determine based on version
+          - stable # Force stable release
           - pre-release # Force pre-release
 
 permissions:
@@ -31,141 +31,157 @@ permissions:
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Full history for changelog generation
-    
-    - name: Use Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22.x'
-        cache: 'npm'
-    
-    - name: Validate version format
-      if: github.event_name == 'workflow_dispatch'
-      run: |
-        if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?(\+[a-zA-Z0-9.-]+)?$ ]]; then
-          echo "Error: Invalid version format. Please use semantic versioning (e.g., 1.0.0, 1.0.0-beta.1)"
-          exit 1
-        fi
-    
-    - name: Extract version
-      id: version
-      run: |
-        if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-          VERSION=${GITHUB_REF#refs/tags/v}
-        else
-          VERSION="${{ inputs.version }}"
-        fi
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        
-        # Determine if this is a prerelease
-        if [[ "$VERSION" =~ -[a-zA-Z] ]] || [[ "${{ inputs.prerelease }}" == "true" ]]; then
-          echo "prerelease=true" >> $GITHUB_OUTPUT
-        else
-          echo "prerelease=false" >> $GITHUB_OUTPUT
-        fi
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Run tests
-      run: xvfb-run -a npm test
-    
-    - name: Build extension
-      run: npm run compile
-    
-    - name: Install vsce
-      run: npm install -g @vscode/vsce
-    
-    - name: Package VSIX
-      run: |
-        vsce package --no-git-tag-version
-        echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_ENV
-    
-    - name: Upload VSIX artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: extension-vsix-${{ steps.version.outputs.version }}
-        path: '*.vsix'
-        retention-days: 30
-    
-    - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v2
-      with:
-        files: '*.vsix'
-        generate_release_notes: true
-        body: |
-          ## Installation
-          
-          ### VS Code Marketplace
-          Install directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
-          
-          ### Manual Installation
-          1. Download the `${{ env.VSIX_FILE }}` file from the assets below
-          2. Open VS Code
-          3. Go to Extensions view (Ctrl+Shift+X)
-          4. Click "..." menu and select "Install from VSIX..."
-          5. Select the downloaded file
-        draft: false
-        prerelease: ${{ steps.version.outputs.prerelease }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Determine marketplace release type
-      id: marketplace_type
-      run: |
-        MARKETPLACE_TYPE="${{ inputs.marketplace_release_type }}"
-        
-        # If auto, determine based on version and prerelease flag
-        if [[ "$MARKETPLACE_TYPE" == "auto" ]] || [[ -z "$MARKETPLACE_TYPE" ]]; then
-          if [[ "${{ steps.version.outputs.prerelease }}" == "true" ]]; then
-            MARKETPLACE_TYPE="pre-release"
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history for changelog generation
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.x"
+          cache: "npm"
+
+      - name: Validate version format
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if ! [[ "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Invalid version format. Please use semantic versioning (e.g., 1.2.0 for release, 1.3.0 for pre-release)"
+            echo "VS Code Marketplace requires major.minor.patch format without pre-release tags"
+            echo "Use even minor numbers for releases (0.2.x) and odd minor numbers for pre-releases (0.3.x)"
+            exit 1
+          fi
+
+      - name: Extract version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
           else
-            MARKETPLACE_TYPE="stable"
+            VERSION="${{ inputs.version }}"
           fi
-        fi
-        
-        echo "marketplace_type=$MARKETPLACE_TYPE" >> $GITHUB_OUTPUT
-        echo "Marketplace release type: $MARKETPLACE_TYPE"
-    
-    - name: Publish to VS Code Marketplace
-      if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch') && secrets.VSCE_PAT != ''
-      run: |
-        echo "Publishing version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
-        echo "Release type: ${{ steps.marketplace_type.outputs.marketplace_type }}"
-        
-        if [[ "${{ steps.marketplace_type.outputs.marketplace_type }}" == "pre-release" ]]; then
-          echo "Publishing as pre-release..."
-          vsce publish --pre-release --no-git-tag-version
-        else
-          echo "Publishing as stable release..."
-          vsce publish --no-git-tag-version
-        fi
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
-    
-    - name: Post-release notification
-      if: always() && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
-      run: |
-        if [[ "${{ job.status }}" == "success" ]]; then
-          echo "✅ Release ${{ steps.version.outputs.version }} completed successfully!"
-          echo ""
-          echo "📦 **Release Details:**"
-          echo "- Version: ${{ steps.version.outputs.version }}"
-          echo "- GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
-          if [[ "${{ steps.version.outputs.prerelease }}" == "true" ]]; then
-            echo "- GitHub Release Type: Pre-release"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Determine if this is a prerelease based on odd/even minor version
+          if (( $(echo "$VERSION" | cut -d'.' -f2) % 2 == 1 )) || [[ "${{ inputs.prerelease }}" == "true" ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
           else
-            echo "- GitHub Release Type: Stable"
+            echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
-          if [[ -n "${{ secrets.VSCE_PAT }}" ]]; then
-            echo "- VS Code Marketplace: Published as ${{ steps.marketplace_type.outputs.marketplace_type }}"
-            echo "- Marketplace URL: https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: xvfb-run -a npm test
+
+      - name: Build extension
+        run: npm run compile
+
+      - name: Install vsce
+        run: npm install -g @vscode/vsce
+
+      - name: Package VSIX
+        run: |
+          # Package with appropriate flags based on version type
+          if [[ "${{ steps.version.outputs.prerelease }}" == "true" ]]; then
+            echo "Packaging pre-release version ${{ steps.version.outputs.version }}"
+            vsce package --pre-release --no-git-tag-version
+          else
+            echo "Packaging stable version ${{ steps.version.outputs.version }}"
+            vsce package --no-git-tag-version
           fi
-        else
-          echo "❌ Release ${{ steps.version.outputs.version }} failed. Please check the logs."
-        fi
+          echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_ENV
+          ls -la *.vsix
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-vsix-${{ steps.version.outputs.version }}
+          path: "*.vsix"
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "*.vsix"
+          generate_release_notes: true
+          body: |
+            ## Installation
+
+            ### VS Code Marketplace
+            Install directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
+
+            ### Manual Installation
+            1. Download the VSIX file from the assets below
+            2. Open VS Code
+            3. Go to Extensions view (Ctrl+Shift+X)
+            4. Click "..." menu and select "Install from VSIX..."
+            5. Select the downloaded file
+          draft: false
+          prerelease: ${{ steps.version.outputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine marketplace release type
+        id: marketplace_type
+        run: |
+          MARKETPLACE_TYPE="${{ inputs.marketplace_release_type }}"
+
+          # If auto, determine based on version and prerelease flag
+          if [[ "$MARKETPLACE_TYPE" == "auto" ]] || [[ -z "$MARKETPLACE_TYPE" ]]; then
+            if [[ "${{ steps.version.outputs.prerelease }}" == "true" ]]; then
+              MARKETPLACE_TYPE="pre-release"
+            else
+              MARKETPLACE_TYPE="stable"
+            fi
+          fi
+
+          echo "marketplace_type=$MARKETPLACE_TYPE" >> $GITHUB_OUTPUT
+          echo "Marketplace release type: $MARKETPLACE_TYPE"
+
+      - name: Publish to VS Code Marketplace
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        run: |
+          if [[ -n "$VSCE_PAT" ]]; then
+            echo "Publishing version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
+            echo "Release type: ${{ steps.marketplace_type.outputs.marketplace_type }}"
+            
+            if [[ "${{ steps.marketplace_type.outputs.marketplace_type }}" == "pre-release" ]]; then
+              echo "Publishing as pre-release..."
+              vsce publish --pre-release --no-git-tag-version
+            else
+              echo "Publishing as stable release..."
+              vsce publish --no-git-tag-version
+            fi
+          else
+            echo "VSCE_PAT secret not configured. Skipping VS Code Marketplace publish."
+          fi
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Post-release notification
+        if: always() && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        run: |
+          if [[ "${{ job.status }}" == "success" ]]; then
+            echo "✅ Release ${{ steps.version.outputs.version }} completed successfully!"
+            echo ""
+            echo "📦 **Release Details:**"
+            echo "- Version: ${{ steps.version.outputs.version }}"
+            echo "- GitHub Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}"
+            if [[ "${{ steps.version.outputs.prerelease }}" == "true" ]]; then
+              echo "- GitHub Release Type: Pre-release"
+            else
+              echo "- GitHub Release Type: Stable"
+            fi
+            if [[ -n "$VSCE_PAT" ]]; then
+              echo "- VS Code Marketplace: Published as ${{ steps.marketplace_type.outputs.marketplace_type }}"
+              echo "- Marketplace URL: https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos"
+            else
+              echo "- VS Code Marketplace: Skipped (VSCE_PAT not configured)"
+            fi
+          else
+            echo "❌ Release ${{ steps.version.outputs.version }} failed. Please check the logs."
+          fi

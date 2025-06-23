@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       bump_type:
-        description: "Version bump type"
+        description: "Version bump type (patch=increment patch, minor=create release, major=major bump, prerelease=create pre-release)"
         required: true
         type: choice
         options:
@@ -12,11 +12,6 @@ on:
           - minor
           - major
           - prerelease
-      prerelease_id:
-        description: "Pre-release identifier (e.g., beta, alpha, rc)"
-        required: false
-        type: string
-        default: "beta"
       commit_and_tag:
         description: "Create commit and tag"
         required: true
@@ -155,8 +150,10 @@ jobs:
           echo "- **Previous version:** ${{ steps.current_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **New version:** ${{ steps.bump.outputs.new_version }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Bump type:** ${{ inputs.bump_type }}" >> $GITHUB_STEP_SUMMARY
-          if [[ "${{ inputs.bump_type }}" == "prerelease" ]]; then
-            echo "- **Pre-release ID:** ${{ inputs.prerelease_id }}" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ steps.bump.outputs.is_prerelease }}" == "true" ]]; then
+            echo "- **Release type:** Pre-release (odd minor version)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Release type:** Stable release (even minor version)" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY
           if [[ "${{ inputs.commit_and_tag }}" == "true" ]]; then

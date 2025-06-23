@@ -30,11 +30,11 @@ jobs:
       - name: Check for changes since last release
         id: check_changes
         run: |
-          # Get the latest release tag (not pre-release)
+          # Get the latest release tag (even minor versions only)
           LATEST_RELEASE_TAG=$(git tag -l | grep -E '^v[0-9]+\.[02468]+\.[0-9]+$' | sort -V | tail -1 || echo "")
 
           if [[ -z "$LATEST_RELEASE_TAG" ]]; then
-            echo "No previous release found. Will create first release."
+            echo "No previous release found. Will create first pre-release."
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
             # Check if there are new commits since the last release (not pre-release)
@@ -104,7 +104,10 @@ jobs:
       - name: Package VSIX
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
+          echo "Packaging pre-release version ${{ steps.version.outputs.version }}"
           vsce package --pre-release --no-git-tag-version
+          # List the created VSIX file for debugging
+          ls -la *.vsix
 
       - name: Create tag
         if: steps.check_changes.outputs.has_changes == 'true'
@@ -160,7 +163,16 @@ jobs:
         run: |
           if [[ -n "$VSCE_PAT" ]]; then
             echo "Publishing pre-release version ${{ steps.version.outputs.version }} to VS Code Marketplace..."
-            vsce publish --pre-release --packagePath "$(ls *.vsix)"
+            echo "Available VSIX files:"
+            ls -la *.vsix
+            
+            VSIX_FILE=$(ls *.vsix | head -1)
+            echo "Using VSIX file: $VSIX_FILE"
+            
+            # Check current package.json version before publishing
+            echo "Current package.json version: $(node -p "require('./package.json').version")"
+            
+            vsce publish --pre-release --packagePath "$VSIX_FILE"
           else
             echo "VSCE_PAT secret not configured. Skipping VS Code Marketplace publish."
           fi
