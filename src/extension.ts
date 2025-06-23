@@ -1,15 +1,16 @@
 import * as vscode from 'vscode';
 import { TodoManager } from './todoManager';
 import { TodoTreeDataProvider, TodoDecorationProvider } from './todoTreeProvider';
-import { TodoReadTool, TodoWriteTool } from './languageModelTools';
 import { SubtaskManager } from './subtaskManager';
+import { TodoMCPServerProvider } from './mcp/mcpProvider';
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('Todos extension is now active!');
 
-	// Initialize todo manager
-	const todoManager = TodoManager.getInstance();
-	todoManager.initialize(context);
+	try {
+		// Initialize todo manager
+		const todoManager = TodoManager.getInstance();
+		todoManager.initialize(context);
 
 	// Register file decoration provider for todo styling
 	const decorationProvider = new TodoDecorationProvider();
@@ -42,12 +43,29 @@ export async function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	// Register language model tools
-	const todoReadTool = new TodoReadTool();
-	const todoWriteTool = new TodoWriteTool();
-
-	const readToolDisposable = vscode.lm.registerTool('todo_read', todoReadTool);
-	const writeToolDisposable = vscode.lm.registerTool('todo_write', todoWriteTool);
+	// Initialize MCP server provider
+	let mcpProvider: TodoMCPServerProvider | undefined;
+	let mcpDisposable: vscode.Disposable | undefined;
+	
+	try {
+		mcpProvider = new TodoMCPServerProvider(context);
+		
+		// Register MCP server provider - check if API is available
+		if (vscode.lm && typeof vscode.lm.registerMcpServerDefinitionProvider === 'function') {
+			mcpDisposable = vscode.lm.registerMcpServerDefinitionProvider(
+				'todos-mcp-provider',
+				mcpProvider
+			);
+		} else {
+			console.log('MCP API not available in this VS Code version');
+		}
+		
+		// Wait for server to start
+		await mcpProvider.ensureServerStarted();
+	} catch (mcpError) {
+		console.error('Failed to initialize MCP server:', mcpError);
+		// Continue without MCP - the extension can still work with just the UI
+	}
 
 	// Register commands
 	const clearTodosCommand = vscode.commands.registerCommand('todoManager.clearTodos', async () => {
@@ -226,8 +244,6 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(
 		treeView,
 		decorationProviderDisposable,
-		readToolDisposable,
-		writeToolDisposable,
 		clearTodosCommand,
 		refreshTodosCommand,
 		toggleTodoStatusCommand,
@@ -247,9 +263,22 @@ export async function activate(context: vscode.ExtensionContext) {
 		clearDetailsCommand,
 		runTodoCommand
 	);
+	
+	// Add MCP disposables if they were initialized successfully
+	if (mcpDisposable) {
+		context.subscriptions.push(mcpDisposable);
+	}
+	if (mcpProvider) {
+		context.subscriptions.push(mcpProvider);
+	}
 
 	// Initialize todos from storage or instructions file
 	// The TodoManager will automatically sync from instructions file if auto-inject is enabled
+	} catch (error) {
+		console.error('Failed to activate Todos extension:', error);
+		vscode.window.showErrorMessage(`Failed to activate Todos extension: ${error instanceof Error ? error.message : String(error)}`);
+		throw error; // Re-throw to let VS Code know activation failed
+	}
 }
 
 export function deactivate() {

@@ -46,6 +46,34 @@ export class TodoValidator {
     }
 
     /**
+     * Validate multiple todos
+     */
+    static validateTodos(todos: any[]): { valid: boolean; errors: string[] } {
+        const errors: string[] = [];
+        
+        if (!Array.isArray(todos)) {
+            return { valid: false, errors: ['Todos must be an array'] };
+        }
+        
+        // Validate each todo
+        todos.forEach((todo, index) => {
+            const validation = this.validateTodo(todo);
+            if (!validation.valid) {
+                errors.push(`Todo at index ${index}: ${validation.error}`);
+            }
+        });
+        
+        // Check for duplicate IDs
+        const ids = todos.map(t => t.id);
+        const uniqueIds = new Set(ids);
+        if (ids.length !== uniqueIds.size) {
+            errors.push('Duplicate todo IDs found');
+        }
+        
+        return { valid: errors.length === 0, errors };
+    }
+
+    /**
      * Validate that only one task is in progress
      */
     static validateSingleInProgress(todos: TodoItem[], excludeId?: string): boolean {

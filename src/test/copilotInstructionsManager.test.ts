@@ -30,9 +30,9 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
         
-        assert.ok(markdown.includes('- [ ] Main task 🔴'));
-        assert.ok(markdown.includes('  - [ ] Subtask 1'));
-        assert.ok(markdown.includes('  - [x] Subtask 2'));
+        assert.ok(markdown.includes('- [ ] todo-1: Main task 🔴'));
+        assert.ok(markdown.includes('  - [ ] sub-1: Subtask 1'));
+        assert.ok(markdown.includes('  - [x] sub-2: Subtask 2'));
     });
 
     test('Should format todos with details in markdown', async () => {
@@ -49,7 +49,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
         
-        assert.ok(markdown.includes('- [x] Main task 🟡'));
+        assert.ok(markdown.includes('- [x] todo-1: Main task 🟡'));
         assert.ok(markdown.includes('  _Used async/await pattern for better error handling_'));
     });
 
@@ -71,7 +71,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
         
-        assert.ok(markdown.includes('- [ ] Main task 🟢'));
+        assert.ok(markdown.includes('- [ ] todo-1: Main task 🟢'));
         assert.ok(!markdown.includes('Subtask 1'));
     });
 
@@ -95,10 +95,10 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
         
-        assert.ok(markdown.includes('- [-] Complex task 🔴'));
-        assert.ok(markdown.includes('  - [x] Research'));
-        assert.ok(markdown.includes('  - [ ] Implementation'));
+        assert.ok(markdown.includes('- [-] todo-1: Complex task 🔴'));
         assert.ok(markdown.includes('  _Using new API approach_'));
+        assert.ok(markdown.includes('  - [x] sub-1: Research'));
+        assert.ok(markdown.includes('  - [ ] sub-2: Implementation'));
     });
 
     test('Should parse todos with subtasks from markdown', async () => {
@@ -108,11 +108,11 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         const mockContent = `<todo>
 > IMPORTANT: You don't need to use todo_read tool, as the list is already available below.
 
-- [ ] Main task 🔴
-  - [ ] Subtask 1
-  - [x] Subtask 2
+- [ ] todo-1: Main task 🔴
   _Implementation details here_
-- [x] Another task 🟡
+  - [ ] subtask-1: Subtask 1
+  - [x] subtask-2: Subtask 2
+- [x] todo-2: Another task 🟡
 </todo>`;
         
         // We would need to mock vscode.workspace.fs for a complete test
@@ -136,8 +136,51 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
         const markdown = formatMethod(todos);
         
-        assert.ok(markdown.includes('- [ ] Task without subtasks 🟡'));
+        assert.ok(markdown.includes('- [ ] todo-1: Task without subtasks 🟡'));
         // Should not include any subtask lines
         assert.ok(!markdown.includes('  - ['));
+    });
+
+    test('Should preserve IDs through format and parse cycle', async () => {
+        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        
+        const originalTodos: TodoItem[] = [
+            {
+                id: 'custom-todo-123',
+                content: 'Task with custom ID',
+                status: 'in_progress',
+                priority: 'high',
+                details: 'Important implementation note',
+                subtasks: [
+                    { id: 'custom-sub-456', content: 'First step', status: 'completed' },
+                    { id: 'custom-sub-789', content: 'Second step', status: 'pending' }
+                ]
+            },
+            {
+                id: 'another-id-999',
+                content: 'Simple task',
+                status: 'pending',
+                priority: 'low'
+            }
+        ];
+        
+        // Format to markdown
+        const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
+        const markdown = formatMethod(originalTodos);
+        
+        // Verify formatted output contains IDs
+        assert.ok(markdown.includes('custom-todo-123:'));
+        assert.ok(markdown.includes('custom-sub-456:'));
+        assert.ok(markdown.includes('custom-sub-789:'));
+        assert.ok(markdown.includes('another-id-999:'));
+        
+        // Verify order: details before subtasks
+        const lines = markdown.split('\n');
+        const taskIndex = lines.findIndex((l: string) => l.includes('Task with custom ID'));
+        const detailsIndex = lines.findIndex((l: string) => l.includes('Important implementation note'));
+        const subtask1Index = lines.findIndex((l: string) => l.includes('First step'));
+        
+        assert.ok(taskIndex < detailsIndex, 'Task should come before details');
+        assert.ok(detailsIndex < subtask1Index, 'Details should come before subtasks');
     });
 });

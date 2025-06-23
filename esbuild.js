@@ -24,7 +24,8 @@ const esbuildProblemMatcherPlugin = {
 };
 
 async function main() {
-	const ctx = await esbuild.context({
+	// Build extension
+	const extensionCtx = await esbuild.context({
 		entryPoints: [
 			'src/extension.ts'
 		],
@@ -42,11 +43,40 @@ async function main() {
 			esbuildProblemMatcherPlugin,
 		],
 	});
+
+	// Build standalone MCP server
+	const mcpCtx = await esbuild.context({
+		entryPoints: [
+			'src/mcp/standalone.ts'
+		],
+		bundle: true,
+		format: 'cjs',
+		minify: production,
+		sourcemap: !production,
+		sourcesContent: false,
+		platform: 'node',
+		outfile: 'dist/mcp/standalone.js',
+		external: [],
+		logLevel: 'silent',
+		plugins: [
+			esbuildProblemMatcherPlugin,
+		],
+	});
+
 	if (watch) {
-		await ctx.watch();
+		await Promise.all([
+			extensionCtx.watch(),
+			mcpCtx.watch()
+		]);
 	} else {
-		await ctx.rebuild();
-		await ctx.dispose();
+		await Promise.all([
+			extensionCtx.rebuild(),
+			mcpCtx.rebuild()
+		]);
+		await Promise.all([
+			extensionCtx.dispose(),
+			mcpCtx.dispose()
+		]);
 	}
 }
 

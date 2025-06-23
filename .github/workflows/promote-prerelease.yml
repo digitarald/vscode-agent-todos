@@ -1,0 +1,137 @@
+name: Promote Pre-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Pre-release version to promote (e.g., 1.0.0-beta.1)'
+        required: true
+        type: string
+      target_version:
+        description: 'Target stable version (leave empty to remove pre-release suffix)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Validate inputs
+      id: validate
+      run: |
+        # Check if the input version exists as a tag
+        if ! git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
+          echo "❌ Error: Tag v${{ inputs.version }} does not exist"
+          exit 1
+        fi
+        
+        # Determine target version
+        if [[ -z "${{ inputs.target_version }}" ]]; then
+          # Remove pre-release suffix
+          TARGET_VERSION=$(echo "${{ inputs.version }}" | sed 's/-[a-zA-Z].*$//')
+        else
+          TARGET_VERSION="${{ inputs.target_version }}"
+        fi
+        
+        echo "source_version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+        echo "target_version=$TARGET_VERSION" >> $GITHUB_OUTPUT
+        
+        echo "Promoting v${{ inputs.version }} to v$TARGET_VERSION"
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Download pre-release VSIX
+      id: download
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Download VSIX from the pre-release
+        echo "Downloading VSIX from release v${{ inputs.version }}..."
+        
+        # Get the release
+        RELEASE_DATA=$(gh api repos/${{ github.repository }}/releases/tags/v${{ inputs.version }})
+        
+        # Extract VSIX download URL
+        VSIX_URL=$(echo "$RELEASE_DATA" | jq -r '.assets[] | select(.name | endswith(".vsix")) | .browser_download_url')
+        
+        if [[ -z "$VSIX_URL" ]]; then
+          echo "❌ Error: No VSIX file found in release v${{ inputs.version }}"
+          exit 1
+        fi
+        
+        # Download the VSIX
+        curl -L -o extension.vsix "$VSIX_URL"
+        echo "vsix_file=extension.vsix" >> $GITHUB_OUTPUT
+    
+    - name: Install vsce
+      run: npm install -g @vscode/vsce
+    
+    - name: Publish stable version to marketplace
+      run: |
+        echo "Publishing stable version ${{ steps.validate.outputs.target_version }} to VS Code Marketplace..."
+        
+        # Publish without pre-release flag
+        vsce publish --packagePath "${{ steps.download.outputs.vsix_file }}"
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    
+    - name: Create stable GitHub release
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Check if target version tag already exists
+        if git rev-parse "v${{ steps.validate.outputs.target_version }}" >/dev/null 2>&1; then
+          echo "Tag v${{ steps.validate.outputs.target_version }} already exists. Updating release..."
+          
+          # Update existing release
+          gh release edit "v${{ steps.validate.outputs.target_version }}" \
+            --title "v${{ steps.validate.outputs.target_version }}" \
+            --notes "Promoted from pre-release v${{ inputs.version }}" \
+            --latest \
+            --prerelease=false
+        else
+          # Get the commit from the pre-release tag
+          COMMIT_SHA=$(git rev-parse "v${{ inputs.version }}")
+          
+          # Create new tag
+          git tag -a "v${{ steps.validate.outputs.target_version }}" "$COMMIT_SHA" \
+            -m "Stable release promoted from v${{ inputs.version }}"
+          
+          git push origin "v${{ steps.validate.outputs.target_version }}"
+          
+          # Create GitHub release
+          gh release create "v${{ steps.validate.outputs.target_version }}" \
+            --title "v${{ steps.validate.outputs.target_version }}" \
+            --notes "Promoted from pre-release v${{ inputs.version }}" \
+            --latest \
+            --prerelease=false \
+            "${{ steps.download.outputs.vsix_file }}"
+        fi
+    
+    - name: Summary
+      run: |
+        echo "## Pre-release Promotion Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ Successfully promoted pre-release!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Source version:** v${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Target version:** v${{ steps.validate.outputs.target_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **GitHub Release:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.validate.outputs.target_version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **VS Code Marketplace:** [Published as stable](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The extension is now available as a stable release on the VS Code Marketplace." >> $GITHUB_STEP_SUMMARY

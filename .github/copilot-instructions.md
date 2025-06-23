@@ -1,10 +1,81 @@
-<!-- Use this file to provide workspace-specific custom instructions to Copilot. For more details, visit https://code.visualstudio.com/docs/copilot/copilot-customization#_use-a-githubcopilotinstructionsmd-file -->
-
 This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
+
+!Important:
+- Keep this document up-to-date with the latest architecture and coding standards.
+- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+
 
 ## Project Overview
 
-This extension adds `todo_read` and `todo_write` language model tools to VS Code's agent mode with an integrated tree view for todo management. The goal is to encourage AI assistants to proactively manage todos during development workflows.
+This extension provides AI assistants with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
+
+For more details:
+- [Main README](../README.md) - Feature overview and usage
+- [MCP Server Documentation](../src/mcp/README.md) - Server architecture and protocol details
+- [VS Code Extension API](https://code.visualstudio.com/api/extension-guides/tools) - Language model tools guide
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph "VS Code Extension"
+        EXT[Extension Entry]
+        TM[TodoManager<br/>Singleton]
+        TTP[TodoTreeProvider]
+        CIM[CopilotInstructionsManager]
+        SM[SubtaskManager]
+    end
+    
+    subgraph "Storage Layer"
+        ITS[ITodoStorage<br/>Interface]
+        WSS[WorkspaceStateStorage]
+        IMS[InMemoryStorage]
+        CIS[CopilotInstructionsStorage]
+    end
+    
+    subgraph "MCP Integration"
+        MCP[MCPProvider]
+        MCPS[MCP Server<br/>HTTP/SSE]
+        TT[TodoTools<br/>read/write]
+        TS[TodoSync]
+        STM[StandaloneTodoManager]
+    end
+    
+    subgraph "External"
+        VSC[VS Code API]
+        CI[Copilot Instructions<br/>.github/copilot-instructions.md]
+        MC[MCP Clients<br/>AI Assistants]
+    end
+    
+    %% Core flows
+    EXT --> TM
+    TM --> ITS
+    ITS -.-> WSS
+    ITS -.-> IMS
+    ITS -.-> CIS
+    
+    %% UI updates
+    TM --> TTP
+    TTP --> VSC
+    
+    %% Copilot sync
+    TM <--> CIM
+    CIM <--> CI
+    
+    %% MCP server
+    EXT --> MCP
+    MCP --> MCPS
+    MCPS --> TT
+    MCPS <--> TS
+    TS <--> TM
+    TS <--> STM
+    
+    %% External clients
+    MC <--> MCPS
+    
+    %% Subtasks
+    TM --> SM
+```
 
 ## Coding Standards
 
@@ -26,14 +97,66 @@ This extension adds `todo_read` and `todo_write` language model tools to VS Code
 
 ```
 src/
-├── extension.ts          # Main activation/deactivation
-├── todoManager.ts        # Singleton state management
-├── todoTreeProvider.ts   # Tree view implementation
-├── languageModelTools.ts # LM tool implementations
-└── types.ts             # Shared interfaces
+├── extension.ts                # Main activation/deactivation
+├── todoManager.ts              # Singleton state management
+├── todoTreeProvider.ts         # Tree view implementation
+├── subtaskManager.ts           # Subtask handling
+├── copilotInstructionsManager.ts # Auto-inject sync
+├── todoValidator.ts            # Input validation
+├── types.ts                    # Shared interfaces
+├── storage/
+│   ├── ITodoStorage.ts         # Storage interface
+│   ├── WorkspaceStateStorage.ts # Default VS Code storage
+│   ├── InMemoryStorage.ts      # Memory-based storage
+│   └── CopilotInstructionsStorage.ts # File-based storage
+└── mcp/
+    ├── mcpProvider.ts          # VS Code MCP integration
+    ├── server.ts               # HTTP/SSE server
+    ├── standalone.ts           # Standalone entry point
+    ├── todoSync.ts             # Bidirectional sync
+    └── tools/
+        └── todoTools.ts        # MCP tool implementations
 ```
 
 ## Required Patterns
+
+### MCP Tool Registration
+
+```typescript
+// MCP tools are registered through the MCP server
+export const todoReadTool = {
+  name: "todo_read",
+  description: "Read the current todo list",
+  inputSchema: {
+    type: "object",
+    properties: {},
+    required: []
+  }
+};
+
+// Dynamic tool registration based on configuration
+if (!config.autoInject) {
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: [todoReadTool, todoWriteTool]
+  }));
+}
+```
+
+### Storage Pattern
+
+All storage implementations follow [`ITodoStorage`](../src/storage/ITodoStorage.ts) interface:
+
+```typescript
+// Example usage with any storage implementation
+const storage: ITodoStorage = new WorkspaceStateStorage(context);
+await storage.save(todos, title);
+const { todos, title } = await storage.load();
+```
+
+Available implementations:
+- [`WorkspaceStateStorage`](../src/storage/WorkspaceStateStorage.ts) - VS Code workspace state
+- [`InMemoryStorage`](../src/storage/InMemoryStorage.ts) - Temporary in-memory storage
+- [`CopilotInstructionsStorage`](../src/storage/CopilotInstructionsStorage.ts) - File-based storage
 
 ### Language Model Tools
 
@@ -75,22 +198,19 @@ export class TodoTreeDataProvider
 
 ### Package.json Contributions
 
-- Language model tools require: `name`, `displayName`, `modelDescription`, `tags`, `toolReferenceName`, `canBeReferencedInPrompt`
-- Views must specify container (`chat` for this project), `id`, `name`, `icon`
-- Commands need `command`, `title`, and `icon` fields
+See [`package.json`](../package.json) for full configuration:
+
+- **MCP Server Definition Providers**: Register with `mcpServerDefinitionProviders`
+- **Views**: Specify in `explorer` container with `id`, `name`, `icon`
+- **Commands**: Define with `command`, `title`, `icon` fields
+- **Configuration**: Settings under `todoManager.*` namespace
 
 ## Data Models
 
-### Todo Item Structure
-
-```typescript
-interface TodoItem {
-  id: string; // Unique identifier
-  content: string; // Task description
-  status: "todo" | "in-progress" | "completed"; // Required enum
-  priority: "low" | "medium" | "high"; // Required enum
-}
-```
+See [`src/types.ts`](../src/types.ts) for complete type definitions:
+- `TodoItem` - Main todo structure with status, priority, subtasks, and details
+- `Subtask` - Nested task structure
+- `TodoWriteInput` - Input schema for todo_write tool
 
 ## Error Handling
 
@@ -108,6 +228,10 @@ interface TodoItem {
 ## Testing Strategy
 
 - Test extension activation/deactivation lifecycle
-- Verify language model tool registration and invocation
+- Verify MCP server and tool operations
 - Test tree view data updates and refresh behavior
 - Validate todo state persistence across sessions
+- Storage implementation compliance with ITodoStorage
+- End-to-end MCP integration tests
+
+See test files in [`src/test/`](../src/test/) for examples.

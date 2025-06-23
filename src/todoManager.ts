@@ -15,7 +15,7 @@ export class TodoManager {
     private readonly onShouldOpenViewEmitter = new vscode.EventEmitter<void>();
     public readonly onShouldOpenView = this.onShouldOpenViewEmitter.event;
     private copilotInstructionsManager: CopilotInstructionsManager;
-    private configurationDisposable: vscode.Disposable;
+    private configurationDisposable: vscode.Disposable | undefined;
     private fileWatcher: vscode.FileSystemWatcher | undefined;
     private isUpdatingFile: boolean = false;
     private updateDebounceTimer: NodeJS.Timeout | undefined;
@@ -24,18 +24,23 @@ export class TodoManager {
     private constructor() {
         this.copilotInstructionsManager = CopilotInstructionsManager.getInstance();
 
-        // Listen for configuration changes
-        this.configurationDisposable = vscode.workspace.onDidChangeConfiguration(async (event) => {
-            if (event.affectsConfiguration('todoManager.autoInject')) {
-                await this.handleAutoInjectSettingChange();
-            }
-        });
+        try {
+            // Listen for configuration changes
+            this.configurationDisposable = vscode.workspace.onDidChangeConfiguration(async (event) => {
+                if (event.affectsConfiguration('todoManager.autoInject')) {
+                    await this.handleAutoInjectSettingChange();
+                }
+            });
 
-        // Initialize file watching if auto-inject is enabled
-        if (this.isAutoInjectEnabled()) {
-            this.startWatchingInstructionsFile();
-            // Sync from file on startup
-            this.syncFromInstructionsFile();
+            // Initialize file watching if auto-inject is enabled
+            if (this.isAutoInjectEnabled()) {
+                this.startWatchingInstructionsFile();
+                // Sync from file on startup
+                this.syncFromInstructionsFile();
+            }
+        } catch (error) {
+            // Running in a context where vscode is not available (e.g., tests or standalone)
+            console.log('TodoManager: Running without VS Code context');
         }
     }
 
@@ -46,25 +51,37 @@ export class TodoManager {
         return TodoManager.instance;
     }
 
-    public initialize(context: vscode.ExtensionContext): void {
+    public initialize(context?: vscode.ExtensionContext): void {
         this.context = context;
         
         // Load todos from storage if auto-inject is disabled
-        if (!this.isAutoInjectEnabled()) {
+        if (!this.isAutoInjectEnabled() && context) {
             this.loadFromStorage();
         }
     }
 
     private isAutoInjectEnabled(): boolean {
-        return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoInject', false);
+        try {
+            return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoInject', false);
+        } catch (error) {
+            return false; // Default to false when vscode is not available
+        }
     }
 
     private isAutoOpenViewEnabled(): boolean {
-        return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoOpenView', true);
+        try {
+            return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoOpenView', true);
+        } catch (error) {
+            return true; // Default to true when vscode is not available
+        }
     }
 
     private isSubtasksEnabled(): boolean {
-        return vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+        try {
+            return vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+        } catch (error) {
+            return true; // Default to true when vscode is not available
+        }
     }
 
     private async handleAutoInjectSettingChange(): Promise<void> {
@@ -198,6 +215,18 @@ export class TodoManager {
         }
         
         return `${this.title} (${completedCount}/${totalCount})`;
+    }
+
+    public async updateTodos(todos: TodoItem[], title?: string): Promise<void> {
+        return this.setTodos(todos, title);
+    }
+
+    public async setTitle(title: string): Promise<void> {
+        if (title !== this.title) {
+            this.title = title;
+            this.onDidChangeTitleEmitter.fire(title);
+            await this.updateInstructionsIfNeeded();
+        }
     }
 
     public async setTodos(todos: TodoItem[], title?: string): Promise<void> {
@@ -404,7 +433,7 @@ export class TodoManager {
         this.onDidChangeTodosEmitter.dispose();
         this.onDidChangeTitleEmitter.dispose();
         this.onShouldOpenViewEmitter.dispose();
-        this.configurationDisposable.dispose();
+        this.configurationDisposable?.dispose();
         this.stopWatchingInstructionsFile();
         if (this.updateDebounceTimer) {
             clearTimeout(this.updateDebounceTimer);

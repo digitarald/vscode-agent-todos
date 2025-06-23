@@ -16,11 +16,15 @@ export class CopilotInstructionsManager {
     }
 
     private getInstructionsFileUri(): vscode.Uri | null {
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
-            return null;
+        try {
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                return null;
+            }
+            return vscode.Uri.joinPath(workspaceFolder.uri, this.instructionsFileName);
+        } catch (error) {
+            return null; // vscode not available
         }
-        return vscode.Uri.joinPath(workspaceFolder.uri, this.instructionsFileName);
     }
 
     private formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
@@ -34,7 +38,12 @@ export class CopilotInstructionsManager {
         }
 
         // Check if subtasks are enabled
-        const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+        let subtasksEnabled = true;
+        try {
+            subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+        } catch (error) {
+            // Default to true when vscode is not available
+        }
 
         // Helper function to format a single todo with subtasks and details
         const formatTodo = (todo: TodoItem): string => {
@@ -46,19 +55,19 @@ export class CopilotInstructionsManager {
             const priorityBadge = todo.priority === 'high' ? ' 🔴' :
                 todo.priority === 'medium' ? ' 🟡' :
                     ' 🟢';
-            let result = `- ${checkbox} ${todo.content}${priorityBadge}\n`;
+            let result = `- ${checkbox} ${todo.id}: ${todo.content}${priorityBadge}\n`;
+            
+            // Add details if present (before subtasks)
+            if (todo.details) {
+                result += `  _${todo.details}_\n`;
+            }
             
             // Add subtasks if enabled and present
             if (subtasksEnabled && todo.subtasks && todo.subtasks.length > 0) {
                 todo.subtasks.forEach(subtask => {
                     const subtaskCheckbox = subtask.status === 'completed' ? '[x]' : '[ ]';
-                    result += `  - ${subtaskCheckbox} ${subtask.content}\n`;
+                    result += `  - ${subtaskCheckbox} ${subtask.id}: ${subtask.content}\n`;
                 });
-            }
-            
-            // Add details if present
-            if (todo.details) {
-                result += `  _${todo.details}_\n`;
             }
             
             return result;
@@ -165,8 +174,6 @@ export class CopilotInstructionsManager {
             const lines = todoContent.split('\n');
             const todos: TodoItem[] = [];
             let title: string | undefined = titleFromAttr;
-            let idCounter = 1;
-            let subtaskIdCounter = 1;
             let inComment = false;
             let currentTodo: TodoItem | null = null;
 
@@ -199,30 +206,31 @@ export class CopilotInstructionsManager {
                     continue;
                 }
 
+                // Check if this is a details line (indented with 2 spaces and italic)
+                if (line.startsWith('  _') && line.endsWith('_') && currentTodo) {
+                    const details = line.substring(3, line.length - 1).trim();
+                    currentTodo.details = details;
+                    continue;
+                }
+
                 // Check if this is a subtask (indented with 2 spaces)
                 if (line.startsWith('  - ') && currentTodo && subtasksEnabled) {
-                    const subtaskMatch = line.match(/^  - \[([ x])\] (.+)$/);
+                    const subtaskMatch = line.match(/^  - \[([ x])\] ([^:]+): (.+)$/);
                     if (subtaskMatch) {
                         const subtaskStatus = subtaskMatch[1] === 'x' ? 'completed' : 'pending';
-                        const subtaskContent = subtaskMatch[2];
+                        const subtaskId = subtaskMatch[2].trim();
+                        const subtaskContent = subtaskMatch[3].trim();
                         
                         if (!currentTodo.subtasks) {
                             currentTodo.subtasks = [];
                         }
                         
                         currentTodo.subtasks.push({
-                            id: `subtask-${subtaskIdCounter++}-${subtaskContent.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`,
+                            id: subtaskId,
                             content: subtaskContent,
                             status: subtaskStatus
                         });
                     }
-                    continue;
-                }
-
-                // Check if this is a details line (indented with 2 spaces and italic)
-                if (line.startsWith('  _') && line.endsWith('_') && currentTodo) {
-                    const details = line.substring(3, line.length - 1).trim();
-                    currentTodo.details = details;
                     continue;
                 }
 
@@ -232,32 +240,36 @@ export class CopilotInstructionsManager {
                     currentTodo = null;
                 }
 
-                // Parse todo items
+                // Parse todo items with ID
                 let match: RegExpMatchArray | null;
                 let status: 'pending' | 'in_progress' | 'completed';
                 let content: string;
                 let priority: 'low' | 'medium' | 'high' = 'medium';
+                let id: string;
 
-                // Check for pending todos: - [ ] content
-                if ((match = trimmedLine.match(/^- \[ \] (.+)$/))) {
+                // Check for pending todos: - [ ] id: content
+                if ((match = trimmedLine.match(/^- \[ \] ([^:]+): (.+)$/))) {
                     status = 'pending';
-                    content = match[1];
+                    id = match[1].trim();
+                    content = match[2].trim();
                 }
-                // Check for in-progress todos: - [-] content
-                else if ((match = trimmedLine.match(/^- \[-\] (.+)$/))) {
+                // Check for in-progress todos: - [-] id: content
+                else if ((match = trimmedLine.match(/^- \[-\] ([^:]+): (.+)$/))) {
                     status = 'in_progress';
-                    content = match[1];
+                    id = match[1].trim();
+                    content = match[2].trim();
                 }
-                // Check for completed todos: - [x] content
-                else if ((match = trimmedLine.match(/^- \[x\] (.+)$/i))) {
+                // Check for completed todos: - [x] id: content
+                else if ((match = trimmedLine.match(/^- \[x\] ([^:]+): (.+)$/i))) {
                     status = 'completed';
-                    content = match[1];
+                    id = match[1].trim();
+                    content = match[2].trim();
                 }
                 else {
                     continue; // Skip non-todo lines
                 }
 
-                // Extract priority from emoji at the end
+                // Extract priority from emoji at the end of content
                 if (content.endsWith(' 🔴')) {
                     priority = 'high';
                     content = content.slice(0, -3).trim();
@@ -268,9 +280,6 @@ export class CopilotInstructionsManager {
                     priority = 'low';
                     content = content.slice(0, -3).trim();
                 }
-
-                // Generate a stable ID based on content and position
-                const id = `todo-${idCounter++}-${content.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`;
 
                 currentTodo = {
                     id,

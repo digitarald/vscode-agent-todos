@@ -4,9 +4,10 @@
   "description": "Gives VS Code agent mode planning superpowers with dynamic todo lists",
   "version": "0.0.1",
   "publisher": "digitarald",
+  "preview": true,
   "repository": {
     "type": "git",
-    "url": "https://github.com/digitarald/agent-todos"
+    "url": "https://github.com/digitarald/vscode-agent-todos"
   },
   "license": "MIT",
   "engines": {
@@ -16,8 +17,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onLanguageModelTool:todo_read",
-    "onLanguageModelTool:todo_write"
+    "onMcpServerDefinitionProvider:todos-mcp-provider"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -114,7 +114,7 @@
       }
     ],
     "views": {
-      "workbench.panel.chat": [
+      "explorer": [
         {
           "id": "todoManager",
           "name": "Todos",
@@ -224,114 +224,6 @@
         }
       ]
     },
-    "languageModelTools": [
-      {
-        "name": "todo_read",
-        "tags": [
-          "todo"
-        ],
-        "toolReferenceName": "readTodos",
-        "displayName": "Read Todos",
-        "modelDescription": "Read the current task list including subtasks and implementation details to track progress and plan next steps. NOTE: If <todos> is already present in the instructions, you can skip using this tool as the todo list is already available. Use PROACTIVELY and FREQUENTLY: at conversation start to see pending work, before starting new tasks to prioritize, when user asks about previous tasks, whenever uncertain about next steps, after completing tasks to update understanding, every few messages to stay on track. Returns all todos with status/priority/content plus any subtasks (when enabled) and implementation details. Empty list if no todos exist yet. Essential for maintaining context and avoiding duplicate work.",
-        "userDescription": "View your current tasks and progress.",
-        "canBeReferencedInPrompt": true,
-        "icon": "$(list-unordered)",
-        "inputSchema": {}
-      },
-      {
-        "name": "todo_write",
-        "tags": [
-          "todo"
-        ],
-        "toolReferenceName": "writeTodos",
-        "displayName": "Write Todos",
-        "modelDescription": "Creates and manages a structured task list with optional subtasks for tracking progress and organizing work. Use PROACTIVELY for: complex multi-step tasks (3+ steps), non-trivial tasks requiring planning, multiple user requests, capturing new instructions, marking tasks in_progress BEFORE starting work, and marking completed IMMEDIATELY after finishing. SKIP for: single straightforward tasks, trivial operations (<3 steps), purely conversational requests. RULES: Only ONE task can be in_progress at a time, update status in real-time, complete current tasks before starting new ones, break complex tasks into specific actionable items. Each todo requires: id (unique), content (clear action, min 1 char), status (pending/in_progress/completed), priority (high/medium/low). SUBTASKS (when enabled): Granular Tasks - Break down complex tasks into manageable subtasks; Clear Dependencies - Define subtask dependencies to show implementation order; Implementation Notes - Use details field to track progress and decisions; Status Tracking - Keep subtask status updated as work progresses. Each subtask requires: id, content, status (pending/completed). This replaces the entire list, so include all existing todos to keep.",
-        "userDescription": "Create and manage your task list.",
-        "canBeReferencedInPrompt": true,
-        "icon": "$(edit)",
-        "inputSchema": {
-          "type": "object",
-          "properties": {
-            "todos": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "id": {
-                    "type": "string",
-                    "description": "Unique identifier string"
-                  },
-                  "content": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": "Clear, actionable description of what needs to be done"
-                  },
-                  "status": {
-                    "type": "string",
-                    "enum": [
-                      "pending",
-                      "in_progress",
-                      "completed"
-                    ],
-                    "description": "Current state of the task (only ONE task should be in_progress at a time)"
-                  },
-                  "priority": {
-                    "type": "string",
-                    "enum": [
-                      "low",
-                      "medium",
-                      "high"
-                    ],
-                    "description": "Task urgency: high (critical/blocking), medium (important), low (nice-to-have)"
-                  },
-                  "subtasks": {
-                    "type": "array",
-                    "description": "Optional subtasks for breaking down complex tasks",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "id": {
-                          "type": "string",
-                          "description": "Unique identifier for subtask"
-                        },
-                        "content": {
-                          "type": "string",
-                          "minLength": 1,
-                          "description": "Subtask description"
-                        },
-                        "status": {
-                          "type": "string",
-                          "enum": ["pending", "completed"],
-                          "description": "Subtask completion status"
-                        }
-                      },
-                      "required": ["id", "content", "status"]
-                    }
-                  },
-                  "details": {
-                    "type": "string",
-                    "description": "Optional implementation details or notes"
-                  }
-                },
-                "required": [
-                  "id",
-                  "content",
-                  "status",
-                  "priority"
-                ]
-              }
-            },
-            "title": {
-              "type": "string",
-              "description": "Optional title for the todo list"
-            }
-          },
-          "required": [
-            "todos"
-          ]
-        }
-      }
-    ],
     "configuration": {
       "title": "Todos",
       "properties": {
@@ -351,7 +243,13 @@
           "description": "Enable subtasks feature for breaking down complex tasks"
         }
       }
-    }
+    },
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "todos-mcp-provider",
+        "label": "Todos"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
@@ -365,19 +263,27 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "mcp-server": "node dist/mcp/standalone.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "eventsource": "^2.0.2",
+    "express": "^5.1.0",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
-    "@types/vscode": "^1.101.0",
+    "@types/express": "^5.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "^1.101.0",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.17.0",
-    "eslint": "^9.16.0",
-    "esbuild": "^0.24.0",
-    "npm-run-all": "^4.1.5",
-    "typescript": "^5.7.2",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.16.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.2"
   }
 }

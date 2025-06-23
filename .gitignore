@@ -4,3 +4,33 @@ node_modules
 .vscode-test/
 *.vsix
 .claude/settings.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage
+*.lcov
+.nyc_output

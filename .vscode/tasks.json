@@ -59,6 +59,38 @@
 				"npm: watch-tests"
 			],
 			"problemMatcher": []
+		},
+		{
+			"type": "npm",
+			"script": "compile",
+			"group": "build",
+			"problemMatcher": ["$tsc", "$esbuild-watch"],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"label": "npm: compile - Build extension and MCP server"
+		},
+		{
+			"type": "npm",
+			"script": "package",
+			"group": "build",
+			"problemMatcher": ["$tsc", "$esbuild-watch"],
+			"presentation": {
+				"reveal": "always",
+				"panel": "shared"
+			},
+			"label": "npm: package - Production build"
+		},
+		{
+			"type": "npm",
+			"script": "mcp-server",
+			"problemMatcher": [],
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated"
+			},
+			"label": "npm: mcp-server - Run standalone MCP server"
 		}
 	]
 }
