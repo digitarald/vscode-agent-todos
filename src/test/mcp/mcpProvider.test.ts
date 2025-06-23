@@ -18,7 +18,7 @@ suite('MCP Provider Tests', () => {
                 }
             }
         } as any;
-        
+
         provider = new TodoMCPServerProvider(context);
     });
 
@@ -28,32 +28,32 @@ suite('MCP Provider Tests', () => {
 
     test('Should provide MCP server definitions', async () => {
         const definitions = await provider.provideMcpServerDefinitions();
-        
+
         assert.strictEqual(definitions.length, 1);
         assert.ok(definitions[0] instanceof vscode.McpHttpServerDefinition);
-        
+
         const httpDef = definitions[0] as vscode.McpHttpServerDefinition;
-        assert.strictEqual(httpDef.label, 'Todos MCP Server');
+        assert.strictEqual(httpDef.label, 'Agent TODOs');
         assert.ok(httpDef.uri.toString().includes('http://localhost:'));
         assert.ok(httpDef.uri.toString().includes('/mcp'));
     });
 
     test('Should resolve server definition with session ID', async () => {
         await provider.ensureServerStarted();
-        
+
         const mockDefinition = new vscode.McpHttpServerDefinition(
             'Test Server',
             vscode.Uri.parse('http://localhost:3000/test')
         );
-        
+
         const resolved = await provider.resolveMcpServerDefinition(
             mockDefinition,
             new vscode.CancellationTokenSource().token
         );
-        
+
         assert.ok(resolved instanceof vscode.McpHttpServerDefinition);
         const resolvedHttp = resolved as vscode.McpHttpServerDefinition;
-        
+
         // Should return the same definition
         assert.strictEqual(resolved, mockDefinition);
     });
@@ -62,10 +62,10 @@ suite('MCP Provider Tests', () => {
     test('Should ensure server starts only once', async () => {
         await provider.ensureServerStarted();
         const server1 = provider.getServer();
-        
+
         await provider.ensureServerStarted();
         const server2 = provider.getServer();
-        
+
         // Should be the same server instance
         assert.strictEqual(server1, server2);
     });
@@ -73,11 +73,11 @@ suite('MCP Provider Tests', () => {
     test('Should handle workspace root changes', async () => {
         await provider.ensureServerStarted();
         const server = provider.getServer();
-        
+
         if (server) {
             const testRoot = '/test/new/workspace';
             server.setWorkspaceRoot(testRoot);
-            
+
             const config = server.getConfig();
             assert.strictEqual(config.workspaceRoot, testRoot);
         }
@@ -86,7 +86,7 @@ suite('MCP Provider Tests', () => {
     test('Should expose server URL', async () => {
         await provider.ensureServerStarted();
         const url = provider.getServerUrl();
-        
+
         assert.ok(url.startsWith('http://localhost:'));
         assert.ok(url.match(/http:\/\/localhost:\d+/));
     });
@@ -94,15 +94,15 @@ suite('MCP Provider Tests', () => {
     test('Should handle configuration change events', () => {
         // Verify event emitter is set up
         assert.ok(provider.onDidChangeMcpServerDefinitions);
-        
+
         let eventFired = false;
         provider.onDidChangeMcpServerDefinitions(() => {
             eventFired = true;
         });
-        
+
         // Fire the event
         provider['_onDidChangeMcpServerDefinitions'].fire();
-        
+
         assert.ok(eventFired);
     });
 
@@ -110,9 +110,9 @@ suite('MCP Provider Tests', () => {
         await provider.ensureServerStarted();
         const server = provider.getServer();
         assert.ok(server);
-        
+
         await provider.dispose();
-        
+
         // Server should be stopped
         assert.ok(!server['isRunning']);
     });
