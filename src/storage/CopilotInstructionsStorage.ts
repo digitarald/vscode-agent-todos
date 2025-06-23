@@ -9,23 +9,23 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
     private fileWatcher: fs.FSWatcher | undefined;
     private isUpdatingFile: boolean = false;
     private updateDebounceTimer: NodeJS.Timeout | undefined;
-    
+
     constructor(private workspaceRoot: string) {
         super();
         this.startWatchingFile();
     }
-    
+
     private getInstructionsPath(): string {
         return path.join(this.workspaceRoot, this.instructionsFileName);
     }
-    
+
     async load(): Promise<{ todos: TodoItem[], title: string }> {
         try {
             const filePath = this.getInstructionsPath();
             if (!fs.existsSync(filePath)) {
                 return { todos: [], title: 'Todos' };
             }
-            
+
             const content = fs.readFileSync(filePath, 'utf8');
             return this.parseTodosFromContent(content);
         } catch (error) {
@@ -33,26 +33,26 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             return { todos: [], title: 'Todos' };
         }
     }
-    
+
     async save(todos: TodoItem[], title: string): Promise<void> {
         this.isUpdatingFile = true;
         try {
             const filePath = this.getInstructionsPath();
             const dir = path.dirname(filePath);
-            
+
             // Ensure directory exists
             if (!fs.existsSync(dir)) {
                 fs.mkdirSync(dir, { recursive: true });
             }
-            
+
             let existingContent = '';
             if (fs.existsSync(filePath)) {
                 existingContent = fs.readFileSync(filePath, 'utf8');
             }
-            
+
             const todoMarkdown = this.formatTodosAsMarkdown(todos, title);
             const planSection = `<todo${title && title !== 'Todos' ? ` title="${title}"` : ''}>\n${todoMarkdown}\n</todo>\n\n`;
-            
+
             let newContent: string;
             if (existingContent) {
                 // Remove existing todo section if it exists
@@ -64,7 +64,7 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 // Create a minimal file with just the todo section
                 newContent = `<!-- Auto-generated todo section -->\n${planSection}<!-- Add your custom Copilot instructions below -->\n`;
             }
-            
+
             fs.writeFileSync(filePath, newContent, 'utf8');
             this.emit('change');
         } catch (error) {
@@ -77,25 +77,25 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             }, 500);
         }
     }
-    
+
     async clear(): Promise<void> {
         await this.save([], 'Todos');
     }
-    
+
     onDidChange(callback: () => void): { dispose: () => void } {
         this.on('change', callback);
         return {
             dispose: () => this.off('change', callback)
         };
     }
-    
+
     private startWatchingFile(): void {
         const filePath = this.getInstructionsPath();
         const dir = path.dirname(filePath);
-        
+
         // Watch the directory if file doesn't exist yet
         const watchPath = fs.existsSync(filePath) ? filePath : dir;
-        
+
         if (fs.existsSync(watchPath)) {
             this.fileWatcher = fs.watch(watchPath, (eventType) => {
                 if (!this.isUpdatingFile) {
@@ -104,39 +104,39 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             });
         }
     }
-    
+
     private handleFileChange(): void {
         // Debounce rapid changes
         if (this.updateDebounceTimer) {
             clearTimeout(this.updateDebounceTimer);
         }
-        
+
         this.updateDebounceTimer = setTimeout(() => {
             this.emit('change');
         }, 300);
     }
-    
+
     private formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
         let markdown = '';
-        markdown += `> IMPORTANT: You don't need to use todo_read tool, as the list is already available below. Review it frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.\n\n`;
-        
+        markdown += `> IMPORTANT: Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.\n\n`;
+
         if (todos.length === 0) {
             markdown += '- No current todos';
             return markdown;
         }
-        
+
         // Helper function to format a single todo with subtasks and details
         const formatTodo = (todo: TodoItem): string => {
             // Determine checkbox based on status
             const checkbox = todo.status === 'completed' ? '[x]' :
-                            todo.status === 'in_progress' ? '[-]' :
-                            '[ ]';
-            
+                todo.status === 'in_progress' ? '[-]' :
+                    '[ ]';
+
             const priorityBadge = todo.priority === 'high' ? ' 🔴' :
                 todo.priority === 'medium' ? ' 🟡' :
                     ' 🟢';
             let result = `- ${checkbox} ${todo.content}${priorityBadge}\n`;
-            
+
             // Add subtasks if present
             if (todo.subtasks && todo.subtasks.length > 0) {
                 todo.subtasks.forEach(subtask => {
@@ -144,30 +144,30 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                     result += `  - ${subtaskCheckbox} ${subtask.content}\n`;
                 });
             }
-            
+
             // Add details if present
             if (todo.details) {
                 result += `  _${todo.details}_\n`;
             }
-            
+
             return result;
         };
-        
+
         // Format todos in their original order
         todos.forEach(todo => {
             markdown += formatTodo(todo);
         });
-        
+
         return markdown.trim();
     }
-    
+
     private parseTodosFromContent(content: string): { todos: TodoItem[], title: string } {
         // Extract todo section
         const todoMatch = content.match(/<todo(?:\s+title="([^"]+)")?>([\s\S]*?)<\/todo>/);
         if (!todoMatch) {
             return { todos: [], title: 'Todos' };
         }
-        
+
         // Extract title from attribute if present
         const titleFromAttr = todoMatch[1];
         const todoContent = todoMatch[2].trim();
@@ -178,11 +178,11 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
         let subtaskIdCounter = 1;
         let inComment = false;
         let currentTodo: TodoItem | null = null;
-        
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const trimmedLine = line.trim();
-            
+
             // Handle multi-line HTML comments
             if (trimmedLine.includes('<!--')) {
                 inComment = true;
@@ -193,29 +193,29 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 }
                 continue;
             }
-            
+
             // Skip empty lines and prompt instructions
             if (trimmedLine === '' || trimmedLine.startsWith('>')) {
                 continue;
             }
-            
+
             // Check for title
             if (trimmedLine.startsWith('# ')) {
                 title = trimmedLine.substring(2).trim();
                 continue;
             }
-            
+
             // Check if this is a subtask (indented with 2 spaces)
             if (line.startsWith('  - ') && currentTodo) {
                 const subtaskMatch = line.match(/^  - \[([ x])\] (.+)$/);
                 if (subtaskMatch) {
                     const subtaskStatus = subtaskMatch[1] === 'x' ? 'completed' : 'pending';
                     const subtaskContent = subtaskMatch[2];
-                    
+
                     if (!currentTodo.subtasks) {
                         currentTodo.subtasks = [];
                     }
-                    
+
                     currentTodo.subtasks.push({
                         id: `subtask-${subtaskIdCounter++}-${subtaskContent.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`,
                         content: subtaskContent,
@@ -224,26 +224,26 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 }
                 continue;
             }
-            
+
             // Check if this is a details line (indented with 2 spaces and italic)
             if (line.startsWith('  _') && line.endsWith('_') && currentTodo) {
                 const details = line.substring(3, line.length - 1).trim();
                 currentTodo.details = details;
                 continue;
             }
-            
+
             // Save the previous todo if exists
             if (currentTodo) {
                 todos.push(currentTodo);
                 currentTodo = null;
             }
-            
+
             // Parse todo items
             let match: RegExpMatchArray | null;
             let status: 'pending' | 'in_progress' | 'completed';
             let content: string;
             let priority: 'low' | 'medium' | 'high' = 'medium';
-            
+
             // Check for pending todos: - [ ] content
             if ((match = trimmedLine.match(/^- \[ \] (.+)$/))) {
                 status = 'pending';
@@ -262,7 +262,7 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             else {
                 continue; // Skip non-todo lines
             }
-            
+
             // Extract priority from emoji at the end
             if (content.endsWith(' 🔴')) {
                 priority = 'high';
@@ -274,10 +274,10 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 priority = 'low';
                 content = content.slice(0, -3).trim();
             }
-            
+
             // Generate a stable ID based on content and position
             const id = `todo-${idCounter++}-${content.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 20)}`;
-            
+
             currentTodo = {
                 id,
                 content,
@@ -285,15 +285,15 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 priority
             };
         }
-        
+
         // Don't forget the last todo
         if (currentTodo) {
             todos.push(currentTodo);
         }
-        
+
         return { todos, title };
     }
-    
+
     dispose(): void {
         if (this.fileWatcher) {
             this.fileWatcher.close();

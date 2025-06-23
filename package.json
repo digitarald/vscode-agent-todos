@@ -26,92 +26,92 @@
     "commands": [
       {
         "command": "todoManager.clearTodos",
-        "title": "Clear All Todos",
+        "title": "Agent TODOs: Clear All Todos",
         "icon": "$(trash)"
       },
       {
         "command": "todoManager.refreshTodos",
-        "title": "Refresh Todos",
+        "title": "Agent TODOs: Refresh Todos",
         "icon": "$(refresh)"
       },
       {
         "command": "todoManager.toggleTodoStatus",
-        "title": "Toggle Todo Status",
+        "title": "Agent TODOs: Toggle Todo Status",
         "icon": "$(check)"
       },
       {
         "command": "todoManager.toggleAutoInject",
-        "title": "Toggle Auto-inject",
+        "title": "Agent TODOs: Toggle Auto-inject",
         "icon": "$(markdown)"
       },
       {
         "command": "todoManager.toggleAutoOpenView",
-        "title": "Toggle Auto-open View",
+        "title": "Agent TODOs: Toggle Auto-open View",
         "icon": "$(eye)"
       },
       {
         "command": "todoManager.deleteTodo",
-        "title": "Delete Todo",
+        "title": "Agent TODOs: Delete Todo",
         "icon": "$(trash)"
       },
       {
         "command": "todoManager.setStatusPending",
-        "title": "Set Status: Pending",
+        "title": "Agent TODOs: Set Status: Pending",
         "icon": "$(circle-outline)"
       },
       {
         "command": "todoManager.setStatusInProgress",
-        "title": "Set Status: In Progress",
+        "title": "Agent TODOs: Set Status: In Progress",
         "icon": "$(sync~spin)"
       },
       {
         "command": "todoManager.setStatusCompleted",
-        "title": "Set Status: Completed",
+        "title": "Agent TODOs: Set Status: Completed",
         "icon": "$(pass-filled)"
       },
       {
         "command": "todoManager.setPriorityHigh",
-        "title": "Set Priority: High",
+        "title": "Agent TODOs: Set Priority: High",
         "icon": "$(flame)"
       },
       {
         "command": "todoManager.setPriorityMedium",
-        "title": "Set Priority: Medium",
+        "title": "Agent TODOs: Set Priority: Medium",
         "icon": "$(dash)"
       },
       {
         "command": "todoManager.setPriorityLow",
-        "title": "Set Priority: Low",
+        "title": "Agent TODOs: Set Priority: Low",
         "icon": "$(chevron-down)"
       },
       {
         "command": "todoManager.addSubtask",
-        "title": "Add Subtask",
+        "title": "Agent TODOs: Add Subtask",
         "icon": "$(add)"
       },
       {
         "command": "todoManager.toggleSubtask",
-        "title": "Toggle Subtask",
+        "title": "Agent TODOs: Toggle Subtask",
         "icon": "$(check)"
       },
       {
         "command": "todoManager.deleteSubtask",
-        "title": "Delete Subtask",
+        "title": "Agent TODOs: Delete Subtask",
         "icon": "$(trash)"
       },
       {
         "command": "todoManager.addEditDetails",
-        "title": "Add/Edit Details",
+        "title": "Agent TODOs: Add/Edit Details",
         "icon": "$(edit)"
       },
       {
         "command": "todoManager.clearDetails",
-        "title": "Clear Details",
+        "title": "Agent TODOs: Clear Details",
         "icon": "$(clear-all)"
       },
       {
         "command": "todoManager.runTodo",
-        "title": "Run Todo in Chat",
+        "title": "Agent TODOs: Run Todo in Chat",
         "icon": "$(play)"
       }
     ],
@@ -119,7 +119,7 @@
       "explorer": [
         {
           "id": "todoManager",
-          "name": "Todos",
+          "name": "Agent TODOs",
           "when": "true",
           "icon": "$(checklist)"
         }
