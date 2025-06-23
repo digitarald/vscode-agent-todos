@@ -105,8 +105,8 @@ export class TodoTreeItem extends vscode.TreeItem {
         // Remove the highlight after 3 seconds
         setTimeout(() => {
             this.recentlyChangedItems.delete(todoId);
-            // Trigger refresh to update decorations
-            vscode.commands.executeCommand('todoManager.refreshTodos');
+            // Only refresh decorations, not the entire tree
+            vscode.commands.executeCommand('todoManager.refreshDecorations');
         }, 3000);
     }
     
@@ -149,28 +149,14 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
     private todoManager: TodoManager;
     private previousTodos: TodoItem[] = [];
     private isRefreshing: boolean = false;
+    private refreshDebounceTimer: NodeJS.Timeout | undefined;
+    private pendingRefresh: boolean = false;
 
     constructor() {
         this.todoManager = TodoManager.getInstance();
-        this.todoManager.onDidChangeTodos(() => {
-            console.log('[TodoTreeProvider] Todos changed, refreshing tree view');
-            
-            // Set refreshing flag to show visual feedback
-            this.isRefreshing = true;
-            
-            // Detect changed items for highlighting
-            this.detectChangedItems();
-            
-            // Fire with undefined to force complete refresh of the tree
-            this._onDidChangeTreeData.fire(undefined);
-            
-            // Reset refreshing flag and trigger decoration refresh after a short delay
-            setTimeout(() => {
-                this.isRefreshing = false;
-                vscode.commands.executeCommand('todoManager.refreshDecorations');
-                // Trigger another refresh to remove the loading state
-                this._onDidChangeTreeData.fire(undefined);
-            }, 300);
+        // Use consolidated change event
+        this.todoManager.onDidChange(() => {
+            this.debouncedRefresh();
         });
     }
 
@@ -226,21 +212,55 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
 
     refresh(): void {
         console.log('[TodoTreeProvider] Manual refresh triggered');
-        // Clear previous todos to force complete refresh
-        this.previousTodos = [];
-        this.detectChangedItems();
-        // Fire with undefined to force complete tree refresh
-        this._onDidChangeTreeData.fire(undefined);
+        this.debouncedRefresh();
+    }
+
+    private debouncedRefresh(): void {
+        // Clear any pending refresh
+        if (this.refreshDebounceTimer) {
+            clearTimeout(this.refreshDebounceTimer);
+        }
+
+        this.pendingRefresh = true;
+        
+        // Debounce rapid refreshes
+        this.refreshDebounceTimer = setTimeout(() => {
+            if (!this.pendingRefresh) {return;}
+            
+            console.log('[TodoTreeProvider] Executing debounced refresh');
+            this.isRefreshing = true;
+            
+            // Detect changed items for highlighting
+            this.detectChangedItems();
+            
+            // Fire with undefined to force complete refresh of the tree
+            this._onDidChangeTreeData.fire(undefined);
+            
+            // Reset refreshing flag and trigger decoration refresh after a short delay
+            setTimeout(() => {
+                this.isRefreshing = false;
+                this.pendingRefresh = false;
+                vscode.commands.executeCommand('todoManager.refreshDecorations');
+            }, 100); // Reduced from 300ms
+        }, 150); // Debounce time
     }
 }
 
 export class TodoDecorationProvider implements vscode.FileDecorationProvider {
     private readonly _onDidChangeFileDecorations = new vscode.EventEmitter<vscode.Uri | vscode.Uri[] | undefined>();
     readonly onDidChangeFileDecorations = this._onDidChangeFileDecorations.event;
+    private decorationCache = new Map<string, vscode.FileDecoration | undefined>();
+    private refreshDebounceTimer: NodeJS.Timeout | undefined;
 
     provideFileDecoration(uri: vscode.Uri): vscode.FileDecoration | undefined {
         if (uri.scheme !== 'todo' && uri.scheme !== 'todo-subtask') {
             return undefined;
+        }
+
+        // Check cache first
+        const cacheKey = uri.toString();
+        if (this.decorationCache.has(cacheKey)) {
+            return this.decorationCache.get(cacheKey);
         }
 
         const parts = uri.path.split('/').filter(p => p);
@@ -249,14 +269,18 @@ export class TodoDecorationProvider implements vscode.FileDecorationProvider {
             // Handle subtask decorations
             const [status] = parts;
             
+            let decoration: vscode.FileDecoration | undefined;
+            
             if (status === 'completed') {
-                return {
+                decoration = {
                     color: new vscode.ThemeColor('disabledForeground'),
                     propagate: false
                 };
             }
             
-            return undefined;
+            // Cache and return
+            this.decorationCache.set(cacheKey, decoration);
+            return decoration;
         }
         
         // Handle regular todo decorations
@@ -264,44 +288,70 @@ export class TodoDecorationProvider implements vscode.FileDecorationProvider {
         
         // Check if this item was recently changed
         if (id && TodoTreeItem.isRecentlyChanged(id)) {
-            return {
+            const decoration = {
                 badge: '●',
                 color: new vscode.ThemeColor('gitDecoration.modifiedResourceForeground'),
                 tooltip: 'Recently changed'
             };
+            this.decorationCache.set(cacheKey, decoration);
+            return decoration;
         }
 
         // Status-based decorations
+        let decoration: vscode.FileDecoration | undefined;
+        
         switch (status) {
             case 'in_progress':
-                return {
+                decoration = {
                     badge: '▸',
                     color: new vscode.ThemeColor('charts.blue'),
                     tooltip: 'In Progress'
                 };
+                this.decorationCache.set(cacheKey, decoration);
+                return decoration;
             case 'completed':
-                return {
+                decoration = {
                     color: new vscode.ThemeColor('disabledForeground'),
                     propagate: false
                 };
+                this.decorationCache.set(cacheKey, decoration);
+                return decoration;
         }
 
         // Priority badges for pending items
         if (status === 'pending' && priority === 'high') {
-            return {
+            decoration = {
                 badge: '!',
                 color: new vscode.ThemeColor('list.warningForeground'),
                 tooltip: 'High Priority'
             };
+            this.decorationCache.set(cacheKey, decoration);
+            return decoration;
         }
         
         // Note: Details indicator is shown in the tree item description instead of badge
         // to avoid conflicts with priority badges
 
-        return undefined;
+        decoration = undefined;
+        
+        // Cache the result
+        this.decorationCache.set(cacheKey, decoration);
+        
+        return decoration;
+    }
+    
+    refresh(): void {
+        // Clear cache
+        this.decorationCache.clear();
+        
+        // Debounce rapid refreshes
+        if (this.refreshDebounceTimer) {
+            clearTimeout(this.refreshDebounceTimer);
+        }
+        
+        this.refreshDebounceTimer = setTimeout(() => {
+            this._onDidChangeFileDecorations.fire(undefined);
+        }, 50);
     }
 
-    refresh(): void {
-        this._onDidChangeFileDecorations.fire(undefined);
-    }
 }

@@ -1,9 +1,11 @@
 This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
 
-!Important:
+IMPORTANT:
 
-- Keep this document up-to-date with the latest architecture and coding standards.
+- Keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation.
 - NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+- NEVER make changes backwards compatible unless explicitly requested by the User.
+- NEVER create one-off scripts to test changes.
 
 ## Project Overview
 
@@ -78,6 +80,89 @@ graph TB
     TM --> SM
 ```
 
+## Performance Optimizations
+
+### Event System Architecture
+
+The extension uses a **consolidated event pattern** to prevent performance issues:
+
+```typescript
+// CORRECT: Single consolidated event
+todoManager.onDidChange((change) => {
+  // Handle both todo and title changes
+  updateTreeView(change.todos);
+  updateTitle(change.title);
+});
+
+// WRONG: Never use separate events (causes cascade loops)
+// todoManager.onDidChangeTodos(...) // DO NOT USE
+// todoManager.onDidChangeTitle(...) // DO NOT USE
+```
+
+**Key Requirements:**
+- Always use the single `onDidChange` event that provides both todos and title
+- Never create or use separate events for different properties
+- All managers (TodoManager, StandaloneTodoManager) must implement the same event interface
+
+### Change Deduplication
+
+All state changes use hash-based deduplication to prevent redundant updates:
+
+```typescript
+private fireConsolidatedChange(): void {
+  const currentHash = JSON.stringify({ todos: this.todos, title: this.title });
+  if (currentHash !== this.lastUpdateHash) {
+    this.lastUpdateHash = currentHash;
+    this.onDidChangeEmitter.fire({ todos: this.todos, title: this.getTitle() });
+  }
+}
+```
+
+### Debouncing Strategy
+
+Different components use specific debounce timings:
+- **Tree View Updates**: 150ms debounce for UI responsiveness
+- **File Operations**: 500ms debounce to batch rapid changes
+- **MCP Sync**: Immediate sync to maintain consistency
+
+### Async Initialization
+
+MCP server initialization is non-blocking to prevent extension startup delays:
+
+```typescript
+// Initialize MCP server asynchronously
+setImmediate(async () => {
+  await mcpProvider.ensureServerStarted();
+});
+```
+
+### File Operation Queueing
+
+File writes are queued to prevent concurrent access issues:
+
+```typescript
+private async writeWithQueue(todos: TodoItem[], title?: string): Promise<void> {
+  if (this.writeInProgress) {
+    this.pendingWrite = { todos, title };
+    return;
+  }
+  
+  this.writeInProgress = true;
+  try {
+    await this.performWrite(todos, title);
+    
+    // Process any pending write
+    if (this.pendingWrite) {
+      const pending = this.pendingWrite;
+      this.pendingWrite = null;
+      await this.writeWithQueue(pending.todos, pending.title);
+    }
+  } finally {
+    this.writeInProgress = false;
+  }
+}
+```
+
 ## Coding Standards
 
 ### TypeScript Patterns
@@ -85,7 +170,7 @@ graph TB
 - Use strict TypeScript with proper type definitions
 - Implement singleton pattern for `TodoManager` (see `src/todoManager.ts`)
 - Follow VS Code extension conventions with proper disposable cleanup
-- Use event emitters for reactive state management
+- Use consolidated event pattern for state management (never separate events)
 
 ### VS Code API Usage
 

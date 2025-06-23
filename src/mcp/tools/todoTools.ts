@@ -25,7 +25,7 @@ interface TodoManagerLike {
   getTitle(): string;
   updateTodos(todos: TodoItem[], title?: string): Promise<void>;
   setTitle(title: string): Promise<void>;
-  onDidChangeTodos(callback: () => void): { dispose: () => void };
+  onDidChange(callback: (change: { todos: TodoItem[], title: string }) => void): { dispose: () => void };
 }
 
 export class TodoTools {

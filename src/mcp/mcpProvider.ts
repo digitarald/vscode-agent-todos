@@ -7,6 +7,7 @@ import { ITodoStorage } from '../storage/ITodoStorage';
 import { WorkspaceStateStorage } from '../storage/WorkspaceStateStorage';
 import { CopilotInstructionsStorage } from '../storage/CopilotInstructionsStorage';
 import * as net from 'net';
+import { PerformanceMonitor } from '../utils/performance';
 
 export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider {
   private server: TodoMCPServer | null = null;
@@ -46,8 +47,9 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       return;
     }
 
-    // Find an available port
-    this.serverPort = await this.findAvailablePort();
+    await PerformanceMonitor.measure('MCP Server Startup', async () => {
+      // Find an available port
+      this.serverPort = await this.findAvailablePort();
 
     // Create server instance
     this.server = new TodoMCPServer({
@@ -86,17 +88,20 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
     // Setup configuration change handling
     this.setupConfigurationHandling();
 
-    console.log(`MCP Todo Server started on port ${this.serverPort}`);
+      console.log(`MCP Todo Server started on port ${this.serverPort}`);
+    });
   }
 
   private async findAvailablePort(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      const server = net.createServer();
-      server.listen(0, () => {
-        const port = (server.address() as net.AddressInfo).port;
-        server.close(() => resolve(port));
+    return PerformanceMonitor.measure('findAvailablePort', () => {
+      return new Promise<number>((resolve, reject) => {
+        const server = net.createServer();
+        server.listen(0, () => {
+          const port = (server.address() as net.AddressInfo).port;
+          server.close(() => resolve(port));
+        });
+        server.on('error', reject);
       });
-      server.on('error', reject);
     });
   }
 

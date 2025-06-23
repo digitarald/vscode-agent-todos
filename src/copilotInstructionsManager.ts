@@ -5,6 +5,8 @@ import { TodoItem } from './types';
 export class CopilotInstructionsManager {
     private static instance: CopilotInstructionsManager;
     private readonly instructionsFileName = '.github/copilot-instructions.md';
+    private writeInProgress = false;
+    private pendingWrite: { todos: TodoItem[], title?: string } | null = null;
 
     private constructor() { }
 
@@ -78,12 +80,19 @@ export class CopilotInstructionsManager {
     }
 
     public async updateInstructionsWithTodos(todos: TodoItem[], title?: string): Promise<void> {
+        // If a write is in progress, queue this update
+        if (this.writeInProgress) {
+            this.pendingWrite = { todos, title };
+            return;
+        }
+
         const fileUri = this.getInstructionsFileUri();
         if (!fileUri) {
             console.warn('No workspace folder found, cannot update copilot instructions');
             return;
         }
 
+        this.writeInProgress = true;
         try {
             const todoMarkdown = this.formatTodosAsMarkdown(todos, title);
             const planSection = title ? `<todos title="${title}" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">\n${todoMarkdown}\n</todos>\n\n` : `<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">\n${todoMarkdown}\n</todos>\n\n`;
@@ -119,6 +128,18 @@ export class CopilotInstructionsManager {
         } catch (error) {
             console.error('Error updating copilot instructions:', error);
             vscode.window.showErrorMessage(`Failed to update copilot instructions: ${error}`);
+        } finally {
+            this.writeInProgress = false;
+            
+            // Process any pending write
+            if (this.pendingWrite) {
+                const pending = this.pendingWrite;
+                this.pendingWrite = null;
+                // Process pending write after a small delay
+                setTimeout(() => {
+                    this.updateInstructionsWithTodos(pending.todos, pending.title);
+                }, 100);
+            }
         }
     }
 

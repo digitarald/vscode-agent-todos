@@ -328,14 +328,12 @@ export class TodoMCPServer {
     }
     
     // Listen for todo changes to broadcast updates
-    if (this.todoManager && this.todoManager.onDidChangeTodos) {
-      this.todoManager.onDidChangeTodos(() => {
-        const todos = this.todoManager.getTodos();
-        const title = this.todoManager.getTitle ? this.todoManager.getTitle() : 'Todos';
+    if (this.todoManager && this.todoManager.onDidChange) {
+      this.todoManager.onDidChange((change: { todos: any[], title: string }) => {
         this.broadcastUpdate({
           type: 'todos-updated',
-          todos,
-          title,
+          todos: change.todos,
+          title: change.title,
           timestamp: Date.now()
         });
       });

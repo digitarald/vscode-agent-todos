@@ -3,15 +3,15 @@ import { TodoItem, Subtask } from './types';
 import { CopilotInstructionsManager } from './copilotInstructionsManager';
 import { SubtaskManager } from './subtaskManager';
 import { TodoValidator } from './todoValidator';
+import { PerformanceMonitor } from './utils/performance';
 
 export class TodoManager {
     private static instance: TodoManager;
     private todos: TodoItem[] = [];
     private title: string = 'Todos';
-    private readonly onDidChangeTodosEmitter = new vscode.EventEmitter<TodoItem[]>();
-    public readonly onDidChangeTodos = this.onDidChangeTodosEmitter.event;
-    private readonly onDidChangeTitleEmitter = new vscode.EventEmitter<string>();
-    public readonly onDidChangeTitle = this.onDidChangeTitleEmitter.event;
+    // Single consolidated change event for better performance
+    private readonly onDidChangeEmitter = new vscode.EventEmitter<{ todos: TodoItem[], title: string }>();
+    public readonly onDidChange = this.onDidChangeEmitter.event;
     private readonly onShouldOpenViewEmitter = new vscode.EventEmitter<void>();
     public readonly onShouldOpenView = this.onShouldOpenViewEmitter.event;
     // Add configuration change event emitter
@@ -23,6 +23,9 @@ export class TodoManager {
     private isUpdatingFile: boolean = false;
     private updateDebounceTimer: NodeJS.Timeout | undefined;
     private context: vscode.ExtensionContext | undefined;
+    private pendingUpdate: { todos?: TodoItem[], title?: string } | null = null;
+    private updateInProgress = false;
+    private lastUpdateHash: string = '';
 
     private constructor() {
         this.copilotInstructionsManager = CopilotInstructionsManager.getInstance();
@@ -117,13 +120,20 @@ export class TodoManager {
     }
 
     private async updateInstructionsIfNeeded(): Promise<void> {
-        if (this.isAutoInjectEnabled()) {
-            this.isUpdatingFile = true;
-            await this.copilotInstructionsManager.updateInstructionsWithTodos(this.todos, this.title);
-            // Reset flag after a short delay to handle async file system events
-            setTimeout(() => {
-                this.isUpdatingFile = false;
-            }, 500);
+        if (this.isAutoInjectEnabled() && !this.updateInProgress) {
+            await PerformanceMonitor.measure('updateInstructionsIfNeeded', async () => {
+                this.updateInProgress = true;
+                this.isUpdatingFile = true;
+                try {
+                    await this.copilotInstructionsManager.updateInstructionsWithTodos(this.todos, this.title);
+                } finally {
+                    // Reset flags after a short delay to handle async file system events
+                    setTimeout(() => {
+                        this.isUpdatingFile = false;
+                        this.updateInProgress = false;
+                    }, 500);
+                }
+            });
         }
     }
 
@@ -153,9 +163,7 @@ export class TodoManager {
             // If file is deleted while watching, clear todos
             if (!this.isUpdatingFile) {
                 this.todos = [];
-                this.onDidChangeTodosEmitter.fire(this.todos);
-                // Also fire title change to update progress indicator
-                this.onDidChangeTitleEmitter.fire(this.getTitle());
+                this.fireConsolidatedChange();
             }
         });
 
@@ -183,39 +191,49 @@ export class TodoManager {
 
         this.updateDebounceTimer = setTimeout(() => {
             this.syncFromInstructionsFile();
-        }, 300);
+        }, 500); // Increased debounce time to reduce rapid updates
     }
 
     private async syncFromInstructionsFile(): Promise<void> {
-        try {
-            const parsed = await this.copilotInstructionsManager.parseTodosFromInstructions();
-            if (!parsed) {
-                return;
-            }
-
-            const { todos, title } = parsed;
-
-            // Check if todos actually changed to avoid unnecessary updates
-            const todosChanged = !this.areTodosEqual(this.todos, todos);
-            const titleChanged = title !== undefined && title !== this.title;
-
-            if (todosChanged || titleChanged) {
-                this.todos = todos;
-                if (title !== undefined) {
-                    this.title = title;
+        await PerformanceMonitor.measure('syncFromInstructionsFile', async () => {
+            try {
+                const parsed = await this.copilotInstructionsManager.parseTodosFromInstructions();
+                if (!parsed) {
+                    return;
                 }
-                this.onDidChangeTodosEmitter.fire(this.todos);
-                // Also fire title change to update progress indicator
-                this.onDidChangeTitleEmitter.fire(this.getTitle());
-                console.log(`Synced ${todos.length} todos from instructions file`);
+
+                const { todos, title } = parsed;
+
+                // Check if todos actually changed to avoid unnecessary updates
+                const todosChanged = !this.areTodosEqual(this.todos, todos);
+                const titleChanged = title !== undefined && title !== this.title;
+
+                if (todosChanged || titleChanged) {
+                    this.todos = todos;
+                    if (title !== undefined) {
+                        this.title = title;
+                    }
+                    this.fireConsolidatedChange();
+                    console.log(`Synced ${todos.length} todos from instructions file`);
+                }
+            } catch (error) {
+                console.error('Error syncing from instructions file:', error);
             }
-        } catch (error) {
-            console.error('Error syncing from instructions file:', error);
-        }
+        });
     }
 
     private areTodosEqual(todos1: TodoItem[], todos2: TodoItem[]): boolean {
         return TodoValidator.areTodosEqual(todos1, todos2);
+    }
+
+    private fireConsolidatedChange(): void {
+        const currentHash = JSON.stringify({ todos: this.todos, title: this.title });
+        if (currentHash !== this.lastUpdateHash) {
+            this.lastUpdateHash = currentHash;
+            
+            // Fire consolidated event only
+            this.onDidChangeEmitter.fire({ todos: this.todos, title: this.getTitle() });
+        }
     }
 
     public getTodos(): TodoItem[] {
@@ -240,52 +258,48 @@ export class TodoManager {
     public async setTitle(title: string): Promise<void> {
         if (title !== this.title) {
             this.title = title;
-            this.onDidChangeTitleEmitter.fire(title);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
         }
     }
 
     public async setTodos(todos: TodoItem[], title?: string): Promise<void> {
-        const hadTodos = this.todos.length > 0;
-        const previousTodoCount = this.todos.length;
+        await PerformanceMonitor.measure('TodoManager.setTodos', async () => {
+            const hadTodos = this.todos.length > 0;
+            const previousTodoCount = this.todos.length;
 
-        console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
+            console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
 
-        this.todos = [...todos];
-        if (title !== undefined && title !== this.title) {
-            this.title = title;
-        }
-        this.onDidChangeTodosEmitter.fire(this.todos);
-        // Also fire title change to update progress indicator
-        this.onDidChangeTitleEmitter.fire(this.getTitle());
+            this.todos = [...todos];
+            if (title !== undefined && title !== this.title) {
+                this.title = title;
+            }
+            this.fireConsolidatedChange();
 
-        // Check if we should open the view
-        const hasTodos = this.todos.length > 0;
-        const todosChanged = previousTodoCount !== this.todos.length || !this.areTodosEqual(this.todos, todos);
+            // Check if we should open the view
+            const hasTodos = this.todos.length > 0;
+            const todosChanged = previousTodoCount !== this.todos.length || !this.areTodosEqual(this.todos, todos);
 
-        if (this.isAutoOpenViewEnabled() && hasTodos && todosChanged) {
-            this.onShouldOpenViewEmitter.fire();
-        }
+            if (this.isAutoOpenViewEnabled() && hasTodos && todosChanged) {
+                this.onShouldOpenViewEmitter.fire();
+            }
 
-        await this.updateInstructionsIfNeeded();
-        this.saveToStorage();
+            await this.updateInstructionsIfNeeded();
+            this.saveToStorage();
+        });
     }
 
     public async clearTodos(): Promise<void> {
         this.todos = [];
         this.title = 'Todos'; // Reset title to default
-        this.onDidChangeTodosEmitter.fire(this.todos);
-        // Also fire title change to update progress indicator
-        this.onDidChangeTitleEmitter.fire(this.getTitle());
+        this.fireConsolidatedChange();
         await this.updateInstructionsIfNeeded();
         this.saveToStorage();
     }
 
     public async deleteTodo(id: string): Promise<void> {
         this.todos = this.todos.filter(t => t.id !== id);
-        this.onDidChangeTodosEmitter.fire(this.todos);
-        // Also fire title change to update progress indicator
-        this.onDidChangeTitleEmitter.fire(this.getTitle());
+        this.fireConsolidatedChange();
         await this.updateInstructionsIfNeeded();
         this.saveToStorage();
     }
@@ -303,8 +317,7 @@ export class TodoManager {
             }
 
             todo.status = status;
-            this.onDidChangeTodosEmitter.fire(this.todos);
-            this.onDidChangeTitleEmitter.fire(this.getTitle());
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -314,7 +327,7 @@ export class TodoManager {
         const todo = this.todos.find(t => t.id === id);
         if (todo) {
             todo.priority = priority;
-            this.onDidChangeTodosEmitter.fire(this.todos);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -341,9 +354,7 @@ export class TodoManager {
                     todo.status = 'pending';
                     break;
             }
-            this.onDidChangeTodosEmitter.fire(this.todos);
-            // Also fire title change to update progress indicator
-            this.onDidChangeTitleEmitter.fire(this.getTitle());
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -358,7 +369,7 @@ export class TodoManager {
         const todo = this.todos.find(t => t.id === todoId);
         if (todo) {
             SubtaskManager.addSubtask(todo, subtask);
-            this.onDidChangeTodosEmitter.fire(this.todos);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -371,7 +382,7 @@ export class TodoManager {
 
         const todo = this.todos.find(t => t.id === todoId);
         if (todo && SubtaskManager.updateSubtask(todo, subtaskId, updates)) {
-            this.onDidChangeTodosEmitter.fire(this.todos);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -384,7 +395,7 @@ export class TodoManager {
 
         const todo = this.todos.find(t => t.id === todoId);
         if (todo && SubtaskManager.deleteSubtask(todo, subtaskId)) {
-            this.onDidChangeTodosEmitter.fire(this.todos);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -397,7 +408,7 @@ export class TodoManager {
 
         const todo = this.todos.find(t => t.id === todoId);
         if (todo && SubtaskManager.toggleSubtaskStatus(todo, subtaskId)) {
-            this.onDidChangeTodosEmitter.fire(this.todos);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -413,7 +424,7 @@ export class TodoManager {
             } else {
                 todo.details = sanitizedDetails;
             }
-            this.onDidChangeTodosEmitter.fire(this.todos);
+            this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
         }
@@ -452,8 +463,7 @@ export class TodoManager {
         if (storageData) {
             this.todos = storageData.todos || [];
             this.title = storageData.title || 'Todos';
-            this.onDidChangeTodosEmitter.fire(this.todos);
-            this.onDidChangeTitleEmitter.fire(this.getTitle());
+            this.fireConsolidatedChange();
         }
     }
 
@@ -462,10 +472,9 @@ export class TodoManager {
             this.configurationDisposable.dispose();
         }
         this.stopWatchingInstructionsFile();
-        this.onDidChangeTodosEmitter.dispose();
-        this.onDidChangeTitleEmitter.dispose();
         this.onShouldOpenViewEmitter.dispose();
         this.onDidChangeConfigurationEmitter.dispose();
+        this.onDidChangeEmitter.dispose();
     }
 
     public getNotCompletedCount(): number {

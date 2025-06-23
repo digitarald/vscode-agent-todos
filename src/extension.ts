@@ -41,13 +41,9 @@ export async function activate(context: vscode.ExtensionContext) {
 		};
 		updateBadge();
 
-		// Listen for title changes
-		todoManager.onDidChangeTitle((newTitle) => {
-			treeView.title = newTitle;
-		});
-
-		// Listen for todos changes to update badge
-		todoManager.onDidChangeTodos(() => {
+		// Listen for changes to update title and badge
+		todoManager.onDidChange((change) => {
+			treeView.title = change.title;
 			updateBadge();
 		});
 
@@ -61,29 +57,39 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		// Initialize MCP server provider
+		// Initialize MCP server provider asynchronously
 		let mcpProvider: TodoMCPServerProvider | undefined;
 		let mcpDisposable: vscode.Disposable | undefined;
 
-		try {
-			mcpProvider = new TodoMCPServerProvider(context);
+		// Start MCP initialization in background
+		setImmediate(async () => {
+			try {
+				mcpProvider = new TodoMCPServerProvider(context);
 
-			// Register MCP server provider - check if API is available
-			if (vscode.lm && typeof vscode.lm.registerMcpServerDefinitionProvider === 'function') {
-				mcpDisposable = vscode.lm.registerMcpServerDefinitionProvider(
-					'todos-mcp-provider',
-					mcpProvider
-				);
-			} else {
-				console.log('MCP API not available in this VS Code version');
+				// Register MCP server provider - check if API is available
+				if (vscode.lm && typeof vscode.lm.registerMcpServerDefinitionProvider === 'function') {
+					mcpDisposable = vscode.lm.registerMcpServerDefinitionProvider(
+						'todos-mcp-provider',
+						mcpProvider
+					);
+					context.subscriptions.push(mcpDisposable);
+				} else {
+					console.log('MCP API not available in this VS Code version');
+				}
+
+				// Start server asynchronously
+				mcpProvider.ensureServerStarted().catch(error => {
+					console.error('Failed to start MCP server:', error);
+				});
+
+				if (mcpProvider) {
+					context.subscriptions.push(mcpProvider);
+				}
+			} catch (mcpError) {
+				console.error('Failed to initialize MCP server:', mcpError);
+				// Continue without MCP - the extension can still work with just the UI
 			}
-
-			// Wait for server to start
-			await mcpProvider.ensureServerStarted();
-		} catch (mcpError) {
-			console.error('Failed to initialize MCP server:', mcpError);
-			// Continue without MCP - the extension can still work with just the UI
-		}
+		});
 
 		// Register commands
 		const clearTodosCommand = vscode.commands.registerCommand('todoManager.clearTodos', async () => {
@@ -288,13 +294,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			runTodoCommand
 		);
 
-		// Add MCP disposables if they were initialized successfully
-		if (mcpDisposable) {
-			context.subscriptions.push(mcpDisposable);
-		}
-		if (mcpProvider) {
-			context.subscriptions.push(mcpProvider);
-		}
+		// MCP disposables are now added in the async initialization
 
 		// Initialize todos from storage or instructions file
 		// The TodoManager will automatically sync from instructions file if auto-inject is enabled

@@ -11,6 +11,7 @@ export class StandaloneTodoManager extends EventEmitter {
   private title: string = 'Todos';
   private storage: ITodoStorage;
   private storageDisposable: { dispose: () => void } | undefined;
+  private lastUpdateHash: string = '';
   
   constructor(storage?: ITodoStorage) {
     super();
@@ -42,8 +43,7 @@ export class StandaloneTodoManager extends EventEmitter {
       const data = await this.storage.load();
       this.todos = data.todos || [];
       this.title = data.title || 'Todos';
-      this.emit('todosChanged');
-      this.emit('titleChanged', this.title);
+      this.fireChangeEvent();
     } catch (error) {
       console.error('Failed to load todos:', error);
     }
@@ -68,7 +68,7 @@ export class StandaloneTodoManager extends EventEmitter {
   async setTitle(title: string): Promise<void> {
     this.title = title;
     this.saveTodos();
-    this.emit('titleChanged', title);
+    this.emit('todosChanged');
   }
   
   async updateTodos(todos: TodoItem[], title?: string): Promise<void> {
@@ -107,7 +107,7 @@ export class StandaloneTodoManager extends EventEmitter {
       };
       todo.status = statusMap[todo.status];
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
@@ -116,7 +116,7 @@ export class StandaloneTodoManager extends EventEmitter {
     if (todo) {
       todo.status = status;
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
@@ -125,7 +125,7 @@ export class StandaloneTodoManager extends EventEmitter {
     if (todo) {
       todo.priority = priority;
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
@@ -134,7 +134,7 @@ export class StandaloneTodoManager extends EventEmitter {
     if (todo) {
       todo.details = details;
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
@@ -146,7 +146,7 @@ export class StandaloneTodoManager extends EventEmitter {
       }
       todo.subtasks.push(subtask);
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
@@ -156,7 +156,7 @@ export class StandaloneTodoManager extends EventEmitter {
     if (subtask) {
       subtask.status = subtask.status === 'completed' ? 'pending' : 'completed';
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
@@ -165,22 +165,26 @@ export class StandaloneTodoManager extends EventEmitter {
     if (todo && todo.subtasks) {
       todo.subtasks = todo.subtasks.filter(s => s.id !== subtaskId);
       this.saveTodos();
-      this.emit('todosChanged');
+      this.fireChangeEvent();
     }
   }
   
-  // Events
-  onDidChangeTodos(callback: () => void): { dispose: () => void } {
-    this.on('todosChanged', callback);
-    return {
-      dispose: () => this.off('todosChanged', callback)
-    };
+  private fireChangeEvent(): void {
+    const currentHash = JSON.stringify({ todos: this.todos, title: this.title });
+    if (currentHash !== this.lastUpdateHash) {
+      this.lastUpdateHash = currentHash;
+      // Emit consolidated change event
+      this.emit('change', { todos: this.getTodos(), title: this.getTitle() });
+    }
   }
-  
-  onDidChangeTitle(callback: (title: string) => void): { dispose: () => void } {
-    this.on('titleChanged', callback);
+
+  // Provide VS Code-compatible event interface
+  onDidChange(callback: (change: { todos: TodoItem[], title: string }) => void): { dispose: () => void } {
+    this.on('change', callback);
     return {
-      dispose: () => this.off('titleChanged', callback)
+      dispose: () => {
+        this.off('change', callback);
+      }
     };
   }
   
