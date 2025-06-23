@@ -10,6 +10,9 @@ suite('TodoManager Subtask Tests', () => {
     setup(async () => {
         todoManager = TodoManager.getInstance();
         
+        // Initialize with a mock context to ensure configuration works
+        todoManager.initialize();
+        
         // Create a test todo
         const testTodo: TodoItem = {
             id: 'test-todo-1',
@@ -30,6 +33,9 @@ suite('TodoManager Subtask Tests', () => {
         // Enable subtasks
         await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
         
+        // Wait a bit for config to propagate
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         const subtask: Subtask = {
             id: 'subtask-1',
             content: 'Test subtask',
@@ -40,6 +46,7 @@ suite('TodoManager Subtask Tests', () => {
         
         const todos = todoManager.getTodos();
         const todo = todos.find(t => t.id === testTodoId);
+        
         
         assert.strictEqual(todo?.subtasks?.length, 1);
         assert.strictEqual(todo?.subtasks?.[0].content, 'Test subtask');

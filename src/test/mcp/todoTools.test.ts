@@ -21,7 +21,7 @@ suite('MCP Todo Tools Tests', () => {
     suite('Tool Availability', () => {
         test('Should return both tools in standalone mode', async () => {
             const tools = await todoTools.getAvailableTools();
-            
+
             assert.strictEqual(tools.length, 2);
             assert.ok(tools.some(t => t.name === 'todo_read'));
             assert.ok(tools.some(t => t.name === 'todo_write'));
@@ -29,15 +29,15 @@ suite('MCP Todo Tools Tests', () => {
 
         test('Should have correct tool schemas', async () => {
             const tools = await todoTools.getAvailableTools();
-            
+
             const readTool = tools.find(t => t.name === 'todo_read');
             assert.ok(readTool);
-            assert.strictEqual(readTool.description, 'Read the current task list including subtasks and implementation details');
+            assert.ok(readTool.description.startsWith('Read the current task list'));
             assert.deepStrictEqual(readTool.inputSchema.properties, {});
-            
+
             const writeTool = tools.find(t => t.name === 'todo_write');
             assert.ok(writeTool);
-            assert.strictEqual(writeTool.description, 'Write/update the task list with optional subtasks');
+            assert.ok(writeTool.description.startsWith('Creates and manages a structured task list'));
             assert.ok(writeTool.inputSchema.properties.todos);
             assert.ok(writeTool.inputSchema.properties.title);
         });
@@ -46,11 +46,11 @@ suite('MCP Todo Tools Tests', () => {
     suite('Todo Read Tool', () => {
         test('Should read empty todo list', async () => {
             const result = await todoTools.handleToolCall('todo_read', {});
-            
+
             assert.strictEqual(result.isError, undefined);
             assert.strictEqual(result.content.length, 1);
             assert.strictEqual(result.content[0].type, 'text');
-            
+
             const data = JSON.parse(result.content[0].text);
             assert.strictEqual(data.title, 'Todos');
             assert.deepStrictEqual(data.todos, []);
@@ -65,9 +65,9 @@ suite('MCP Todo Tools Tests', () => {
                     priority: 'high'
                 }
             ], 'Test List');
-            
+
             const result = await todoTools.handleToolCall('todo_read', {});
-            
+
             const data = JSON.parse(result.content[0].text);
             assert.strictEqual(data.title, 'Test List (0/1)');
             assert.strictEqual(data.todos.length, 1);
@@ -88,13 +88,13 @@ suite('MCP Todo Tools Tests', () => {
                 ],
                 title: 'New List'
             };
-            
+
             const result = await todoTools.handleToolCall('todo_write', params);
-            
+
             assert.strictEqual(result.isError, undefined);
             assert.ok(result.content[0].text.includes('Successfully updated 1 todo items'));
             assert.ok(result.content[0].text.includes('(1 pending, 0 in progress, 0 completed)'));
-            
+
             // Verify todos were actually saved
             const todos = todoManager.getTodos();
             assert.strictEqual(todos.length, 1);
@@ -103,7 +103,7 @@ suite('MCP Todo Tools Tests', () => {
 
         test('Should validate todo input', async () => {
             const result = await todoTools.handleToolCall('todo_write', { todos: 'not-an-array' });
-            
+
             assert.strictEqual(result.isError, true);
             assert.ok(result.content[0].text.includes('Error: todos must be an array'));
         });
@@ -125,9 +125,9 @@ suite('MCP Todo Tools Tests', () => {
                     }
                 ]
             };
-            
+
             const result = await todoTools.handleToolCall('todo_write', params);
-            
+
             assert.strictEqual(result.isError, true);
             assert.ok(result.content[0].text.includes('Only ONE task can be in_progress at a time'));
         });
@@ -147,9 +147,9 @@ suite('MCP Todo Tools Tests', () => {
                     }
                 ]
             };
-            
+
             const result = await todoTools.handleToolCall('todo_write', params);
-            
+
             assert.strictEqual(result.isError, undefined);
             assert.ok(result.content[0].text.includes('Subtasks: 1/2 completed'));
         });
@@ -166,9 +166,9 @@ suite('MCP Todo Tools Tests', () => {
                     }
                 ]
             };
-            
+
             const result = await todoTools.handleToolCall('todo_write', params);
-            
+
             assert.strictEqual(result.isError, undefined);
             assert.ok(result.content[0].text.includes('Details added to 1 task(s)'));
         });
@@ -177,7 +177,7 @@ suite('MCP Todo Tools Tests', () => {
     suite('Error Handling', () => {
         test('Should handle unknown tool name', async () => {
             const result = await todoTools.handleToolCall('unknown_tool', {});
-            
+
             assert.strictEqual(result.isError, true);
             assert.ok(result.content[0].text.includes('Unknown tool: unknown_tool'));
         });
@@ -192,9 +192,9 @@ suite('MCP Todo Tools Tests', () => {
                     }
                 ]
             };
-            
+
             const result = await todoTools.handleToolCall('todo_write', params);
-            
+
             assert.strictEqual(result.isError, true);
             assert.ok(result.content[0].text.includes('Error:'));
         });

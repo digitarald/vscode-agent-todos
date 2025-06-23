@@ -1,15 +1,16 @@
 This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
 
 !Important:
-- Keep this document up-to-date with the latest architecture and coding standards.
-- NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 
+- Keep this document up-to-date with the latest architecture and coding standards.
+- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
 
 ## Project Overview
 
 This extension provides AI assistants with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
 
 For more details:
+
 - [Main README](../README.md) - Feature overview and usage
 - [MCP Server Documentation](../src/mcp/README.md) - Server architecture and protocol details
 - [VS Code Extension API](https://code.visualstudio.com/api/extension-guides/tools) - Language model tools guide
@@ -25,14 +26,14 @@ graph TB
         CIM[CopilotInstructionsManager]
         SM[SubtaskManager]
     end
-    
+
     subgraph "Storage Layer"
         ITS[ITodoStorage<br/>Interface]
         WSS[WorkspaceStateStorage]
         IMS[InMemoryStorage]
         CIS[CopilotInstructionsStorage]
     end
-    
+
     subgraph "MCP Integration"
         MCP[MCPProvider]
         MCPS[MCP Server<br/>HTTP/SSE]
@@ -40,28 +41,28 @@ graph TB
         TS[TodoSync]
         STM[StandaloneTodoManager]
     end
-    
+
     subgraph "External"
         VSC[VS Code API]
         CI[Copilot Instructions<br/>.github/copilot-instructions.md]
         MC[MCP Clients<br/>AI Assistants]
     end
-    
+
     %% Core flows
     EXT --> TM
     TM --> ITS
     ITS -.-> WSS
     ITS -.-> IMS
     ITS -.-> CIS
-    
+
     %% UI updates
     TM --> TTP
     TTP --> VSC
-    
+
     %% Copilot sync
     TM <--> CIM
     CIM <--> CI
-    
+
     %% MCP server
     EXT --> MCP
     MCP --> MCPS
@@ -69,10 +70,10 @@ graph TB
     MCPS <--> TS
     TS <--> TM
     TS <--> STM
-    
+
     %% External clients
     MC <--> MCPS
-    
+
     %% Subtasks
     TM --> SM
 ```
@@ -120,28 +121,6 @@ src/
 
 ## Required Patterns
 
-### MCP Tool Registration
-
-```typescript
-// MCP tools are registered through the MCP server
-export const todoReadTool = {
-  name: "todo_read",
-  description: "Read the current todo list",
-  inputSchema: {
-    type: "object",
-    properties: {},
-    required: []
-  }
-};
-
-// Dynamic tool registration based on configuration
-if (!config.autoInject) {
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: [todoReadTool, todoWriteTool]
-  }));
-}
-```
-
 ### Storage Pattern
 
 All storage implementations follow [`ITodoStorage`](../src/storage/ITodoStorage.ts) interface:
@@ -154,6 +133,7 @@ const { todos, title } = await storage.load();
 ```
 
 Available implementations:
+
 - [`WorkspaceStateStorage`](../src/storage/WorkspaceStateStorage.ts) - VS Code workspace state
 - [`InMemoryStorage`](../src/storage/InMemoryStorage.ts) - Temporary in-memory storage
 - [`CopilotInstructionsStorage`](../src/storage/CopilotInstructionsStorage.ts) - File-based storage
@@ -208,6 +188,7 @@ See [`package.json`](../package.json) for full configuration:
 ## Data Models
 
 See [`src/types.ts`](../src/types.ts) for complete type definitions:
+
 - `TodoItem` - Main todo structure with status, priority, subtasks, and details
 - `Subtask` - Nested task structure
 - `TodoWriteInput` - Input schema for todo_write tool

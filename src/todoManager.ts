@@ -249,6 +249,8 @@ export class TodoManager {
         const hadTodos = this.todos.length > 0;
         const previousTodoCount = this.todos.length;
         
+        console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
+        
         this.todos = [...todos];
         if (title !== undefined && title !== this.title) {
             this.title = title;
@@ -418,8 +420,13 @@ export class TodoManager {
     }
 
     private saveToStorage(): void {
-        if (!this.context || this.isAutoInjectEnabled()) {
+        if (this.isAutoInjectEnabled()) {
             return; // Don't save to storage if auto-inject is enabled
+        }
+        
+        if (!this.context) {
+            console.warn('[TodoManager] Cannot save to storage: context not initialized');
+            return;
         }
         
         const storageData = {
@@ -427,7 +434,12 @@ export class TodoManager {
             title: this.title
         };
         
-        this.context.workspaceState.update('todoManager.todos', storageData);
+        try {
+            this.context.workspaceState.update('todoManager.todos', storageData);
+            console.log('[TodoManager] Saved todos to workspace storage');
+        } catch (error) {
+            console.error('[TodoManager] Failed to save to storage:', error);
+        }
     }
 
     private loadFromStorage(): void {

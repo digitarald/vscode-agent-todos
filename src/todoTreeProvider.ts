@@ -148,12 +148,29 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
 
     private todoManager: TodoManager;
     private previousTodos: TodoItem[] = [];
+    private isRefreshing: boolean = false;
 
     constructor() {
         this.todoManager = TodoManager.getInstance();
         this.todoManager.onDidChangeTodos(() => {
+            console.log('[TodoTreeProvider] Todos changed, refreshing tree view');
+            
+            // Set refreshing flag to show visual feedback
+            this.isRefreshing = true;
+            
+            // Detect changed items for highlighting
             this.detectChangedItems();
-            this._onDidChangeTreeData.fire();
+            
+            // Fire with undefined to force complete refresh of the tree
+            this._onDidChangeTreeData.fire(undefined);
+            
+            // Reset refreshing flag and trigger decoration refresh after a short delay
+            setTimeout(() => {
+                this.isRefreshing = false;
+                vscode.commands.executeCommand('todoManager.refreshDecorations');
+                // Trigger another refresh to remove the loading state
+                this._onDidChangeTreeData.fire(undefined);
+            }, 300);
         });
     }
 
@@ -208,7 +225,12 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
     }
 
     refresh(): void {
-        this._onDidChangeTreeData.fire();
+        console.log('[TodoTreeProvider] Manual refresh triggered');
+        // Clear previous todos to force complete refresh
+        this.previousTodos = [];
+        this.detectChangedItems();
+        // Fire with undefined to force complete tree refresh
+        this._onDidChangeTreeData.fire(undefined);
     }
 }
 

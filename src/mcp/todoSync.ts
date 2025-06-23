@@ -45,6 +45,7 @@ export class TodoSync {
     try {
       const todos = this.standaloneManager.getTodos();
       const title = this.standaloneManager.getTitle();
+      console.log(`[TodoSync] Syncing to VS Code: ${todos.length} todos`);
       this.vscodeManager.setTodos(todos, title);
     } finally {
       // Reset flag after a short delay to ensure all cascading updates are complete

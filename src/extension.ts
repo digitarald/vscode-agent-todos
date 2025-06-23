@@ -82,6 +82,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage('Todos refreshed!');
 	});
 
+	// Command to refresh decorations only (used internally)
+	const refreshDecorationsCommand = vscode.commands.registerCommand('todoManager.refreshDecorations', () => {
+		decorationProvider.refresh();
+	});
+
 	const toggleTodoStatusCommand = vscode.commands.registerCommand('todoManager.toggleTodoStatus', async (item: any) => {
 		// Handle both direct call with todoId and tree item call
 		const todoId = typeof item === 'string' ? item : item?.todo?.id;
@@ -246,6 +251,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		decorationProviderDisposable,
 		clearTodosCommand,
 		refreshTodosCommand,
+		refreshDecorationsCommand,
 		toggleTodoStatusCommand,
 		deleteTodoCommand,
 		toggleAutoInjectCommand,
