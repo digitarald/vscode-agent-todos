@@ -30,21 +30,21 @@ jobs:
       - name: Check for changes since last release
         id: check_changes
         run: |
-          # Get the latest release tag
-          LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # Get the latest release tag (not pre-release)
+          LATEST_RELEASE_TAG=$(git tag -l | grep -E '^v[0-9]+\.[02468]+\.[0-9]+$' | sort -V | tail -1 || echo "")
 
-          if [[ -z "$LATEST_TAG" ]]; then
+          if [[ -z "$LATEST_RELEASE_TAG" ]]; then
             echo "No previous release found. Will create first release."
             echo "has_changes=true" >> $GITHUB_OUTPUT
           else
-            # Check if there are new commits since the last tag
-            COMMITS_SINCE_TAG=$(git rev-list --count "$LATEST_TAG"..HEAD)
+            # Check if there are new commits since the last release (not pre-release)
+            COMMITS_SINCE_RELEASE=$(git rev-list --count "$LATEST_RELEASE_TAG"..HEAD)
             
-            if [[ $COMMITS_SINCE_TAG -gt 0 ]]; then
-              echo "Found $COMMITS_SINCE_TAG new commits since $LATEST_TAG"
+            if [[ $COMMITS_SINCE_RELEASE -gt 0 ]]; then
+              echo "Found $COMMITS_SINCE_RELEASE new commits since release $LATEST_RELEASE_TAG"
               echo "has_changes=true" >> $GITHUB_OUTPUT
             else
-              echo "No new commits since $LATEST_TAG"
+              echo "No new commits since release $LATEST_RELEASE_TAG"
               echo "has_changes=false" >> $GITHUB_OUTPUT
             fi
           fi
@@ -111,8 +111,14 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Pre-release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
+
+          # Check if tag already exists
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "Tag v${{ steps.version.outputs.version }} already exists, skipping tag creation"
+          else
+            git tag -a "v${{ steps.version.outputs.version }}" -m "Pre-release v${{ steps.version.outputs.version }}"
+            git push origin "v${{ steps.version.outputs.version }}"
+          fi
 
       - name: Generate changelog
         if: steps.check_changes.outputs.has_changes == 'true'
