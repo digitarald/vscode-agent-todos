@@ -66,11 +66,11 @@ export class TodoTreeItem extends vscode.TreeItem {
         switch (todo.status) {
             case 'pending':
                 if (todo.priority === 'high') {
-                    this.iconPath = new vscode.ThemeIcon('circle-large-outline', new vscode.ThemeColor('list.warningForeground'));
+                    this.iconPath = new vscode.ThemeIcon('arrow-circle-up', new vscode.ThemeColor('list.warningForeground'));
                 } else if (todo.priority === 'medium') {
-                    this.iconPath = new vscode.ThemeIcon('circle-outline');
+                    this.iconPath = new vscode.ThemeIcon('arrow-circle-right');
                 } else {
-                    this.iconPath = new vscode.ThemeIcon('circle-outline', new vscode.ThemeColor('descriptionForeground'));
+                    this.iconPath = new vscode.ThemeIcon('arrow-circle-down', new vscode.ThemeColor('descriptionForeground'));
                 }
                 break;
             case 'in_progress':

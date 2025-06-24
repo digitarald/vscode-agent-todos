@@ -94,19 +94,19 @@
         "command": "agentTodos.setPriorityHigh",
         "title": "Set Priority: High",
         "category": "Agent TODOs",
-        "icon": "$(flame)"
+        "icon": "$(arrow-circle-up)"
       },
       {
         "command": "agentTodos.setPriorityMedium",
         "title": "Set Priority: Medium",
         "category": "Agent TODOs",
-        "icon": "$(dash)"
+        "icon": "$(arrow-circle-right)"
       },
       {
         "command": "agentTodos.setPriorityLow",
         "title": "Set Priority: Low",
         "category": "Agent TODOs",
-        "icon": "$(chevron-down)"
+        "icon": "$(arrow-circle-down)"
       },
       {
         "command": "agentTodos.addSubtask",
