@@ -37,7 +37,7 @@ suite('MCP Todo Tools Tests', () => {
 
             const writeTool = tools.find(t => t.name === 'todo_write');
             assert.ok(writeTool);
-            assert.ok(writeTool.description.startsWith('Creates and manages a structured task list'));
+            assert.ok(writeTool.description.includes('Creates and manages a structured task list'));
             assert.ok(writeTool.inputSchema.properties.todos);
             assert.ok(writeTool.inputSchema.properties.title);
         });

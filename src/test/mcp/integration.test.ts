@@ -188,7 +188,16 @@ suite('MCP Integration Tests', () => {
         await config.update('autoInject', false, vscode.ConfigurationTarget.Workspace);
         await new Promise(resolve => setTimeout(resolve, 200));
         
-        // Initially, both tools should be available (auto-inject disabled)
+        // Add todos first so todo_read will be available
+        await todoManager.updateTodos([{
+            id: 'test-1',
+            content: 'Test todo for auto-inject test',
+            status: 'pending',
+            priority: 'medium'
+        }]);
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        // Initially, both tools should be available (auto-inject disabled + todos present)
         let tools = await server.getTodoTools().getAvailableTools();
         assert.strictEqual(tools.length, 2);
         assert.ok(tools.some((t: any) => t.name === 'todo_read'));

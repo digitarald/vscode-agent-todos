@@ -45,9 +45,12 @@ export class TodoTools {
     // Check if we're in standalone mode or if auto-inject is disabled
     const autoInject = this.isAutoInjectEnabled();
     const subtasksEnabled = this.isSubtasksEnabled();
+    const hasTodos = this.todoManager.getTodos().length > 0;
 
-    // Only add todo_read if auto-inject is disabled
-    if (!autoInject) {
+    // Only add todo_read if:
+    // - In standalone mode (always show), OR
+    // - Auto-inject is disabled AND there are todos to read
+    if (this.server.isStandalone() || (!autoInject && hasTodos)) {
       const readDescription = subtasksEnabled
         ? `Read the current task list including subtasks and implementation details to track progress and plan next steps.
 
@@ -92,69 +95,7 @@ Essential for maintaining context and avoiding duplicate work.`;
     }
 
     // Always add todo_write
-    const writeDescription = subtasksEnabled
-      ? `Creates and manages a structured task list with subtasks for tracking progress and organizing work.
-
-USE PROACTIVELY FOR:
-• Complex multi-step tasks (3+ steps)
-• Non-trivial tasks requiring planning
-• Multiple user requests
-• Capturing new instructions
-• Marking tasks in_progress BEFORE starting work
-• Marking completed IMMEDIATELY after finishing, optionally adding implementation notes
-
-SKIP FOR:
-• Single straightforward tasks
-• Trivial operations (<3 steps)
-• Purely conversational requests
-
-RULES:
-• Only ONE task can be in_progress at a time
-• Update status in real-time
-• Complete current tasks before starting new ones
-• Break complex tasks into specific actionable items
-
-REQUIRED FIELDS:
-• id: short unique identifier
-• content: clear action (min 1 char)
-• status: pending/in_progress/completed
-• priority: high/medium/low
-• adr (optional): context, decision log and/or implementation notes
-
-SUBTASKS:
-• Break down complex tasks into manageable subtasks
-• Each subtask needs: id, content, status (pending/completed)
-
-Note: This replaces the entire list, so include all existing todos to keep.`
-      : `Creates and manages a structured task list for tracking progress and organizing work.
-
-USE PROACTIVELY FOR:
-• Complex multi-step tasks (3+ steps)
-• Non-trivial tasks requiring planning
-• Multiple user requests
-• Capturing new instructions
-• Marking tasks in_progress BEFORE starting work
-• Marking completed IMMEDIATELY after finishing, optionally adding implementation notes
-
-SKIP FOR:
-• Single straightforward tasks
-• Trivial operations (<3 steps)
-• Purely conversational requests
-
-RULES:
-• Only ONE task can be in_progress at a time
-• Update status in real-time
-• Complete current tasks before starting new ones
-• Break complex tasks into specific actionable items
-
-FIELDS:
-• id: short unique identifier
-• content: clear action (min 1 char)
-• status: pending/in_progress/completed
-• priority: high/medium/low
-• adr (optional): context, decision log and/or implementation notes
-
-Note: This replaces the entire list, so include all existing todos to keep.`;
+    const writeDescription = this.buildWriteDescription(subtasksEnabled);
 
     tools.push({
       name: 'todo_write',
@@ -166,6 +107,58 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
     });
 
     return tools;
+  }
+
+  private buildWriteDescription(subtasksEnabled: boolean): string {
+    const basePrompt = `Creates and manages a structured task list for tracking progress and organizing work.
+
+<usage_guidelines>
+<use_proactively_for>
+• Complex multi-step tasks (3+ steps)
+• Non-trivial tasks requiring planning
+• Multiple user requests
+• Capturing new instructions
+• Marking tasks in_progress BEFORE starting work
+• Marking completed IMMEDIATELY after finishing
+• Track decisions and implementation notes in the adr field
+</use_proactively_for>
+
+<skip_for>
+• Single straightforward tasks
+• Trivial operations (<3 steps)
+• Purely conversational requests
+</skip_for>
+</usage_guidelines>
+
+<workflow_rules>
+• Only ONE task can be in_progress at a time
+• Update status in real-time
+• Complete current tasks before starting new ones
+• Break complex tasks into specific actionable items
+</workflow_rules>
+
+<parameters>
+• id: short unique identifier
+• content: clear action (min 1 char)
+• status: pending/in_progress/completed
+• priority: high/medium/low
+• adr (optional): context, decision log and/or implementation notes
+</parameters>`;
+
+    const subtasksSection = subtasksEnabled ? `
+
+<subtasks>
+• Break down complex tasks into manageable subtasks
+• Each subtask needs: id, content, status (pending/completed)
+</subtasks>` : '';
+
+    const footerNote = `
+
+<important_note>
+This replaces the entire list, so include all existing todos to keep.
+</important_note>`;
+
+    return basePrompt + subtasksSection + footerNote;
   }
 
   async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
@@ -235,7 +228,7 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
     // Get current state before update for comparison
     const previousTodos = this.todoManager.getTodos();
     const previousTitle = this.todoManager.getTitle();
-    
+
     console.log('[TodoTools.handleWrite] State before update:', {
       previousTodoCount: previousTodos.length,
       previousTitle: previousTitle,
@@ -311,7 +304,7 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
     // Get state after update
     const finalTodos = this.todoManager.getTodos();
     const finalTitle = this.todoManager.getTitle();
-    
+
     console.log('[TodoTools.handleWrite] State after update:', {
       finalTodoCount: finalTodos.length,
       finalTitle: finalTitle,
@@ -489,7 +482,7 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
             properties: {
               id: {
                 type: 'string',
-                description: 'Unique identifier'
+                description: 'Show unique identifier'
               },
               content: {
                 type: 'string',
@@ -505,6 +498,10 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
                 type: 'string',
                 enum: ['low', 'medium', 'high'],
                 description: 'Urgency level'
+              },
+              adr: {
+                type: 'string',
+                description: 'Architecture decisions, rationale, or implementation notes'
               }
             },
             required: ['id', 'content', 'status', 'priority']
@@ -518,7 +515,7 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
       required: ['todos']
     };
 
-    // Add subtasks and details if enabled
+    // Add subtasks if enabled
     if (subtasksEnabled) {
       schema.properties.todos.items.properties.subtasks = {
         type: 'array',
@@ -543,11 +540,6 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
           },
           required: ['id', 'content', 'status']
         }
-      };
-
-      schema.properties.todos.items.properties.adr = {
-        type: 'string',
-        description: 'Architecture decisions, rationale, or implementation notes'
       };
     }
 

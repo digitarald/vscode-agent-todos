@@ -360,6 +360,50 @@ export class TodoMCPServerProvider
 }
 ```
 
+### Dynamic Configuration Updates
+
+The MCP server supports dynamic configuration updates without requiring server restart:
+
+```typescript
+// Configuration changes are broadcast to all active sessions
+todoManager.onDidChangeConfiguration((config) => {
+  server.broadcastUpdate({
+    type: 'configuration-changed',
+    config: {
+      autoInject: config.autoInject,
+      enableSubtasks: config.enableSubtasks
+    }
+  });
+});
+
+// Todo changes also trigger tool updates for conditional visibility
+todoManager.onDidChange((change) => {
+  server.broadcastUpdate({
+    type: 'todos-updated',
+    todos: change.todos,
+    title: change.title
+  });
+});
+
+// Server re-registers handlers for all sessions on config/todo change
+private updateAllSessionHandlers(): void {
+  for (const [sessionId, server] of this.servers) {
+    this.registerHandlers(server);
+  }
+}
+```
+
+**Key Features:**
+- Tool schemas update immediately when settings change
+- All active MCP sessions receive updated tool definitions
+- No server restart required for configuration changes
+- Subtasks can be enabled/disabled dynamically via VS Code settings
+- `todo_read` tool dynamically appears/disappears based on todo list state:
+  - Hidden when todo list is empty (unless in standalone mode)
+  - Appears when todos are added
+  - Disappears again when all todos are removed
+  - Always hidden when auto-inject is enabled (todos available in instructions)
+
 ### Tree View Pattern
 
 ```typescript

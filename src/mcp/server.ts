@@ -203,6 +203,7 @@ export class TodoMCPServer {
 
     // Register tool handlers with proper schemas
     server.setRequestHandler(ListToolsRequestSchema, async () => {
+      // Always get fresh tools to reflect current configuration
       const tools = await this.todoTools!.getAvailableTools();
       return { tools };
     });
@@ -232,6 +233,16 @@ export class TodoMCPServer {
 
       return await this.todoTools!.handleToolCall(name, args, context);
     });
+  }
+
+  private updateAllSessionHandlers(): void {
+    console.log(`[MCPServer] Updating handlers for ${this.servers.size} active sessions`);
+    
+    // Re-register handlers for all active sessions
+    for (const [sessionId, server] of this.servers) {
+      console.log(`[MCPServer] Re-registering handlers for session: ${sessionId}`);
+      this.registerHandlers(server);
+    }
   }
 
   private cleanupSession(sessionId: string): void {
@@ -264,12 +275,15 @@ export class TodoMCPServer {
     // Each session maintains its own state
     console.log('Update event:', event);
 
-    // If this is a configuration change event, we should reinitialize tools
-    // to ensure they reflect the latest configuration
-    if (event.type === 'configuration-changed' && this.todoTools && this.todoManager) {
-      // Recreate tools with updated configuration
-      this.todoTools = new TodoTools(this.todoManager, this);
-      console.log('MCP tools reinitialized due to configuration change');
+    // If this is a configuration change event OR todos update, we should reinitialize tools
+    // to ensure they reflect the latest configuration and todo state
+    if ((event.type === 'configuration-changed' || event.type === 'todos-updated') && this.todoTools && this.todoManager) {
+      // Recreate tools with updated configuration/state
+      this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
+      console.log(`MCP tools reinitialized due to ${event.type}`);
+      
+      // Update handlers for all active sessions to reflect new tool schemas
+      this.updateAllSessionHandlers();
     }
   }
 
