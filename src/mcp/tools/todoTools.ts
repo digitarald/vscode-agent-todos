@@ -52,32 +52,48 @@ export class TodoTools {
     // - Auto-inject is disabled AND there are todos to read
     if (this.server.isStandalone() || (!autoInject && hasTodos)) {
       const readDescription = subtasksEnabled
-        ? `Read the current task list including subtasks and implementation details to track progress and plan next steps.
+        ? `CRITICAL WORKFLOW TOOL: Always check current tasks before making any changes or starting work.
 
-IMPORTANT: Use PROACTIVELY and FREQUENTLY:
-• At conversation start to see pending work
-• Before starting new tasks to prioritize
-• When user asks about previous tasks
-• Whenever uncertain about next steps
-• After completing tasks to update understanding
-• Every few messages to stay on track
+# MANDATORY USAGE - Never Skip This Tool
+• **IMMEDIATELY** at conversation start (before any other actions)
+• **BEFORE** planning any development work or code changes
+• **WHEN** user mentions tasks, features, bugs, or project planning
+• **AFTER** completing work to maintain accurate context
+• **EVERY** 3-4 messages to stay synchronized with active work
+• **WHENEVER** uncertain about priorities or next steps
 
-Returns all todos with status/priority/content plus any subtasks and implementation details.
-Empty list if no todos exist yet.
-Essential for maintaining context and avoiding duplicate work.`
-        : `Read the current task list to track progress and plan next steps.
+# Tool Purpose
+Retrieves all active todos with status/priority/content plus subtasks and implementation details.
+Returns empty list only if no planning has occurred yet.
 
-IMPORTANT: Use PROACTIVELY and FREQUENTLY:
-• At conversation start to see pending work
-• Before starting new tasks to prioritize
-• When user asks about previous tasks
-• Whenever uncertain about next steps
-• After completing tasks to update understanding
-• Every few messages to stay on track
+# Why This Matters
+- Prevents duplicate work and conflicting efforts
+- Maintains development workflow continuity
+- Ensures proper task prioritization
+- Critical for maintaining project context
 
-Returns all todos with status/priority/content.
-Empty list if no todos exist yet.
-Essential for maintaining context and avoiding duplicate work.`;
+**If list is empty, use todo_write immediately to start planning work.**`
+        : `CRITICAL WORKFLOW TOOL: Always check current tasks before making any changes or starting work.
+
+# MANDATORY USAGE - Never Skip This Tool
+• **IMMEDIATELY** at conversation start (before any other actions)
+• **BEFORE** planning any development work or code changes
+• **WHEN** user mentions tasks, features, bugs, or project planning
+• **AFTER** completing work to maintain accurate context
+• **EVERY** 3-4 messages to stay synchronized with active work
+• **WHENEVER** uncertain about priorities or next steps
+
+# Tool Purpose
+Retrieves all active todos with status/priority/content.
+Returns empty list only if no planning has occurred yet.
+
+# Why This Matters
+- Prevents duplicate work and conflicting efforts
+- Maintains development workflow continuity
+- Ensures proper task prioritization
+- Critical for maintaining project context
+
+**If list is empty, use todo_write immediately to start planning work.**`;
 
       tools.push({
         name: 'todo_read',
@@ -110,53 +126,64 @@ Essential for maintaining context and avoiding duplicate work.`;
   }
 
   private buildWriteDescription(subtasksEnabled: boolean): string {
-    const basePrompt = `Creates and manages a structured task list for tracking progress and organizing work.
+    const basePrompt = `ESSENTIAL PLANNING TOOL: Plan ALL development work before coding. Use this tool for ANY user request involving code changes.
 
-<usage_guidelines>
-<use_proactively_for>
-• Complex multi-step tasks (3+ steps)
-• Non-trivial tasks requiring planning
-• Multiple user requests
-• Capturing new instructions
-• Marking tasks in_progress BEFORE starting work
-• Marking completed IMMEDIATELY after finishing
-• Track decisions and implementation notes in the adr field
-</use_proactively_for>
+# Role and Objective
+Transform user requests into structured, actionable tasks that drive development forward systematically.
 
-<skip_for>
-• Single straightforward tasks
-• Trivial operations (<3 steps)
-• Purely conversational requests
-</skip_for>
-</usage_guidelines>
+# Instructions - When To Use This Tool
 
-<workflow_rules>
-• Only ONE task can be in_progress at a time
-• Update status in real-time
-• Complete current tasks before starting new ones
-• Break complex tasks into specific actionable items
-</workflow_rules>
+## ALWAYS Use For (Never Skip These):
+• **ANY** user request requiring code changes or multiple steps
+• **IMMEDIATELY** when user mentions features, bugs, improvements, or tasks
+• **ALL** development work (planning is mandatory before implementation)
+• **EVERY** multi-file change or refactoring request
+• **ARCHITECTURE** decisions and technical planning sessions
+• **BREAKING DOWN** user requirements into actionable steps
 
-<parameters>
-• id: short unique identifier
-• content: clear action (min 1 char)
-• status: pending/in_progress/completed
-• priority: high/medium/low
-• adr (optional): context, decision log and/or implementation notes
-</parameters>`;
+## NEVER Skip For:
+• Complex multi-step tasks (3+ actions) - planning is mandatory
+• Any coding task - no exceptions to planning requirement
+• User feature requests - break down immediately into tasks
+• Multiple user requests in single conversation
+• Technical debt or refactoring work
+• New functionality implementation
+
+# Workflow Requirements - Strict Adherence Required
+1. **Plan Before Code**: NEVER write code without planning tasks first
+2. **Single Progress**: Only ONE task can be in_progress at any time
+3. **Real-time Updates**: Mark in_progress BEFORE starting, completed IMMEDIATELY when done
+4. **Incremental Progress**: Break complex requests into specific, testable steps
+5. **Document Decisions**: Use adr field for architectural decisions and implementation notes
+
+# Parameters - Required Fields
+• **id**: Short, unique kebab-case identifier (e.g., "fix-login-bug")
+• **content**: Clear, actionable task description (minimum 1 character)
+• **status**: One of pending/in_progress/completed (enforce single in_progress rule)
+• **priority**: Set based on user needs - high/medium/low
+• **adr**: Optional but recommended for technical context, decisions, rationale`;
 
     const subtasksSection = subtasksEnabled ? `
 
-<subtasks>
-• Break down complex tasks into manageable subtasks
-• Each subtask needs: id, content, status (pending/completed)
-</subtasks>` : '';
+# Subtasks - Required for Complex Tasks
+• **ALWAYS** break complex tasks (3+ steps) into manageable subtasks
+• **EACH** subtask requires: id, content, status (pending/completed)
+• **USE** for any task involving multiple files, functions, or major steps
+• **MARK** subtasks completed as you finish each step to track progress` : '';
 
     const footerNote = `
 
-<important_note>
-This replaces the entire list, so include all existing todos to keep.
-</important_note>`;
+# CRITICAL WARNING - Data Replacement
+⚠️ **This tool REPLACES the entire todo list** - include existing todos you want to keep.
+⚠️ **Use todo_read first** if uncertain about current todos before updating.
+⚠️ **NEVER lose existing work** by forgetting to include current todos in the update.
+
+# Success Pattern
+1. Read current todos (if any exist)
+2. Plan new work by adding/updating tasks  
+3. Mark appropriate task as in_progress before coding
+4. Update progress as you work
+5. Mark completed when finished`;
 
     return basePrompt + subtasksSection + footerNote;
   }
@@ -476,32 +503,32 @@ This replaces the entire list, so include all existing todos to keep.
       properties: {
         todos: {
           type: 'array',
-          description: 'Complete list of todos (replaces existing list)',
+          description: 'Complete array of all todos (this replaces the entire existing list)',
           items: {
             type: 'object',
             properties: {
               id: {
                 type: 'string',
-                description: 'Show unique identifier'
+                description: 'Unique kebab-case identifier for the task (e.g., "implement-user-auth")'
               },
               content: {
                 type: 'string',
                 minLength: 1,
-                description: 'Clear, actionable task description'
+                description: 'Clear, specific description of what needs to be done'
               },
               status: {
                 type: 'string',
                 enum: ['pending', 'in_progress', 'completed'],
-                description: 'Task state (only ONE in_progress allowed)'
+                description: 'Current state: pending (not started), in_progress (actively working), completed (finished). Only ONE task can be in_progress.'
               },
               priority: {
                 type: 'string',
                 enum: ['low', 'medium', 'high'],
-                description: 'Urgency level'
+                description: 'Importance level: high (urgent/critical), medium (important), low (nice-to-have)'
               },
               adr: {
                 type: 'string',
-                description: 'Architecture decisions, rationale, or implementation notes'
+                description: 'Architecture Decision Record: technical context, rationale, implementation notes, or decisions made'
               }
             },
             required: ['id', 'content', 'status', 'priority']
@@ -509,7 +536,7 @@ This replaces the entire list, so include all existing todos to keep.
         },
         title: {
           type: 'string',
-          description: 'Optional list title (e.g., project name)'
+          description: 'Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)'
         }
       },
       required: ['todos']
@@ -519,23 +546,23 @@ This replaces the entire list, so include all existing todos to keep.
     if (subtasksEnabled) {
       schema.properties.todos.items.properties.subtasks = {
         type: 'array',
-        description: 'Break down complex tasks into smaller steps',
+        description: 'Break complex tasks into smaller, manageable steps. Use for any task with 3+ actions.',
         items: {
           type: 'object',
           properties: {
             id: {
               type: 'string',
-              description: 'Unique subtask ID'
+              description: 'Unique kebab-case identifier for this subtask'
             },
             content: {
               type: 'string',
               minLength: 1,
-              description: 'Subtask description'
+              description: 'Specific action or step to complete'
             },
             status: {
               type: 'string',
               enum: ['pending', 'completed'],
-              description: 'Completion state'
+              description: 'Completion state: pending (not done) or completed (finished)'
             }
           },
           required: ['id', 'content', 'status']

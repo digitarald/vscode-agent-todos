@@ -9,6 +9,38 @@ IMPORTANT:
 - NEVER make changes backwards compatible unless explicitly requested by the User.
 - NEVER create one-off scripts to test changes.
 
+## Tool Prompt Optimization Strategy
+
+The MCP todo tools use **highly optimized prompts** designed to trigger proactive usage by AI agents, following OpenAI GPT-4.1 prompting best practices:
+
+### Key Optimization Principles:
+
+1. **Imperative Language**: Commands like "ALWAYS", "IMMEDIATELY", "MANDATORY" instead of passive descriptions
+2. **Planning-First Messaging**: Emphasizes planning as essential before any coding work
+3. **Psychological Triggers**: Uses urgency words and patterns that compel immediate action
+4. **Development Workflow Integration**: Directly connects todo usage to coding workflows
+5. **Mandatory Usage Patterns**: Explicitly lists when tools MUST be used (not just suggested)
+6. **Structured Sections**: Clear role/objective, instructions, workflow requirements following GPT-4.1 guide
+7. **Detailed Parameter Descriptions**: Rich context for each schema field to guide proper usage
+
+### OpenAI GPT-4.1 Optimizations Applied:
+
+- **Agentic Persistence**: Tool descriptions encourage continued usage until completion
+- **Clear Tool Purpose**: Specific when/why to use each tool with concrete examples
+- **Instruction Structure**: Markdown sections with clear hierarchy and formatting
+- **Parameter Clarity**: Detailed JSON schema descriptions with examples and constraints
+- **Workflow Integration**: Tools positioned as critical workflow components, not optional aids
+
+### Current Prompt Features:
+
+- **todo_read**: Structured with "CRITICAL WORKFLOW TOOL" and "MANDATORY USAGE" sections
+- **todo_write**: Organized with "Role and Objective", "Instructions", "Workflow Requirements"
+- **Rich Descriptions**: Parameter schemas include context, examples, and usage guidance
+- **Warning Systems**: Critical warnings about data replacement and workflow requirements
+- **Success Patterns**: Step-by-step guidance for proper tool usage workflows
+
+These optimizations significantly increase the likelihood that AI agents will proactively use the todo management tools during development conversations.
+
 ## Project Overview
 
 This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
@@ -396,6 +428,7 @@ private updateAllSessionHandlers(): void {
 ```
 
 **Key Features:**
+
 - Tool schemas update immediately when settings change
 - All active MCP sessions receive updated tool definitions
 - No server restart required for configuration changes
@@ -427,29 +460,26 @@ export class TodoTreeDataProvider
 }
 ```
 
-### Empty State Pattern
+### Welcome View Pattern
 
-When the todo list is empty, show an interactive empty state item with click action:
+When the todo list is empty, VS Code displays a welcome view with helpful content:
 
-```typescript
-export class EmptyStateTreeItem extends vscode.TreeItem {
-  constructor() {
-    super("No todos yet", vscode.TreeItemCollapsibleState.None);
-    this.description = "Get started by adding your first task";
-    this.iconPath = new vscode.ThemeIcon(
-      "info",
-      new vscode.ThemeColor("descriptionForeground")
-    );
-    this.tooltip = "Click to start planning with AI";
-    this.command = {
-      command: "agentTodos.startPlanning",
-      title: "Start Planning",
-    };
+```json
+"viewsWelcome": [
+  {
+    "view": "agentTodos",
+    "contents": "No todos yet. Start by planning your tasks.\n\n[Start Planning](command:agentTodos.startPlanning)\n\nOr add todos using the language model tools available in your AI assistant.",
+    "when": "!agentTodos.hasTodos"
   }
-}
+]
 ```
 
-This enables users to click the empty state to open VS Code's chat with a planning prompt.
+This provides a clean empty state with:
+
+- Clear messaging about the empty state
+- A button to start planning that opens VS Code's chat
+- Instructions for using the language model tools
+- Automatic visibility controlled by the `agentTodos.hasTodos` context key
 
 ### Package.json Contributions
 

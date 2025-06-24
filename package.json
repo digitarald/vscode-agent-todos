@@ -306,6 +306,13 @@
         }
       }
     },
+    "viewsWelcome": [
+      {
+        "view": "agentTodos",
+        "contents": "No todos yet. Start by planning your tasks.\n\n[Start Planning](command:agentTodos.startPlanning)\n\nOr add todos using the language model tools available in agent mode.",
+        "when": "!agentTodos.hasTodos"
+      }
+    ],
     "mcpServerDefinitionProviders": [
       {
         "id": "todos-mcp-provider",

@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { TodoMCPServerProvider } from '../../mcp/mcpProvider';
 import { TodoManager } from '../../todoManager';
-import { TodoTreeDataProvider } from '../../todoTreeProvider';
+import { TodoTreeDataProvider, TodoTreeItem } from '../../todoTreeProvider';
 
 suite('MCP Empty State Transition Tests', () => {
     let provider: TodoMCPServerProvider;
@@ -62,10 +62,9 @@ suite('MCP Empty State Transition Tests', () => {
         let todos = todoManager.getTodos();
         assert.strictEqual(todos.length, 0, 'Should start with no todos');
         
-        // Check tree shows empty state
+        // Check tree shows empty state (no children with welcome view)
         let children = await treeProvider.getChildren();
-        assert.strictEqual(children.length, 1, 'Should show one item (empty state)');
-        assert.strictEqual(children[0].label, 'No todos yet');
+        assert.strictEqual(children.length, 0, 'Should show no items (welcome view handles empty state)');
         
         // Track if tree refresh was triggered
         let refreshTriggered = false;
@@ -103,10 +102,13 @@ suite('MCP Empty State Transition Tests', () => {
             // Verify tree refresh was triggered
             assert.ok(refreshTriggered, 'Tree refresh should have been triggered');
             
-            // Check tree no longer shows empty state
+            // Check tree now shows todo items
             children = await treeProvider.getChildren();
-            assert.ok(children.length > 0, 'Should have at least one item');
-            assert.ok(children[0].label !== 'No todos yet', 'Should not show empty state');
+            assert.strictEqual(children.length, 1, 'Should have one todo item');
+            assert.ok(children[0] instanceof TodoTreeItem, 'Should be a TodoTreeItem');
+            if (children[0] instanceof TodoTreeItem) {
+                assert.strictEqual(children[0].todo.content, 'First todo after empty', 'Should show the added todo');
+            }
         } finally {
             disposable.dispose();
         }
@@ -160,10 +162,9 @@ suite('MCP Empty State Transition Tests', () => {
             // Verify tree refresh was triggered
             assert.ok(refreshTriggered, 'Tree refresh should have been triggered');
             
-            // Check tree shows empty state
+            // Check tree shows empty state (no children with welcome view)
             const children = await treeProvider.getChildren();
-            assert.strictEqual(children.length, 1, 'Should show one item');
-            assert.strictEqual(children[0].label, 'No todos yet', 'Should show empty state');
+            assert.strictEqual(children.length, 0, 'Should show no items (welcome view handles empty state)');
         } finally {
             disposable.dispose();
         }
@@ -215,10 +216,9 @@ suite('MCP Empty State Transition Tests', () => {
             // Should have triggered multiple refreshes
             assert.ok(refreshCount >= 3, `Should have triggered at least 3 refreshes, got ${refreshCount}`);
             
-            // Tree should show empty state
+            // Tree should show empty state (no children with welcome view)
             const children = await treeProvider.getChildren();
-            assert.strictEqual(children.length, 1, 'Should show one item');
-            assert.strictEqual(children[0].label, 'No todos yet', 'Should show empty state');
+            assert.strictEqual(children.length, 0, 'Should show no items (welcome view handles empty state)');
         } finally {
             disposable.dispose();
         }

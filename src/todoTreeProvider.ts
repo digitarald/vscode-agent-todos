@@ -3,20 +3,6 @@ import { TodoItem, Subtask } from './types';
 import { TodoManager } from './todoManager';
 import { SubtaskManager } from './subtaskManager';
 
-export class EmptyStateTreeItem extends vscode.TreeItem {
-    constructor() {
-        super('No todos yet', vscode.TreeItemCollapsibleState.None);
-        this.description = 'Get started by adding your first task';
-        this.iconPath = new vscode.ThemeIcon('info', new vscode.ThemeColor('descriptionForeground'));
-        this.contextValue = 'emptyState';
-        this.tooltip = 'Click to start planning with AI';
-        this.command = {
-            command: 'agentTodos.startPlanning',
-            title: 'Start Planning'
-        };
-    }
-}
-
 export class TodoTreeItem extends vscode.TreeItem {
     private static recentlyChangedItems = new Set<string>();
 
@@ -146,8 +132,8 @@ export class SubtaskTreeItem extends vscode.TreeItem {
     }
 }
 
-export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeItem | SubtaskTreeItem | EmptyStateTreeItem> {
-    private readonly _onDidChangeTreeData = new vscode.EventEmitter<TodoTreeItem | SubtaskTreeItem | EmptyStateTreeItem | undefined | null | void>();
+export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeItem | SubtaskTreeItem> {
+    private readonly _onDidChangeTreeData = new vscode.EventEmitter<TodoTreeItem | SubtaskTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     private todoManager: TodoManager;
@@ -185,19 +171,14 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
         this.previousTodos = [...currentTodos];
     }
 
-    getTreeItem(element: TodoTreeItem | SubtaskTreeItem | EmptyStateTreeItem): vscode.TreeItem {
+    getTreeItem(element: TodoTreeItem | SubtaskTreeItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: TodoTreeItem | SubtaskTreeItem | EmptyStateTreeItem): Thenable<(TodoTreeItem | SubtaskTreeItem | EmptyStateTreeItem)[]> {
+    getChildren(element?: TodoTreeItem | SubtaskTreeItem): Thenable<(TodoTreeItem | SubtaskTreeItem)[]> {
         if (!element) {
-            // Root level - return all todos or empty state
+            // Root level - return all todos
             const todos = this.todoManager.getTodos();
-
-            if (todos.length === 0) {
-                // Show empty state
-                return Promise.resolve([new EmptyStateTreeItem()]);
-            }
 
             return Promise.resolve(
                 todos.map(todo => new TodoTreeItem(todo))

@@ -12,15 +12,6 @@ export async function activate(context: vscode.ExtensionContext) {
 		const todoManager = TodoManager.getInstance();
 		todoManager.initialize(context);
 
-		// Function to update toggle command titles based on current settings
-		const updateToggleCommandTitles = () => {
-			const config = vscode.workspace.getConfiguration('agentTodos');
-			const autoInjectEnabled = config.get<boolean>('autoInject', false);
-			const autoOpenViewEnabled = config.get<boolean>('autoOpenView', true);
-
-			// We can't directly update command titles, but we can show the state in the menu
-			// This is handled via the when clauses in package.json and updated icons
-		};
 
 		// Register file decoration provider for todo styling
 		const decorationProvider = new TodoDecorationProvider();
