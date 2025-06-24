@@ -4,7 +4,6 @@ import { TodoItem } from './types';
 
 export class CopilotInstructionsManager {
     private static instance: CopilotInstructionsManager;
-    private readonly instructionsFileName = '.github/copilot-instructions.md';
     private writeInProgress = false;
     private pendingWrite: { todos: TodoItem[], title?: string } | null = null;
 
@@ -17,13 +16,64 @@ export class CopilotInstructionsManager {
         return CopilotInstructionsManager.instance;
     }
 
+    private validateFilePath(filePath: string): boolean {
+        // Check for empty or whitespace-only paths
+        if (!filePath || filePath.trim().length === 0) {
+            return false;
+        }
+
+        // Check for potentially dangerous paths
+        const normalizedPath = path.normalize(filePath);
+
+        // Reject paths that try to escape the workspace root with relative paths
+        if (normalizedPath.includes('..') && !path.isAbsolute(normalizedPath)) {
+            console.warn(`[CopilotInstructionsManager] Potentially unsafe relative path: ${filePath}`);
+            return false;
+        }
+
+        // Ensure path has a valid file extension for markdown
+        if (!normalizedPath.endsWith('.md')) {
+            console.warn(`[CopilotInstructionsManager] File path should end with .md: ${filePath}`);
+            // Return true but warn - we don't want to break functionality for non-md files
+            return true;
+        }
+
+        return true;
+    }
+
+    private getConfiguredFilePath(): string {
+        try {
+            const config = vscode.workspace.getConfiguration('todoManager');
+            const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+
+            if (!this.validateFilePath(filePath)) {
+                console.warn(`[CopilotInstructionsManager] Invalid file path configured: ${filePath}, using default`);
+                return '.github/copilot-instructions.md';
+            }
+
+            return filePath;
+        } catch (error) {
+            // Default when vscode is not available
+            return '.github/copilot-instructions.md';
+        }
+    }
+
     private getInstructionsFileUri(): vscode.Uri | null {
         try {
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
                 return null;
             }
-            return vscode.Uri.joinPath(workspaceFolder.uri, this.instructionsFileName);
+
+            const filePath = this.getConfiguredFilePath();
+
+            // Check if the path is absolute
+            if (path.isAbsolute(filePath)) {
+                return vscode.Uri.file(filePath);
+            } else {
+                // Treat as relative to workspace root
+                return vscode.Uri.joinPath(workspaceFolder.uri, filePath);
+            }
         } catch (error) {
             return null; // vscode not available
         }
@@ -130,7 +180,7 @@ export class CopilotInstructionsManager {
             vscode.window.showErrorMessage(`Failed to update copilot instructions: ${error}`);
         } finally {
             this.writeInProgress = false;
-            
+
             // Process any pending write
             if (this.pendingWrite) {
                 const pending = this.pendingWrite;
@@ -319,6 +369,6 @@ export class CopilotInstructionsManager {
     }
 
     public getInstructionsFilePath(): string {
-        return this.instructionsFileName;
+        return this.getConfiguredFilePath();
     }
 }

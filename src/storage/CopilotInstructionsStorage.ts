@@ -5,18 +5,29 @@ import { ITodoStorage } from './ITodoStorage';
 import { TodoItem, Subtask } from '../types';
 
 export class CopilotInstructionsStorage extends EventEmitter implements ITodoStorage {
-    private readonly instructionsFileName = '.github/copilot-instructions.md';
     private fileWatcher: fs.FSWatcher | undefined;
     private isUpdatingFile: boolean = false;
     private updateDebounceTimer: NodeJS.Timeout | undefined;
 
-    constructor(private workspaceRoot: string) {
+    constructor(private workspaceRoot: string, private filePath?: string) {
         super();
         this.startWatchingFile();
     }
 
+    private getConfiguredFilePath(): string {
+        return this.filePath || '.github/copilot-instructions.md';
+    }
+
     private getInstructionsPath(): string {
-        return path.join(this.workspaceRoot, this.instructionsFileName);
+        const configuredPath = this.getConfiguredFilePath();
+
+        // Check if the path is absolute
+        if (path.isAbsolute(configuredPath)) {
+            return configuredPath;
+        } else {
+            // Treat as relative to workspace root
+            return path.join(this.workspaceRoot, configuredPath);
+        }
     }
 
     async load(): Promise<{ todos: TodoItem[], title: string }> {

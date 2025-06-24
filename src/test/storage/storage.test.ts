@@ -149,5 +149,48 @@ This is my custom content that should be preserved.
             assert.ok(content.includes('New todo'));
             assert.ok(!content.includes('Old todo'));
         });
+
+        test('should use custom file path when provided', async () => {
+            // Create storage with custom file path
+            const customPath = 'custom-instructions.md';
+            const customStorage = new CopilotInstructionsStorage(tempDir, customPath);
+            const customInstructionsPath = path.join(tempDir, customPath);
+
+            const todos: TodoItem[] = [
+                { id: 'test', content: 'Test todo', status: 'pending', priority: 'medium' }
+            ];
+
+            await customStorage.save(todos, 'Test Title');
+
+            // Verify file was created at custom path
+            assert.ok(fs.existsSync(customInstructionsPath), 'Custom file should exist');
+
+            const content = fs.readFileSync(customInstructionsPath, 'utf8');
+            assert.ok(content.includes('Test todo'), 'Content should include the todo');
+
+            // Clean up
+            customStorage.dispose();
+        });
+
+        test('should handle absolute file paths', async () => {
+            // Create storage with absolute file path
+            const absolutePath = path.join(tempDir, 'absolute-instructions.md');
+            const absoluteStorage = new CopilotInstructionsStorage(tempDir, absolutePath);
+
+            const todos: TodoItem[] = [
+                { id: 'absolute', content: 'Absolute path todo', status: 'pending', priority: 'medium' }
+            ];
+
+            await absoluteStorage.save(todos, 'Absolute Title');
+
+            // Verify file was created at absolute path
+            assert.ok(fs.existsSync(absolutePath), 'Absolute path file should exist');
+
+            const content = fs.readFileSync(absolutePath, 'utf8');
+            assert.ok(content.includes('Absolute path todo'), 'Content should include the todo');
+
+            // Clean up
+            absoluteStorage.dispose();
+        });
     });
 });

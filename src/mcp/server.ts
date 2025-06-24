@@ -45,13 +45,13 @@ export class TodoMCPServer {
 
     // Setup Express app
     this.app = express();
-    
-    
+
+
     // Configure body parsing middleware with proper options
     this.app.use(express.json({ type: 'application/json' }));
     this.app.use(express.text({ type: 'text/plain' }));
     this.app.use(express.raw({ type: 'application/octet-stream' }));
-    
+
     // Setup basic routes immediately
     this.setupBasicRoutes();
   }
@@ -61,7 +61,7 @@ export class TodoMCPServer {
     const mcpModule = await import('@modelcontextprotocol/sdk/server/index.js');
     const httpModule = await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
     const typesModule = await import('@modelcontextprotocol/sdk/types.js');
-    
+
     Server = mcpModule.Server;
     StreamableHTTPServerTransport = httpModule.StreamableHTTPServerTransport;
     ListToolsRequestSchema = typesModule.ListToolsRequestSchema;
@@ -96,7 +96,7 @@ export class TodoMCPServer {
     // Handle POST requests for client-to-server communication
     this.app.post('/mcp', async (req: Request, res: Response) => {
       try {
-        
+
         const sessionId = req.headers['mcp-session-id'] as string | undefined;
         let transport = sessionId ? this.transports.get(sessionId) : undefined;
         let server = sessionId ? this.servers.get(sessionId) : undefined;
@@ -104,7 +104,7 @@ export class TodoMCPServer {
         // If no existing session and this is an initialize request, create new session
         if (!transport && this.isInitializeRequest(req.body)) {
           const newSessionId = randomUUID();
-          
+
           // Create transport with session
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => newSessionId,
@@ -113,7 +113,7 @@ export class TodoMCPServer {
               this.transports.set(sessionId, transport);
             }
           });
-          
+
           // Clean up transport when closed
           transport.onclose = () => {
             if (transport.sessionId) {
@@ -133,7 +133,7 @@ export class TodoMCPServer {
               }
             }
           );
-          
+
           // Store server
           this.servers.set(newSessionId, server);
 
@@ -147,8 +147,8 @@ export class TodoMCPServer {
         }
 
         if (!transport) {
-          res.status(400).json({ 
-            error: 'No session found. Send initialize request first.' 
+          res.status(400).json({
+            error: 'No session found. Send initialize request first.'
           });
           return;
         }
@@ -157,10 +157,10 @@ export class TodoMCPServer {
         await transport.handleRequest(req, res, req.body);
       } catch (error) {
         console.error('Error handling MCP request:', error);
-        res.status(500).json({ 
+        res.status(500).json({
           jsonrpc: '2.0',
-          error: { 
-            code: -32603, 
+          error: {
+            code: -32603,
             message: 'Internal error',
             data: error instanceof Error ? error.message : String(error)
           }
@@ -175,14 +175,14 @@ export class TodoMCPServer {
         res.status(400).send('Invalid or missing session ID');
         return;
       }
-      
+
       const transport = this.transports.get(sessionId)!;
       await transport.handleRequest(req, res);
     };
-    
+
     // Handle GET requests for server-to-client notifications via SSE
     this.app.get('/mcp', handleSessionRequest);
-    
+
     // Handle DELETE requests for session termination
     this.app.delete('/mcp', handleSessionRequest);
 
@@ -205,7 +205,7 @@ export class TodoMCPServer {
 
     server.setRequestHandler(CallToolRequestSchema, async (request: any, extra: any) => {
       const { name, arguments: args } = request.params;
-      
+
       console.log('[MCPServer] CallToolRequest:', {
         toolName: name,
         hasExtra: !!extra,
@@ -218,14 +218,14 @@ export class TodoMCPServer {
         fullRequest: JSON.stringify(request, null, 2),
         fullExtra: JSON.stringify(extra, null, 2)
       });
-      
+
       const context = {
         sendNotification: extra?.sendNotification,
         _meta: request.params._meta
       };
-      
+
       console.log('[MCPServer] Passing context to tool:', JSON.stringify(context, null, 2));
-      
+
       return await this.todoTools!.handleToolCall(name, args, context);
     });
   }
@@ -259,7 +259,7 @@ export class TodoMCPServer {
     // In HTTP mode with sessions, updates aren't broadcast
     // Each session maintains its own state
     console.log('Update event:', event);
-    
+
     // If this is a configuration change event, we should reinitialize tools
     // to ensure they reflect the latest configuration
     if (event.type === 'configuration-changed' && this.todoTools && this.todoManager) {
@@ -275,13 +275,13 @@ export class TodoMCPServer {
     }
 
     const serverPort = port || this.config.port || 3000;
-    
+
     // Initialize MCP components BEFORE creating the server
     await this.initialize();
-    
+
     return new Promise((resolve, reject) => {
       this.httpServer = createServer(this.app);
-      
+
       this.httpServer.listen(serverPort, () => {
         this.isRunning = true;
         console.log(`MCP Todo Server (HTTP) running on http://localhost:${serverPort}`);
@@ -307,7 +307,7 @@ export class TodoMCPServer {
     for (const sessionId of this.transports.keys()) {
       this.cleanupSession(sessionId);
     }
-    
+
     // Close HTTP server
     return new Promise((resolve) => {
       this.httpServer!.close(() => {
@@ -343,7 +343,7 @@ export class TodoMCPServer {
     if (this.todoTools) {
       this.todoTools = new TodoTools(this.todoManager, this);
     }
-    
+
     // Listen for todo changes to broadcast updates
     if (this.todoManager && this.todoManager.onDidChange) {
       this.todoManager.onDidChange((change: { todos: any[], title: string }) => {
@@ -363,7 +363,10 @@ export class TodoMCPServer {
 
   private createStorage(): ITodoStorage {
     if (this.config.autoInject && this.config.workspaceRoot) {
-      return new CopilotInstructionsStorage(this.config.workspaceRoot);
+      return new CopilotInstructionsStorage(
+        this.config.workspaceRoot,
+        this.config.autoInjectFilePath
+      );
     }
     return new InMemoryStorage();
   }

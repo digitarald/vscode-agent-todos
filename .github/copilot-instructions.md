@@ -151,8 +151,8 @@ All state changes use enhanced hash-based deduplication with version tracking to
 ```typescript
 private fireConsolidatedChange(): void {
   const isEmptyTransition = // ... detect empty transitions
-  const currentHash = JSON.stringify({ 
-    todos: this.todos, 
+  const currentHash = JSON.stringify({
+    todos: this.todos,
     title: this.title,
     version: isEmptyTransition ? ++this.updateVersion : this.updateVersion
   });
@@ -164,6 +164,7 @@ private fireConsolidatedChange(): void {
 ```
 
 **Key Features:**
+
 - Version field increments on empty transitions to force updates
 - Empty transitions (0→n or n→0 todos) always trigger immediate updates
 - Prevents deduplication from blocking critical UI updates
@@ -191,6 +192,7 @@ if (this.syncPromise) {
 ```
 
 **Key Features:**
+
 - Promise-based sync queue prevents race conditions
 - Version tracking ensures sync order consistency
 - Comprehensive logging for debugging sync issues
@@ -393,7 +395,11 @@ See [`package.json`](../package.json) for full configuration:
   - `todoManager.runTodo` - Opens chat to continue with a specific todo
   - Task management commands (add, delete, toggle status)
   - Configuration commands (auto-inject, auto-open view)
-- **Configuration**: Settings under `todoManager.*` namespace
+- **Configuration**: Settings under `todoManager.*` namespace including:
+  - `todoManager.autoInject` - Enable auto-injection into copilot instructions file
+  - `todoManager.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/copilot-instructions.md`)
+  - `todoManager.autoOpenView` - Automatically open todo view when list changes
+  - `todoManager.enableSubtasks` - Enable subtasks feature
 
 ## Data Models
 
@@ -414,13 +420,17 @@ See [`src/types.ts`](../src/types.ts) for complete type definitions:
 ## Best Practices for MCP Sync
 
 ### Handle Empty State Transitions
+
 Empty transitions (0→n or n→0 todos) require special handling:
+
 - Always force sync on empty transitions
 - Use immediate refresh (0ms debounce) for empty state changes
 - Test empty state transitions explicitly in your code
 
 ### Async Operation Patterns
+
 When implementing sync between managers:
+
 ```typescript
 // Use promise-based sync to prevent race conditions
 private syncPromise: Promise<void> | null = null;
@@ -432,18 +442,23 @@ if (this.syncPromise) {
 ```
 
 ### Event Deduplication
+
 Prevent event loops with proper deduplication:
+
 - Use version tracking for forced updates
 - Compare state hashes before firing events
 - Log state transitions for debugging
 
 ### Testing Async Code
+
 - Use adequate timeouts (300-500ms) for sync operations
 - Initialize test context properly with mock storage
 - Create isolated instances for each test to avoid state pollution
 
 ### Debugging Sync Issues
+
 When debugging MCP/tree view sync problems:
+
 1. Add comprehensive logging at each sync step
 2. Log state transitions with counts: `${previousCount} -> ${currentCount}`
 3. Include operation versions in logs for tracking order

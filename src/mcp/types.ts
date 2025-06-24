@@ -26,6 +26,7 @@ export interface MCPServerConfig {
   workspaceRoot?: string;
   standalone?: boolean;
   autoInject?: boolean;
+  autoInjectFilePath?: string;
 }
 
 export interface ToolResult {

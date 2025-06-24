@@ -287,7 +287,12 @@
         "todoManager.autoInject": {
           "type": "boolean",
           "default": false,
-          "description": "Automatically inject todo list into .github/copilot-instructions.md and disable the List Todos tool"
+          "description": "Automatically inject todo list into copilot instructions file and disable the List Todos tool"
+        },
+        "todoManager.autoInjectFilePath": {
+          "type": "string",
+          "default": ".github/copilot-instructions.md",
+          "description": "File path for auto-inject feature. Can be relative to workspace root or absolute path."
         },
         "todoManager.autoOpenView": {
           "type": "boolean",

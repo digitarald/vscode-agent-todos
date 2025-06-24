@@ -51,46 +51,48 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       // Find an available port
       this.serverPort = await this.findAvailablePort();
 
-    // Create server instance
-    this.server = new TodoMCPServer({
-      port: this.serverPort,
-      workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
-      standalone: false
-    });
+      // Create server instance
+      this.server = new TodoMCPServer({
+        port: this.serverPort,
+        workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
+        standalone: false
+      });
 
-    // Setup sync between VS Code TodoManager and standalone manager
-    const vscodeManager = TodoManager.getInstance();
+      // Setup sync between VS Code TodoManager and standalone manager
+      const vscodeManager = TodoManager.getInstance();
 
-    // For non-standalone mode, we need to create a standalone manager for the server
-    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+      // For non-standalone mode, we need to create a standalone manager for the server
+      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
-    // Create appropriate storage based on auto-inject setting
-    const isAutoInjectEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('autoInject', false);
-    let storage: ITodoStorage;
+      // Create appropriate storage based on auto-inject setting
+      const config = vscode.workspace.getConfiguration('todoManager');
+      const isAutoInjectEnabled = config.get<boolean>('autoInject', false);
+      let storage: ITodoStorage;
 
-    if (isAutoInjectEnabled) {
-      console.log(`[MCPProvider] Using CopilotInstructionsStorage for workspace: ${workspaceRoot}`);
-      storage = new CopilotInstructionsStorage(workspaceRoot);
-    } else {
-      console.log('[MCPProvider] Using WorkspaceStateStorage');
-      storage = new WorkspaceStateStorage(this.context);
-    }
+      if (isAutoInjectEnabled) {
+        console.log(`[MCPProvider] Using CopilotInstructionsStorage for workspace: ${workspaceRoot}`);
+        const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+        storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
+      } else {
+        console.log('[MCPProvider] Using WorkspaceStateStorage');
+        storage = new WorkspaceStateStorage(this.context);
+      }
 
-    const standaloneManager = StandaloneTodoManager.getInstance(storage);
-    
-    // Setup sync BEFORE starting the server to ensure we capture all events
-    this.todoSync = new TodoSync(vscodeManager, standaloneManager);
-    
-    this.server.setTodoManager(standaloneManager);
+      const standaloneManager = StandaloneTodoManager.getInstance(storage);
 
-    // Start the server (this will call initialize internally)
-    await this.server.start();
+      // Setup sync BEFORE starting the server to ensure we capture all events
+      this.todoSync = new TodoSync(vscodeManager, standaloneManager);
 
-    // Setup workspace roots handling
-    this.setupWorkspaceRoots();
+      this.server.setTodoManager(standaloneManager);
 
-    // Setup configuration change handling
-    this.setupConfigurationHandling();
+      // Start the server (this will call initialize internally)
+      await this.server.start();
+
+      // Setup workspace roots handling
+      this.setupWorkspaceRoots();
+
+      // Setup configuration change handling
+      this.setupConfigurationHandling();
 
       console.log(`MCP Todo Server started on port ${this.serverPort}`);
     });
@@ -133,12 +135,14 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       if (e.affectsConfiguration('todoManager')) {
         // Handle auto-inject setting change
         if (e.affectsConfiguration('todoManager.autoInject') && this.server) {
-          const isAutoInjectEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('autoInject', false);
+          const config = vscode.workspace.getConfiguration('todoManager');
+          const isAutoInjectEnabled = config.get<boolean>('autoInject', false);
           const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
           let storage: ITodoStorage;
           if (isAutoInjectEnabled) {
-            storage = new CopilotInstructionsStorage(workspaceRoot);
+            const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+            storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
           } else {
             storage = new WorkspaceStateStorage(this.context);
           }
@@ -171,7 +175,9 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
         let storage: ITodoStorage;
         if (config.autoInject) {
-          storage = new CopilotInstructionsStorage(workspaceRoot);
+          const vsCodeConfig = vscode.workspace.getConfiguration('todoManager');
+          const filePath = vsCodeConfig.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+          storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
         } else {
           storage = new WorkspaceStateStorage(this.context);
         }
