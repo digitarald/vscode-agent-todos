@@ -43,9 +43,37 @@ export class TodoTools {
 
     // Only add todo_read if auto-inject is disabled
     if (!autoInject) {
+      const readDescription = subtasksEnabled
+        ? `Read the current task list including subtasks and implementation details to track progress and plan next steps.
+
+IMPORTANT: Use PROACTIVELY and FREQUENTLY:
+• At conversation start to see pending work
+• Before starting new tasks to prioritize
+• When user asks about previous tasks
+• Whenever uncertain about next steps
+• After completing tasks to update understanding
+• Every few messages to stay on track
+
+Returns all todos with status/priority/content plus any subtasks and implementation details.
+Empty list if no todos exist yet.
+Essential for maintaining context and avoiding duplicate work.`
+        : `Read the current task list to track progress and plan next steps.
+
+IMPORTANT: Use PROACTIVELY and FREQUENTLY:
+• At conversation start to see pending work
+• Before starting new tasks to prioritize
+• When user asks about previous tasks
+• Whenever uncertain about next steps
+• After completing tasks to update understanding
+• Every few messages to stay on track
+
+Returns all todos with status/priority/content.
+Empty list if no todos exist yet.
+Essential for maintaining context and avoiding duplicate work.`;
+      
       tools.push({
         name: 'todo_read',
-        description: 'Read the current task list including subtasks and implementation details to track progress and plan next steps. IMPORTANT: Use PROACTIVELY and FREQUENTLY: at conversation start to see pending work, before starting new tasks to prioritize, when user asks about previous tasks, whenever uncertain about next steps, after completing tasks to update understanding, every few messages to stay on track. Returns all todos with status/priority/content plus any subtasks (when enabled) and implementation details. Empty list if no todos exist yet. Essential for maintaining context and avoiding duplicate work.',
+        description: readDescription,
         inputSchema: {
           type: 'object',
           properties: {},
@@ -59,9 +87,72 @@ export class TodoTools {
     }
 
     // Always add todo_write
+    const writeDescription = subtasksEnabled
+      ? `Creates and manages a structured task list with subtasks for tracking progress and organizing work.
+
+USE PROACTIVELY FOR:
+• Complex multi-step tasks (3+ steps)
+• Non-trivial tasks requiring planning
+• Multiple user requests
+• Capturing new instructions
+• Marking tasks in_progress BEFORE starting work
+• Marking completed IMMEDIATELY after finishing
+
+SKIP FOR:
+• Single straightforward tasks
+• Trivial operations (<3 steps)
+• Purely conversational requests
+
+RULES:
+• Only ONE task can be in_progress at a time
+• Update status in real-time
+• Complete current tasks before starting new ones
+• Break complex tasks into specific actionable items
+
+REQUIRED FIELDS:
+• id: unique identifier
+• content: clear action (min 1 char)
+• status: pending/in_progress/completed
+• priority: high/medium/low
+
+SUBTASKS:
+• Break down complex tasks into manageable subtasks
+• Each subtask needs: id, content, status (pending/completed)
+• Use details field to track implementation notes and decisions
+
+Note: This replaces the entire list, so include all existing todos to keep.`
+      : `Creates and manages a structured task list for tracking progress and organizing work.
+
+USE PROACTIVELY FOR:
+• Complex multi-step tasks (3+ steps)
+• Non-trivial tasks requiring planning
+• Multiple user requests
+• Capturing new instructions
+• Marking tasks in_progress BEFORE starting work
+• Marking completed IMMEDIATELY after finishing
+
+SKIP FOR:
+• Single straightforward tasks
+• Trivial operations (<3 steps)
+• Purely conversational requests
+
+RULES:
+• Only ONE task can be in_progress at a time
+• Update status in real-time
+• Complete current tasks before starting new ones
+• Break complex tasks into specific actionable items
+
+REQUIRED FIELDS:
+• id: unique identifier
+• content: clear action (min 1 char)
+• status: pending/in_progress/completed
+• priority: high/medium/low
+
+Note: This replaces the entire list, so include all existing todos to keep.`;
+    
     tools.push({
       name: 'todo_write',
-      description: 'Creates and manages a structured task list with optional subtasks for tracking progress and organizing work. Use PROACTIVELY for: complex multi-step tasks (3+ steps), non-trivial tasks requiring planning, multiple user requests, capturing new instructions, marking tasks in_progress BEFORE starting work, and marking completed IMMEDIATELY after finishing. SKIP for: single straightforward tasks, trivial operations (<3 steps), purely conversational requests. RULES: Only ONE task can be in_progress at a time, update status in real-time, complete current tasks before starting new ones, break complex tasks into specific actionable items. Each todo requires: id (unique), content (clear action, min 1 char), status (pending/in_progress/completed), priority (high/medium/low). SUBTASKS (when enabled): Granular Tasks - Break down complex tasks into manageable subtasks; Clear Dependencies - Define subtask dependencies to show implementation order; Implementation Notes - Use details field to track progress and decisions; Status Tracking - Keep subtask status updated as work progresses. Each subtask requires: id, content, status (pending/completed). This replaces the entire list, so include all existing todos to keep.',
+      description: writeDescription,
       inputSchema: this.getTodoWriteSchema(subtasksEnabled),
       annotations: {
         title: 'Update Todos'
@@ -182,7 +273,7 @@ export class TodoTools {
         return {
           content: [{
             type: 'text',
-            text: 'Error: Subtasks are disabled in settings. Enable todoManager.enableSubtasks to use subtasks.'
+            text: 'Error: Subtasks are disabled in settings. Enable agentTodos.enableSubtasks to use subtasks.'
           }],
           isError: true
         };
@@ -359,28 +450,28 @@ export class TodoTools {
       properties: {
         todos: {
           type: 'array',
-          description: 'Array of todo items',
+          description: 'Complete list of todos (replaces existing list)',
           items: {
             type: 'object',
             properties: {
               id: {
                 type: 'string',
-                description: 'Unique identifier string'
+                description: 'Unique identifier'
               },
               content: {
                 type: 'string',
                 minLength: 1,
-                description: 'Clear, actionable description of what needs to be done'
+                description: 'Clear, actionable task description'
               },
               status: {
                 type: 'string',
                 enum: ['pending', 'in_progress', 'completed'],
-                description: 'Current state of the task (only ONE task should be in_progress at a time)'
+                description: 'Task state (only ONE in_progress allowed)'
               },
               priority: {
                 type: 'string',
                 enum: ['low', 'medium', 'high'],
-                description: 'Task urgency: high (critical/blocking), medium (important), low (nice-to-have)'
+                description: 'Urgency level'
               }
             },
             required: ['id', 'content', 'status', 'priority']
@@ -388,7 +479,7 @@ export class TodoTools {
         },
         title: {
           type: 'string',
-          description: 'Optional title for the todo list'
+          description: 'Optional list title (e.g., project name)'
         }
       },
       required: ['todos']
@@ -398,13 +489,13 @@ export class TodoTools {
     if (subtasksEnabled) {
       schema.properties.todos.items.properties.subtasks = {
         type: 'array',
-        description: 'Optional subtasks for breaking down complex tasks',
+        description: 'Break down complex tasks into smaller steps',
         items: {
           type: 'object',
           properties: {
             id: {
               type: 'string',
-              description: 'Unique identifier for subtask'
+              description: 'Unique subtask ID'
             },
             content: {
               type: 'string',
@@ -414,7 +505,7 @@ export class TodoTools {
             status: {
               type: 'string',
               enum: ['pending', 'completed'],
-              description: 'Subtask completion status'
+              description: 'Completion state'
             }
           },
           required: ['id', 'content', 'status']
@@ -423,7 +514,7 @@ export class TodoTools {
 
       schema.properties.todos.items.properties.details = {
         type: 'string',
-        description: 'Optional implementation details or notes'
+        description: 'Implementation notes, progress tracking, or decisions'
       };
     }
 
