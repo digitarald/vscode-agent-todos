@@ -11,7 +11,7 @@ export class EmptyStateTreeItem extends vscode.TreeItem {
         this.contextValue = 'emptyState';
         this.tooltip = 'Click to start planning with AI';
         this.command = {
-            command: 'todoManager.startPlanning',
+            command: 'agentTodos.startPlanning',
             title: 'Start Planning'
         };
     }
@@ -110,7 +110,7 @@ export class TodoTreeItem extends vscode.TreeItem {
         setTimeout(() => {
             this.recentlyChangedItems.delete(todoId);
             // Only refresh decorations, not the entire tree
-            vscode.commands.executeCommand('todoManager.refreshDecorations');
+            vscode.commands.executeCommand('agentTodos.refreshDecorations');
         }, 3000);
     }
 
@@ -230,7 +230,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
         // Check for empty state transitions for immediate refresh
         const currentTodos = this.todoManager.getTodos();
         const isEmptyTransition = (this.previousTodos.length > 0 && currentTodos.length === 0) ||
-                                 (this.previousTodos.length === 0 && currentTodos.length > 0);
+            (this.previousTodos.length === 0 && currentTodos.length > 0);
 
         if (isEmptyTransition) {
             console.log('[TodoTreeProvider] Empty transition detected, immediate refresh');
@@ -261,8 +261,8 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
             this.pendingRefresh = false;
             // Only execute command if it exists (might not in test environment)
             vscode.commands.getCommands().then(commands => {
-                if (commands.includes('todoManager.refreshDecorations')) {
-                    vscode.commands.executeCommand('todoManager.refreshDecorations');
+                if (commands.includes('agentTodos.refreshDecorations')) {
+                    vscode.commands.executeCommand('agentTodos.refreshDecorations');
                 }
             });
         }, 50); // Reduced delay

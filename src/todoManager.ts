@@ -294,7 +294,7 @@ export class TodoManager {
     }
 
     public async setTodos(todos: TodoItem[], title?: string): Promise<void> {
-        await PerformanceMonitor.measure('TodoManager.setTodos', async () => {
+        await PerformanceMonitor.measure('agentTodos.setTodos', async () => {
             const hadTodos = this.todos.length > 0;
             const previousTodoCount = this.todos.length;
 
@@ -476,7 +476,7 @@ export class TodoManager {
         };
 
         try {
-            this.context.workspaceState.update('todoManager.todos', storageData);
+            this.context.workspaceState.update('agentTodos.todos', storageData);
             console.log('[TodoManager] Saved todos to workspace storage');
         } catch (error) {
             console.error('[TodoManager] Failed to save to storage:', error);
@@ -488,7 +488,7 @@ export class TodoManager {
             return;
         }
 
-        const storageData = this.context.workspaceState.get<{ todos: TodoItem[], title: string }>('todoManager.todos');
+        const storageData = this.context.workspaceState.get<{ todos: TodoItem[], title: string }>('agentTodos.todos');
 
         if (storageData) {
             this.todos = storageData.todos || [];

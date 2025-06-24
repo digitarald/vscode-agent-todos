@@ -375,7 +375,7 @@ export class EmptyStateTreeItem extends vscode.TreeItem {
     );
     this.tooltip = "Click to start planning with AI";
     this.command = {
-      command: "todoManager.startPlanning",
+      command: "agentTodos.startPlanning",
       title: "Start Planning",
     };
   }
@@ -391,15 +391,15 @@ See [`package.json`](../package.json) for full configuration:
 - **MCP Server Definition Providers**: Register with `mcpServerDefinitionProviders`
 - **Views**: Specify in `explorer` container with `id`, `name`, `icon`
 - **Commands**: Define with `command`, `title`, `icon` fields including:
-  - `todoManager.startPlanning` - Opens chat with planning prompt for empty state
-  - `todoManager.runTodo` - Opens chat to continue with a specific todo
+  - `agentTodos.startPlanning` - Opens chat with planning prompt for empty state
+  - `agentTodos.runTodo` - Opens chat to continue with a specific todo
   - Task management commands (add, delete, toggle status)
   - Configuration commands (auto-inject, auto-open view)
-- **Configuration**: Settings under `todoManager.*` namespace including:
-  - `todoManager.autoInject` - Enable auto-injection into copilot instructions file
-  - `todoManager.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/copilot-instructions.md`)
-  - `todoManager.autoOpenView` - Automatically open todo view when list changes
-  - `todoManager.enableSubtasks` - Enable subtasks feature
+- **Configuration**: Settings under `agentTodos.*` namespace including:
+  - `agentTodos.autoInject` - Enable auto-injection into copilot instructions file
+  - `agentTodos.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/copilot-instructions.md`)
+  - `agentTodos.autoOpenView` - Automatically open todo view when list changes
+  - `agentTodos.enableSubtasks` - Enable subtasks feature
 
 ## Data Models
 
