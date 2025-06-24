@@ -31,7 +31,7 @@ suite('TodoManager Subtask Tests', () => {
 
     test('Should add subtask to todo when subtasks are enabled', async () => {
         // Enable subtasks
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         // Wait a bit for config to propagate
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -55,7 +55,7 @@ suite('TodoManager Subtask Tests', () => {
 
     test('Should not add subtask when subtasks are disabled', async () => {
         // Disable subtasks
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', false);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', false);
 
         const subtask: Subtask = {
             id: 'subtask-1',
@@ -72,7 +72,7 @@ suite('TodoManager Subtask Tests', () => {
     });
 
     test('Should update subtask status', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const subtask: Subtask = {
             id: 'subtask-1',
@@ -90,7 +90,7 @@ suite('TodoManager Subtask Tests', () => {
     });
 
     test('Should toggle subtask status', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const subtask: Subtask = {
             id: 'subtask-1',
@@ -115,7 +115,7 @@ suite('TodoManager Subtask Tests', () => {
     });
 
     test('Should delete subtask', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const subtask1: Subtask = {
             id: 'subtask-1',
@@ -164,7 +164,7 @@ suite('TodoManager Subtask Tests', () => {
     });
 
     test('Should compare todos with subtasks correctly', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const todo1: TodoItem = {
             id: 'todo-1',

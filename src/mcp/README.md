@@ -79,9 +79,9 @@ npm test
 ## Configuration
 
 The server respects VS Code settings and updates dynamically:
-- `todoManager.autoInject` - Controls todo_read tool visibility
-- `todoManager.enableSubtasks` - Enables/disables subtask features  
-- `todoManager.autoOpenView` - Controls view auto-opening
+- `agentTodos.autoInject` - Controls todo_read tool visibility
+- `agentTodos.enableSubtasks` - Enables/disables subtask features  
+- `agentTodos.autoOpenView` - Controls view auto-opening
 
 ## Protocol Details
 

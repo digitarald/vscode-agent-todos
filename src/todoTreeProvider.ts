@@ -28,7 +28,7 @@ export class TodoTreeItem extends vscode.TreeItem {
         const displayContent = todo.content.replace(/\s+/g, ' ').trim();
 
         // Check if subtasks are enabled and todo has subtasks
-        const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+        const subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
         const hasSubtasks = subtasksEnabled && todo.subtasks && todo.subtasks.length > 0;
         const finalCollapsibleState = collapsibleState !== undefined ? collapsibleState :
             (hasSubtasks ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
@@ -204,7 +204,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
             );
         } else if (element instanceof TodoTreeItem) {
             // Return subtasks if enabled and present
-            const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+            const subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
             if (subtasksEnabled && element.todo.subtasks && element.todo.subtasks.length > 0) {
                 return Promise.resolve(
                     element.todo.subtasks.map(subtask => new SubtaskTreeItem(subtask, element.todo.id))

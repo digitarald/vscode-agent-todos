@@ -14,7 +14,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		// Function to update toggle command titles based on current settings
 		const updateToggleCommandTitles = () => {
-			const config = vscode.workspace.getConfiguration('todoManager');
+			const config = vscode.workspace.getConfiguration('agentTodos');
 			const autoInjectEnabled = config.get<boolean>('autoInject', false);
 			const autoOpenViewEnabled = config.get<boolean>('autoOpenView', true);
 
@@ -28,7 +28,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		// Create tree data provider and tree view
 		const treeDataProvider = new TodoTreeDataProvider();
-		const treeView = vscode.window.createTreeView('todoManager', {
+		const treeView = vscode.window.createTreeView('agentTodos', {
 			treeDataProvider: treeDataProvider,
 			showCollapseAll: false,
 			canSelectMany: false
@@ -63,7 +63,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			const todos = todoManager.getTodos();
 			if (todos.length > 0) {
 				// Show the tree view by focusing on the Todos panel
-				await vscode.commands.executeCommand('todoManager.focus');
+				await vscode.commands.executeCommand('agentTodos.focus');
 			}
 		});
 
@@ -102,23 +102,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		// Register commands
-		const clearTodosCommand = vscode.commands.registerCommand('todoManager.clearTodos', async () => {
+		const clearTodosCommand = vscode.commands.registerCommand('agentTodos.clearTodos', async () => {
 			await todoManager.clearTodos();
 			vscode.window.showInformationMessage('All todos cleared!');
 		});
 
-		const refreshTodosCommand = vscode.commands.registerCommand('todoManager.refreshTodos', () => {
+		const refreshTodosCommand = vscode.commands.registerCommand('agentTodos.refreshTodos', () => {
 			treeDataProvider.refresh();
 			decorationProvider.refresh();
 			vscode.window.showInformationMessage('Todos refreshed!');
 		});
 
 		// Command to refresh decorations only (used internally)
-		const refreshDecorationsCommand = vscode.commands.registerCommand('todoManager.refreshDecorations', () => {
+		const refreshDecorationsCommand = vscode.commands.registerCommand('agentTodos.refreshDecorations', () => {
 			decorationProvider.refresh();
 		});
 
-		const toggleTodoStatusCommand = vscode.commands.registerCommand('todoManager.toggleTodoStatus', async (item: any) => {
+		const toggleTodoStatusCommand = vscode.commands.registerCommand('agentTodos.toggleTodoStatus', async (item: any) => {
 			// Handle both direct call with todoId and tree item call
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
@@ -126,7 +126,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		const deleteTodoCommand = vscode.commands.registerCommand('todoManager.deleteTodo', async (item: any) => {
+		const deleteTodoCommand = vscode.commands.registerCommand('agentTodos.deleteTodo', async (item: any) => {
 			// Handle both direct call with todoId and tree item call
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
@@ -134,8 +134,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		const toggleAutoInjectCommand = vscode.commands.registerCommand('todoManager.toggleAutoInject', async () => {
-			const config = vscode.workspace.getConfiguration('todoManager');
+		const toggleAutoInjectCommand = vscode.commands.registerCommand('agentTodos.toggleAutoInject', async () => {
+			const config = vscode.workspace.getConfiguration('agentTodos');
 			const currentValue = config.get<boolean>('autoInject', false);
 			await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
 
@@ -143,8 +143,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
 		});
 
-		const toggleAutoInjectEnabledCommand = vscode.commands.registerCommand('todoManager.toggleAutoInjectEnabled', async () => {
-			const config = vscode.workspace.getConfiguration('todoManager');
+		const toggleAutoInjectEnabledCommand = vscode.commands.registerCommand('agentTodos.toggleAutoInjectEnabled', async () => {
+			const config = vscode.workspace.getConfiguration('agentTodos');
 			const currentValue = config.get<boolean>('autoInject', false);
 			await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
 
@@ -152,8 +152,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
 		});
 
-		const toggleAutoOpenViewCommand = vscode.commands.registerCommand('todoManager.toggleAutoOpenView', async () => {
-			const config = vscode.workspace.getConfiguration('todoManager');
+		const toggleAutoOpenViewCommand = vscode.commands.registerCommand('agentTodos.toggleAutoOpenView', async () => {
+			const config = vscode.workspace.getConfiguration('agentTodos');
 			const currentValue = config.get<boolean>('autoOpenView', true);
 			await config.update('autoOpenView', !currentValue, vscode.ConfigurationTarget.Workspace);
 
@@ -161,8 +161,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage(`Auto-open view ${status}. The Todos view will ${!currentValue ? 'automatically open' : 'not open'} when the todo list changes.`);
 		});
 
-		const toggleAutoOpenViewEnabledCommand = vscode.commands.registerCommand('todoManager.toggleAutoOpenViewEnabled', async () => {
-			const config = vscode.workspace.getConfiguration('todoManager');
+		const toggleAutoOpenViewEnabledCommand = vscode.commands.registerCommand('agentTodos.toggleAutoOpenViewEnabled', async () => {
+			const config = vscode.workspace.getConfiguration('agentTodos');
 			const currentValue = config.get<boolean>('autoOpenView', true);
 			await config.update('autoOpenView', !currentValue, vscode.ConfigurationTarget.Workspace);
 
@@ -171,21 +171,21 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		// Status commands
-		const setStatusPendingCommand = vscode.commands.registerCommand('todoManager.setStatusPending', async (item: any) => {
+		const setStatusPendingCommand = vscode.commands.registerCommand('agentTodos.setStatusPending', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoStatus(todoId, 'pending');
 			}
 		});
 
-		const setStatusInProgressCommand = vscode.commands.registerCommand('todoManager.setStatusInProgress', async (item: any) => {
+		const setStatusInProgressCommand = vscode.commands.registerCommand('agentTodos.setStatusInProgress', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoStatus(todoId, 'in_progress');
 			}
 		});
 
-		const setStatusCompletedCommand = vscode.commands.registerCommand('todoManager.setStatusCompleted', async (item: any) => {
+		const setStatusCompletedCommand = vscode.commands.registerCommand('agentTodos.setStatusCompleted', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoStatus(todoId, 'completed');
@@ -193,21 +193,21 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		// Priority commands
-		const setPriorityHighCommand = vscode.commands.registerCommand('todoManager.setPriorityHigh', async (item: any) => {
+		const setPriorityHighCommand = vscode.commands.registerCommand('agentTodos.setPriorityHigh', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoPriority(todoId, 'high');
 			}
 		});
 
-		const setPriorityMediumCommand = vscode.commands.registerCommand('todoManager.setPriorityMedium', async (item: any) => {
+		const setPriorityMediumCommand = vscode.commands.registerCommand('agentTodos.setPriorityMedium', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoPriority(todoId, 'medium');
 			}
 		});
 
-		const setPriorityLowCommand = vscode.commands.registerCommand('todoManager.setPriorityLow', async (item: any) => {
+		const setPriorityLowCommand = vscode.commands.registerCommand('agentTodos.setPriorityLow', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoPriority(todoId, 'low');
@@ -215,7 +215,7 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		// Subtask commands
-		const addSubtaskCommand = vscode.commands.registerCommand('todoManager.addSubtask', async (item: any) => {
+		const addSubtaskCommand = vscode.commands.registerCommand('agentTodos.addSubtask', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				const content = await vscode.window.showInputBox({
@@ -233,20 +233,20 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		const toggleSubtaskCommand = vscode.commands.registerCommand('todoManager.toggleSubtask', async (item: any) => {
+		const toggleSubtaskCommand = vscode.commands.registerCommand('agentTodos.toggleSubtask', async (item: any) => {
 			if (item?.subtask && item?.parentTodoId) {
 				await todoManager.toggleSubtaskStatus(item.parentTodoId, item.subtask.id);
 			}
 		});
 
-		const deleteSubtaskCommand = vscode.commands.registerCommand('todoManager.deleteSubtask', async (item: any) => {
+		const deleteSubtaskCommand = vscode.commands.registerCommand('agentTodos.deleteSubtask', async (item: any) => {
 			if (item?.subtask && item?.parentTodoId) {
 				await todoManager.deleteSubtask(item.parentTodoId, item.subtask.id);
 			}
 		});
 
 		// Details commands
-		const addEditDetailsCommand = vscode.commands.registerCommand('todoManager.addEditDetails', async (item: any) => {
+		const addEditDetailsCommand = vscode.commands.registerCommand('agentTodos.addEditDetails', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				const todo = todoManager.getTodos().find(t => t.id === todoId);
@@ -268,14 +268,14 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		const clearDetailsCommand = vscode.commands.registerCommand('todoManager.clearDetails', async (item: any) => {
+		const clearDetailsCommand = vscode.commands.registerCommand('agentTodos.clearDetails', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				await todoManager.setTodoDetails(todoId, undefined);
 			}
 		});
 
-		const runTodoCommand = vscode.commands.registerCommand('todoManager.runTodo', async (item: any) => {
+		const runTodoCommand = vscode.commands.registerCommand('agentTodos.runTodo', async (item: any) => {
 			const todo = item?.todo;
 			if (todo) {
 				// Set the todo status to in-progress
@@ -291,11 +291,12 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		const startPlanningCommand = vscode.commands.registerCommand('todoManager.startPlanning', async () => {
+		const startPlanningCommand = vscode.commands.registerCommand('agentTodos.startPlanning', async () => {
 			// Open chat with a planning prompt
 			await vscode.commands.executeCommand('workbench.action.chat.open', {
 				mode: 'agent',
-				query: 'Create a detailed plan to implement ...'
+				query: 'Create a detailed plan to implement ...',
+				isPartialQuery: true
 			});
 		});
 

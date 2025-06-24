@@ -437,7 +437,7 @@ export class TodoTools {
 
     try {
       const vscode = require('vscode');
-      return vscode.workspace.getConfiguration('todoManager').get('autoInject', false);
+      return vscode.workspace.getConfiguration('agentTodos').get('autoInject', false);
     } catch (error) {
       return false; // Default to false if vscode not available
     }
@@ -450,7 +450,7 @@ export class TodoTools {
 
     try {
       const vscode = require('vscode');
-      return vscode.workspace.getConfiguration('todoManager').get('enableSubtasks', true);
+      return vscode.workspace.getConfiguration('agentTodos').get('enableSubtasks', true);
     } catch (error) {
       return true; // Default to true if vscode not available
     }

@@ -43,7 +43,7 @@ export class CopilotInstructionsManager {
 
     private getConfiguredFilePath(): string {
         try {
-            const config = vscode.workspace.getConfiguration('todoManager');
+            const config = vscode.workspace.getConfiguration('agentTodos');
             const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
 
             if (!this.validateFilePath(filePath)) {
@@ -87,7 +87,7 @@ export class CopilotInstructionsManager {
         // Check if subtasks are enabled
         let subtasksEnabled = true;
         try {
-            subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+            subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
         } catch (error) {
             // Default to true when vscode is not available
         }
@@ -245,7 +245,7 @@ export class CopilotInstructionsManager {
             let currentTodo: TodoItem | null = null;
 
             // Check if subtasks are enabled
-            const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+            const subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
 
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];

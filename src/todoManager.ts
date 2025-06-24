@@ -34,11 +34,11 @@ export class TodoManager {
         try {
             // Listen for configuration changes
             this.configurationDisposable = vscode.workspace.onDidChangeConfiguration(async (event) => {
-                if (event.affectsConfiguration('todoManager.autoInject')) {
+                if (event.affectsConfiguration('agentTodos.autoInject')) {
                     await this.handleAutoInjectSettingChange();
                 }
                 // Also broadcast changes for other configuration settings that affect MCP tools
-                if (event.affectsConfiguration('todoManager.enableSubtasks')) {
+                if (event.affectsConfiguration('agentTodos.enableSubtasks')) {
                     this.onDidChangeConfigurationEmitter.fire({
                         autoInject: this.isAutoInjectEnabled(),
                         enableSubtasks: this.isSubtasksEnabled()
@@ -76,7 +76,7 @@ export class TodoManager {
 
     private isAutoInjectEnabled(): boolean {
         try {
-            return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoInject', false);
+            return vscode.workspace.getConfiguration('agentTodos').get<boolean>('autoInject', false);
         } catch (error) {
             return false; // Default to false when vscode is not available
         }
@@ -84,7 +84,7 @@ export class TodoManager {
 
     private isAutoOpenViewEnabled(): boolean {
         try {
-            return vscode.workspace.getConfiguration('todoManager').get<boolean>('autoOpenView', true);
+            return vscode.workspace.getConfiguration('agentTodos').get<boolean>('autoOpenView', true);
         } catch (error) {
             return true; // Default to true when vscode is not available
         }
@@ -92,7 +92,7 @@ export class TodoManager {
 
     private isSubtasksEnabled(): boolean {
         try {
-            return vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
+            return vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
         } catch (error) {
             return true; // Default to true when vscode is not available
         }

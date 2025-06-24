@@ -11,7 +11,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
     });
 
     test('Should format todos with subtasks in markdown', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const todos: TodoItem[] = [
             {
@@ -54,7 +54,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
     });
 
     test('Should not include subtasks when disabled', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', false);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', false);
 
         const todos: TodoItem[] = [
             {
@@ -76,7 +76,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
     });
 
     test('Should handle todos with both subtasks and details', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const todos: TodoItem[] = [
             {
@@ -102,7 +102,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
     });
 
     test('Should parse todos with subtasks from markdown', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         // Mock file system for testing
         const mockContent = `<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
@@ -119,7 +119,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
     });
 
     test('Should handle empty subtasks array', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const todos: TodoItem[] = [
             {
@@ -140,7 +140,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
     });
 
     test('Should preserve IDs through format and parse cycle', async () => {
-        await vscode.workspace.getConfiguration('todoManager').update('enableSubtasks', true);
+        await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const originalTodos: TodoItem[] = [
             {

@@ -4,7 +4,7 @@ import { ITodoStorage } from './ITodoStorage';
 import { TodoItem } from '../types';
 
 export class WorkspaceStateStorage extends EventEmitter implements ITodoStorage {
-    private readonly storageKey = 'todoManager.todos';
+    private readonly storageKey = 'agentTodos.todos';
     
     constructor(private context: vscode.ExtensionContext) {
         super();

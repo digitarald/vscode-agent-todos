@@ -65,7 +65,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
       // Create appropriate storage based on auto-inject setting
-      const config = vscode.workspace.getConfiguration('todoManager');
+      const config = vscode.workspace.getConfiguration('agentTodos');
       const isAutoInjectEnabled = config.get<boolean>('autoInject', false);
       let storage: ITodoStorage;
 
@@ -132,10 +132,10 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
   private setupConfigurationHandling(): void {
     // Listen for configuration changes from VS Code settings
     const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('todoManager')) {
+      if (e.affectsConfiguration('agentTodos')) {
         // Handle auto-inject setting change
-        if (e.affectsConfiguration('todoManager.autoInject') && this.server) {
-          const config = vscode.workspace.getConfiguration('todoManager');
+        if (e.affectsConfiguration('agentTodos.autoInject') && this.server) {
+          const config = vscode.workspace.getConfiguration('agentTodos');
           const isAutoInjectEnabled = config.get<boolean>('autoInject', false);
           const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
@@ -175,7 +175,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
         let storage: ITodoStorage;
         if (config.autoInject) {
-          const vsCodeConfig = vscode.workspace.getConfiguration('todoManager');
+          const vsCodeConfig = vscode.workspace.getConfiguration('agentTodos');
           const filePath = vsCodeConfig.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
           storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
         } else {

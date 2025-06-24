@@ -25,127 +25,127 @@
   "contributes": {
     "commands": [
       {
-        "command": "todoManager.clearTodos",
+        "command": "agentTodos.clearTodos",
         "title": "Clear All Todos",
         "category": "Agent TODOs",
         "icon": "$(clear-all)"
       },
       {
-        "command": "todoManager.refreshTodos",
+        "command": "agentTodos.refreshTodos",
         "title": "Refresh Todos",
         "category": "Agent TODOs",
         "icon": "$(refresh)"
       },
       {
-        "command": "todoManager.toggleTodoStatus",
+        "command": "agentTodos.toggleTodoStatus",
         "title": "Toggle Todo Status",
         "category": "Agent TODOs",
         "icon": "$(check)"
       },
       {
-        "command": "todoManager.toggleAutoInject",
+        "command": "agentTodos.toggleAutoInject",
         "title": "Enable auto-inject into copilot-instructions.md",
         "category": "Agent TODOs",
         "icon": "$(sync)"
       },
       {
-        "command": "todoManager.toggleAutoInjectEnabled",
+        "command": "agentTodos.toggleAutoInjectEnabled",
         "title": "Disable auto-inject into copilot-instructions.md",
         "category": "Agent TODOs",
         "icon": "$(sync)"
       },
       {
-        "command": "todoManager.toggleAutoOpenView",
+        "command": "agentTodos.toggleAutoOpenView",
         "title": "Enable auto-open view on changes",
         "category": "Agent TODOs",
         "icon": "$(eye)"
       },
       {
-        "command": "todoManager.toggleAutoOpenViewEnabled",
+        "command": "agentTodos.toggleAutoOpenViewEnabled",
         "title": "Disable auto-open view on changes",
         "category": "Agent TODOs",
         "icon": "$(eye)"
       },
       {
-        "command": "todoManager.deleteTodo",
+        "command": "agentTodos.deleteTodo",
         "title": "Delete Todo",
         "category": "Agent TODOs",
         "icon": "$(trash)"
       },
       {
-        "command": "todoManager.setStatusPending",
+        "command": "agentTodos.setStatusPending",
         "title": "Set Status: Pending",
         "category": "Agent TODOs",
         "icon": "$(circle-outline)"
       },
       {
-        "command": "todoManager.setStatusInProgress",
+        "command": "agentTodos.setStatusInProgress",
         "title": "Set Status: In Progress",
         "category": "Agent TODOs",
         "icon": "$(sync~spin)"
       },
       {
-        "command": "todoManager.setStatusCompleted",
+        "command": "agentTodos.setStatusCompleted",
         "title": "Set Status: Completed",
         "category": "Agent TODOs",
         "icon": "$(pass-filled)"
       },
       {
-        "command": "todoManager.setPriorityHigh",
+        "command": "agentTodos.setPriorityHigh",
         "title": "Set Priority: High",
         "category": "Agent TODOs",
         "icon": "$(flame)"
       },
       {
-        "command": "todoManager.setPriorityMedium",
+        "command": "agentTodos.setPriorityMedium",
         "title": "Set Priority: Medium",
         "category": "Agent TODOs",
         "icon": "$(dash)"
       },
       {
-        "command": "todoManager.setPriorityLow",
+        "command": "agentTodos.setPriorityLow",
         "title": "Set Priority: Low",
         "category": "Agent TODOs",
         "icon": "$(chevron-down)"
       },
       {
-        "command": "todoManager.addSubtask",
+        "command": "agentTodos.addSubtask",
         "title": "Add Subtask",
         "category": "Agent TODOs",
         "icon": "$(add)"
       },
       {
-        "command": "todoManager.toggleSubtask",
+        "command": "agentTodos.toggleSubtask",
         "title": "Toggle Subtask",
         "category": "Agent TODOs",
         "icon": "$(check)"
       },
       {
-        "command": "todoManager.deleteSubtask",
+        "command": "agentTodos.deleteSubtask",
         "title": "Delete Subtask",
         "category": "Agent TODOs",
         "icon": "$(trash)"
       },
       {
-        "command": "todoManager.addEditDetails",
+        "command": "agentTodos.addEditDetails",
         "title": "Add/Edit Details",
         "category": "Agent TODOs",
         "icon": "$(edit)"
       },
       {
-        "command": "todoManager.clearDetails",
+        "command": "agentTodos.clearDetails",
         "title": "Clear Details",
         "category": "Agent TODOs",
         "icon": "$(clear-all)"
       },
       {
-        "command": "todoManager.runTodo",
+        "command": "agentTodos.runTodo",
         "title": "Run Todo in Chat",
         "category": "Agent TODOs",
         "icon": "$(play)"
       },
       {
-        "command": "todoManager.startPlanning",
+        "command": "agentTodos.startPlanning",
         "title": "Start Planning",
         "category": "Agent TODOs",
         "icon": "$(comment-discussion)"
@@ -163,7 +163,7 @@
     "views": {
       "todos-container": [
         {
-          "id": "todoManager",
+          "id": "agentTodos",
           "name": "Agent TODOs",
           "when": "true",
           "icon": "$(checklist)"
@@ -173,110 +173,110 @@
     "menus": {
       "view/title": [
         {
-          "command": "todoManager.clearTodos",
-          "when": "view == todoManager",
+          "command": "agentTodos.clearTodos",
+          "when": "view == agentTodos",
           "group": "navigation"
         },
         {
-          "command": "todoManager.refreshTodos",
-          "when": "view == todoManager",
+          "command": "agentTodos.refreshTodos",
+          "when": "view == agentTodos",
           "group": "navigation"
         },
         {
-          "command": "todoManager.toggleAutoInject",
-          "when": "view == todoManager && !config.todoManager.autoInject",
+          "command": "agentTodos.toggleAutoInject",
+          "when": "view == agentTodos && !config.agentTodos.autoInject",
           "group": "1_toggles"
         },
         {
-          "command": "todoManager.toggleAutoInjectEnabled",
-          "when": "view == todoManager && config.todoManager.autoInject",
+          "command": "agentTodos.toggleAutoInjectEnabled",
+          "when": "view == agentTodos && config.agentTodos.autoInject",
           "group": "1_toggles"
         },
         {
-          "command": "todoManager.toggleAutoOpenView",
-          "when": "view == todoManager && !config.todoManager.autoOpenView",
+          "command": "agentTodos.toggleAutoOpenView",
+          "when": "view == agentTodos && !config.agentTodos.autoOpenView",
           "group": "1_toggles"
         },
         {
-          "command": "todoManager.toggleAutoOpenViewEnabled",
-          "when": "view == todoManager && config.todoManager.autoOpenView",
+          "command": "agentTodos.toggleAutoOpenViewEnabled",
+          "when": "view == agentTodos && config.agentTodos.autoOpenView",
           "group": "1_toggles"
         }
       ],
       "view/item/context": [
         {
-          "command": "todoManager.runTodo",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.runTodo",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "inline@1"
         },
         {
-          "command": "todoManager.toggleTodoStatus",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.toggleTodoStatus",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "inline@2"
         },
         {
-          "command": "todoManager.deleteTodo",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.deleteTodo",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "inline@3"
         },
         {
-          "command": "todoManager.deleteTodo",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.deleteTodo",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "3_modification"
         },
         {
-          "command": "todoManager.setStatusPending",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.setStatusPending",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "1_status"
         },
         {
-          "command": "todoManager.setStatusInProgress",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.setStatusInProgress",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "1_status"
         },
         {
-          "command": "todoManager.setStatusCompleted",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.setStatusCompleted",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "1_status"
         },
         {
-          "command": "todoManager.setPriorityHigh",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.setPriorityHigh",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "2_priority"
         },
         {
-          "command": "todoManager.setPriorityMedium",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.setPriorityMedium",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "2_priority"
         },
         {
-          "command": "todoManager.setPriorityLow",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.setPriorityLow",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "2_priority"
         },
         {
-          "command": "todoManager.addSubtask",
-          "when": "view == todoManager && viewItem =~ /^todoItem/ && config.todoManager.enableSubtasks",
+          "command": "agentTodos.addSubtask",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/ && config.agentTodos.enableSubtasks",
           "group": "4_subtasks"
         },
         {
-          "command": "todoManager.addEditDetails",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.addEditDetails",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "5_details"
         },
         {
-          "command": "todoManager.clearDetails",
-          "when": "view == todoManager && viewItem =~ /^todoItem/",
+          "command": "agentTodos.clearDetails",
+          "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "5_details"
         },
         {
-          "command": "todoManager.toggleSubtask",
-          "when": "view == todoManager && viewItem =~ /^subtaskItem/ && config.todoManager.enableSubtasks",
+          "command": "agentTodos.toggleSubtask",
+          "when": "view == agentTodos && viewItem =~ /^subtaskItem/ && config.agentTodos.enableSubtasks",
           "group": "inline"
         },
         {
-          "command": "todoManager.deleteSubtask",
-          "when": "view == todoManager && viewItem =~ /^subtaskItem/ && config.todoManager.enableSubtasks",
+          "command": "agentTodos.deleteSubtask",
+          "when": "view == agentTodos && viewItem =~ /^subtaskItem/ && config.agentTodos.enableSubtasks",
           "group": "inline"
         }
       ]
@@ -284,22 +284,22 @@
     "configuration": {
       "title": "Todos",
       "properties": {
-        "todoManager.autoInject": {
+        "agentTodos.autoInject": {
           "type": "boolean",
           "default": false,
           "description": "Automatically inject todo list into copilot instructions file and disable the List Todos tool"
         },
-        "todoManager.autoInjectFilePath": {
+        "agentTodos.autoInjectFilePath": {
           "type": "string",
           "default": ".github/copilot-instructions.md",
           "description": "File path for auto-inject feature. Can be relative to workspace root or absolute path."
         },
-        "todoManager.autoOpenView": {
+        "agentTodos.autoOpenView": {
           "type": "boolean",
           "default": true,
           "description": "Automatically open the Todos view when the todo list changes"
         },
-        "todoManager.enableSubtasks": {
+        "agentTodos.enableSubtasks": {
           "type": "boolean",
           "default": true,
           "description": "Enable subtasks feature for breaking down complex tasks"

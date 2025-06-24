@@ -184,7 +184,7 @@ suite('MCP Integration Tests', () => {
         await server.initialize();
         
         // Ensure auto-inject is disabled to start
-        const config = vscode.workspace.getConfiguration('todoManager');
+        const config = vscode.workspace.getConfiguration('agentTodos');
         await config.update('autoInject', false, vscode.ConfigurationTarget.Workspace);
         await new Promise(resolve => setTimeout(resolve, 200));
         
@@ -230,7 +230,7 @@ suite('MCP Integration Tests', () => {
         
         try {
             // Change auto-inject setting
-            const config = vscode.workspace.getConfiguration('todoManager');
+            const config = vscode.workspace.getConfiguration('agentTodos');
             await config.update('autoInject', true, vscode.ConfigurationTarget.Workspace);
             
             // Give more time for event to fire
@@ -240,7 +240,7 @@ suite('MCP Integration Tests', () => {
         } finally {
             disposable.dispose();
             // Reset config
-            await vscode.workspace.getConfiguration('todoManager').update('autoInject', false, vscode.ConfigurationTarget.Workspace);
+            await vscode.workspace.getConfiguration('agentTodos').update('autoInject', false, vscode.ConfigurationTarget.Workspace);
         }
     });
 });

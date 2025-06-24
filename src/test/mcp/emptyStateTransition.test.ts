@@ -30,14 +30,17 @@ suite('MCP Empty State Transition Tests', () => {
         todoManager.initialize(context); // Initialize with context to avoid storage warnings
         await todoManager.clearTodos();
         
+        // Wait for clear to propagate
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         treeProvider = new TodoTreeDataProvider();
         
         // Start MCP provider
         provider = new TodoMCPServerProvider(context);
         await provider.ensureServerStarted();
         
-        // Give everything time to initialize
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Give everything time to initialize and sync
+        await new Promise(resolve => setTimeout(resolve, 1000));
     });
 
     teardown(async () => {
@@ -89,7 +92,7 @@ suite('MCP Empty State Transition Tests', () => {
             console.log('[TEST] Write result:', JSON.stringify(writeResult));
             
             // Give time for sync and events to propagate
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 2500));
             
             // Verify todos were added
             todos = todoManager.getTodos();
