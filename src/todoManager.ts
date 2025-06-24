@@ -26,6 +26,7 @@ export class TodoManager {
     private pendingUpdate: { todos?: TodoItem[], title?: string } | null = null;
     private updateInProgress = false;
     private lastUpdateHash: string = '';
+    private updateVersion: number = 0;
 
     private constructor() {
         this.copilotInstructionsManager = CopilotInstructionsManager.getInstance();
@@ -227,12 +228,37 @@ export class TodoManager {
     }
 
     private fireConsolidatedChange(): void {
-        const currentHash = JSON.stringify({ todos: this.todos, title: this.title });
-        if (currentHash !== this.lastUpdateHash) {
+        let previousTodoCount = 0;
+        let isEmptyTransition = false;
+        
+        try {
+            if (this.lastUpdateHash) {
+                const previousData = JSON.parse(this.lastUpdateHash);
+                previousTodoCount = previousData.todos?.length || 0;
+            }
+        } catch (e) {
+            // Ignore parse errors
+        }
+        
+        const currentTodoCount = this.todos.length;
+        isEmptyTransition = (previousTodoCount > 0 && currentTodoCount === 0) ||
+                           (previousTodoCount === 0 && currentTodoCount > 0);
+        
+        // Include version in hash for forced updates
+        const currentHash = JSON.stringify({ 
+            todos: this.todos, 
+            title: this.title,
+            version: isEmptyTransition ? ++this.updateVersion : this.updateVersion
+        });
+        
+        if (currentHash !== this.lastUpdateHash || isEmptyTransition) {
+            console.log(`[TodoManager] Firing change event: ${previousTodoCount} -> ${currentTodoCount} todos, title: "${this.getTitle()}"${isEmptyTransition ? ' (empty transition)' : ''}`);
             this.lastUpdateHash = currentHash;
             
             // Fire consolidated event only
             this.onDidChangeEmitter.fire({ todos: this.todos, title: this.getTitle() });
+        } else {
+            console.log('[TodoManager] No change detected, skipping event');
         }
     }
 

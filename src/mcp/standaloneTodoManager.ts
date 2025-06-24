@@ -12,6 +12,7 @@ export class StandaloneTodoManager extends EventEmitter {
   private storage: ITodoStorage;
   private storageDisposable: { dispose: () => void } | undefined;
   private lastUpdateHash: string = '';
+  private updateVersion: number = 0;
   
   constructor(storage?: ITodoStorage) {
     super();
@@ -175,11 +176,36 @@ export class StandaloneTodoManager extends EventEmitter {
   }
   
   private fireChangeEvent(): void {
-    const currentHash = JSON.stringify({ todos: this.todos, title: this.title });
-    if (currentHash !== this.lastUpdateHash) {
+    let previousTodoCount = 0;
+    let isEmptyTransition = false;
+    
+    try {
+      if (this.lastUpdateHash) {
+        const previousData = JSON.parse(this.lastUpdateHash);
+        previousTodoCount = previousData.todos?.length || 0;
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+    
+    const currentTodoCount = this.todos.length;
+    isEmptyTransition = (previousTodoCount > 0 && currentTodoCount === 0) ||
+                       (previousTodoCount === 0 && currentTodoCount > 0);
+    
+    // Include version in hash for forced updates
+    const currentHash = JSON.stringify({ 
+      todos: this.todos, 
+      title: this.title,
+      version: isEmptyTransition ? ++this.updateVersion : this.updateVersion
+    });
+    
+    if (currentHash !== this.lastUpdateHash || isEmptyTransition) {
+      console.log(`[StandaloneTodoManager] Firing change event: ${previousTodoCount} -> ${currentTodoCount} todos, title: "${this.title}"${isEmptyTransition ? ' (empty transition)' : ''}`);
       this.lastUpdateHash = currentHash;
       // Emit consolidated change event
       this.emit('change', { todos: this.getTodos(), title: this.getTitle() });
+    } else {
+      console.log('[StandaloneTodoManager] No change detected, skipping event');
     }
   }
 

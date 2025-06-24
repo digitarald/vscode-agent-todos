@@ -9,51 +9,55 @@ export class EmptyStateTreeItem extends vscode.TreeItem {
         this.description = 'Get started by adding your first task';
         this.iconPath = new vscode.ThemeIcon('info', new vscode.ThemeColor('descriptionForeground'));
         this.contextValue = 'emptyState';
-        this.tooltip = 'Use the todo tools in agent mode to create your first task';
+        this.tooltip = 'Click to start planning with AI';
+        this.command = {
+            command: 'todoManager.startPlanning',
+            title: 'Start Planning'
+        };
     }
 }
 
 export class TodoTreeItem extends vscode.TreeItem {
     private static recentlyChangedItems = new Set<string>();
-    
+
     constructor(
         public readonly todo: TodoItem,
         collapsibleState?: vscode.TreeItemCollapsibleState
     ) {
         // Clean up content for display - replace newlines with spaces
         const displayContent = todo.content.replace(/\s+/g, ' ').trim();
-        
+
         // Check if subtasks are enabled and todo has subtasks
         const subtasksEnabled = vscode.workspace.getConfiguration('todoManager').get<boolean>('enableSubtasks', true);
         const hasSubtasks = subtasksEnabled && todo.subtasks && todo.subtasks.length > 0;
-        const finalCollapsibleState = collapsibleState !== undefined ? collapsibleState : 
+        const finalCollapsibleState = collapsibleState !== undefined ? collapsibleState :
             (hasSubtasks ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-        
+
         super(displayContent, finalCollapsibleState);
 
         // Enhanced tooltip with status and priority
-        const statusLabel = todo.status === 'pending' ? 'Pending' : 
-                           todo.status === 'in_progress' ? 'In Progress' : 
-                           'Completed';
+        const statusLabel = todo.status === 'pending' ? 'Pending' :
+            todo.status === 'in_progress' ? 'In Progress' :
+                'Completed';
         const priorityEmoji = todo.priority === 'high' ? '🔴' :
-                             todo.priority === 'medium' ? '🟡' :
-                             '🟢';
-        
+            todo.priority === 'medium' ? '🟡' :
+                '🟢';
+
         let tooltipText = `${statusLabel}: ${todo.content}\n${priorityEmoji} ${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)} priority`;
-        
+
         // Add details to tooltip if present
         if (todo.details) {
             tooltipText += `\n\nDetails: ${todo.details}`;
         }
-        
+
         // Add subtask count if present
         if (hasSubtasks) {
             const completedSubtasks = todo.subtasks!.filter(s => s.status === 'completed').length;
             tooltipText += `\n\nSubtasks: ${completedSubtasks}/${todo.subtasks!.length} completed`;
         }
-        
+
         this.tooltip = tooltipText;
-        
+
         // Set resourceUri for FileDecorationProvider
         const hasDetailsFlag = todo.details ? '/details' : '';
         this.resourceUri = vscode.Uri.parse(`todo://${todo.status}/${todo.priority}/${todo.id}${hasDetailsFlag}`);
@@ -80,26 +84,26 @@ export class TodoTreeItem extends vscode.TreeItem {
         // Set contextValue for commands and menus
         const hasDetails = todo.details ? ' has-details' : '';
         this.contextValue = `todoItem todo-${todo.status} todo-${todo.priority}${hasDetails}`;
-        
+
         // Add description to show subtask count and/or details indicator
         const descriptions: string[] = [];
-        
+
         if (hasSubtasks) {
             const { completed, total } = SubtaskManager.countCompletedSubtasks(todo);
             descriptions.push(`${completed}/${total}`);
         }
-        
+
         if (todo.details) {
             descriptions.push('•');
         }
-        
+
         if (descriptions.length > 0) {
             this.description = descriptions.join(' ');
         }
 
         // No click command - use inline action instead
     }
-    
+
     static markAsRecentlyChanged(todoId: string): void {
         this.recentlyChangedItems.add(todoId);
         // Remove the highlight after 3 seconds
@@ -109,7 +113,7 @@ export class TodoTreeItem extends vscode.TreeItem {
             vscode.commands.executeCommand('todoManager.refreshDecorations');
         }, 3000);
     }
-    
+
     static isRecentlyChanged(todoId: string): boolean {
         return this.recentlyChangedItems.has(todoId);
     }
@@ -122,21 +126,21 @@ export class SubtaskTreeItem extends vscode.TreeItem {
     ) {
         const displayContent = subtask.content.replace(/\s+/g, ' ').trim();
         super(displayContent, vscode.TreeItemCollapsibleState.None);
-        
+
         // Set tooltip
         const statusLabel = subtask.status === 'pending' ? 'Pending' : 'Completed';
         this.tooltip = `${statusLabel}: ${subtask.content}`;
-        
+
         // Set resourceUri for FileDecorationProvider
         this.resourceUri = vscode.Uri.parse(`todo-subtask://${subtask.status}/${parentTodoId}/${subtask.id}`);
-        
+
         // Set icon based on status
         if (subtask.status === 'pending') {
             this.iconPath = new vscode.ThemeIcon('circle-outline');
         } else {
             this.iconPath = new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('testing.iconPassed'));
         }
-        
+
         // Set contextValue for commands
         this.contextValue = `subtaskItem subtask-${subtask.status}`;
     }
@@ -162,7 +166,7 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
 
     private detectChangedItems(): void {
         const currentTodos = this.todoManager.getTodos();
-        
+
         // Find items that have changed status
         for (const currentTodo of currentTodos) {
             const previousTodo = this.previousTodos.find(t => t.id === currentTodo.id);
@@ -170,14 +174,14 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
                 TodoTreeItem.markAsRecentlyChanged(currentTodo.id);
             }
         }
-        
+
         // Find newly added items
         for (const currentTodo of currentTodos) {
             if (!this.previousTodos.find(t => t.id === currentTodo.id)) {
                 TodoTreeItem.markAsRecentlyChanged(currentTodo.id);
             }
         }
-        
+
         this.previousTodos = [...currentTodos];
     }
 
@@ -189,12 +193,12 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
         if (!element) {
             // Root level - return all todos or empty state
             const todos = this.todoManager.getTodos();
-            
+
             if (todos.length === 0) {
                 // Show empty state
                 return Promise.resolve([new EmptyStateTreeItem()]);
             }
-            
+
             return Promise.resolve(
                 todos.map(todo => new TodoTreeItem(todo))
             );
@@ -222,27 +226,46 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
         }
 
         this.pendingRefresh = true;
-        
-        // Debounce rapid refreshes
+
+        // Check for empty state transitions for immediate refresh
+        const currentTodos = this.todoManager.getTodos();
+        const isEmptyTransition = (this.previousTodos.length > 0 && currentTodos.length === 0) ||
+                                 (this.previousTodos.length === 0 && currentTodos.length > 0);
+
+        if (isEmptyTransition) {
+            console.log('[TodoTreeProvider] Empty transition detected, immediate refresh');
+            this.executeRefresh();
+            return;
+        }
+
+        // Debounce rapid refreshes with minimal delay
         this.refreshDebounceTimer = setTimeout(() => {
-            if (!this.pendingRefresh) {return;}
-            
-            console.log('[TodoTreeProvider] Executing debounced refresh');
-            this.isRefreshing = true;
-            
-            // Detect changed items for highlighting
-            this.detectChangedItems();
-            
-            // Fire with undefined to force complete refresh of the tree
-            this._onDidChangeTreeData.fire(undefined);
-            
-            // Reset refreshing flag and trigger decoration refresh after a short delay
-            setTimeout(() => {
-                this.isRefreshing = false;
-                this.pendingRefresh = false;
-                vscode.commands.executeCommand('todoManager.refreshDecorations');
-            }, 100); // Reduced from 300ms
-        }, 150); // Debounce time
+            if (!this.pendingRefresh) { return; }
+            this.executeRefresh();
+        }, 50); // Further reduced for better responsiveness
+    }
+
+    private executeRefresh(): void {
+        console.log('[TodoTreeProvider] Executing refresh');
+        this.isRefreshing = true;
+
+        // Detect changed items for highlighting
+        this.detectChangedItems();
+
+        // Fire with undefined to force complete refresh of the tree
+        this._onDidChangeTreeData.fire(undefined);
+
+        // Reset refreshing flag and trigger decoration refresh after a short delay
+        setTimeout(() => {
+            this.isRefreshing = false;
+            this.pendingRefresh = false;
+            // Only execute command if it exists (might not in test environment)
+            vscode.commands.getCommands().then(commands => {
+                if (commands.includes('todoManager.refreshDecorations')) {
+                    vscode.commands.executeCommand('todoManager.refreshDecorations');
+                }
+            });
+        }, 50); // Reduced delay
     }
 }
 
@@ -264,28 +287,28 @@ export class TodoDecorationProvider implements vscode.FileDecorationProvider {
         }
 
         const parts = uri.path.split('/').filter(p => p);
-        
+
         if (uri.scheme === 'todo-subtask') {
             // Handle subtask decorations
             const [status] = parts;
-            
+
             let decoration: vscode.FileDecoration | undefined;
-            
+
             if (status === 'completed') {
                 decoration = {
                     color: new vscode.ThemeColor('disabledForeground'),
                     propagate: false
                 };
             }
-            
+
             // Cache and return
             this.decorationCache.set(cacheKey, decoration);
             return decoration;
         }
-        
+
         // Handle regular todo decorations
         const [status, priority, id] = parts;
-        
+
         // Check if this item was recently changed
         if (id && TodoTreeItem.isRecentlyChanged(id)) {
             const decoration = {
@@ -299,7 +322,7 @@ export class TodoDecorationProvider implements vscode.FileDecorationProvider {
 
         // Status-based decorations
         let decoration: vscode.FileDecoration | undefined;
-        
+
         switch (status) {
             case 'in_progress':
                 decoration = {
@@ -328,27 +351,27 @@ export class TodoDecorationProvider implements vscode.FileDecorationProvider {
             this.decorationCache.set(cacheKey, decoration);
             return decoration;
         }
-        
+
         // Note: Details indicator is shown in the tree item description instead of badge
         // to avoid conflicts with priority badges
 
         decoration = undefined;
-        
+
         // Cache the result
         this.decorationCache.set(cacheKey, decoration);
-        
+
         return decoration;
     }
-    
+
     refresh(): void {
         // Clear cache
         this.decorationCache.clear();
-        
+
         // Debounce rapid refreshes
         if (this.refreshDebounceTimer) {
             clearTimeout(this.refreshDebounceTimer);
         }
-        
+
         this.refreshDebounceTimer = setTimeout(() => {
             this._onDidChangeFileDecorations.fire(undefined);
         }, 50);

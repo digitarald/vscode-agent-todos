@@ -46,7 +46,7 @@ graph TB
         TT[TodoTools<br/>read/write handlers]
         TS[TodoSync<br/>Bidirectional]
         STM[StandaloneTodoManager<br/>Singleton]
-        
+
         subgraph SessionMgmt[Session Management]
             TRM[Transports Map]
             SRM[Servers Map]
@@ -66,7 +66,7 @@ graph TB
     EXT --> TTP
     EXT --> TDP
     EXT --> MCP
-    
+
     %% Storage configuration
     TM --> WSS
     STM -.-> IMS
@@ -80,7 +80,7 @@ graph TB
     TDP --> VSC
     TM --> TTP
     TM --> TDP
-    
+
     %% View events
     TM -.->|onShouldOpenView| EXT
     TM -.->|onDidChange| TTP
@@ -97,19 +97,19 @@ graph TB
     MCPS --> STR
     STR --> TRM
     STR --> SRM
-    
+
     %% Bidirectional sync
     MCP --> TS
     TS <--> TM
     TS <--> STM
-    
+
     %% Tool handling
     TT --> STM
     TT --> TS
-    
+
     %% External communication
     MC <-->|HTTP POST/GET/SSE| MCPS
-    
+
     %% Utility usage
     TM --> SM
     TM --> TV
@@ -146,25 +146,55 @@ todoManager.onDidChange((change) => {
 
 ### Change Deduplication
 
-All state changes use hash-based deduplication to prevent redundant updates:
+All state changes use enhanced hash-based deduplication with version tracking to handle edge cases:
 
 ```typescript
 private fireConsolidatedChange(): void {
-  const currentHash = JSON.stringify({ todos: this.todos, title: this.title });
-  if (currentHash !== this.lastUpdateHash) {
+  const isEmptyTransition = // ... detect empty transitions
+  const currentHash = JSON.stringify({ 
+    todos: this.todos, 
+    title: this.title,
+    version: isEmptyTransition ? ++this.updateVersion : this.updateVersion
+  });
+  if (currentHash !== this.lastUpdateHash || isEmptyTransition) {
     this.lastUpdateHash = currentHash;
     this.onDidChangeEmitter.fire({ todos: this.todos, title: this.getTitle() });
   }
 }
 ```
 
+**Key Features:**
+- Version field increments on empty transitions to force updates
+- Empty transitions (0→n or n→0 todos) always trigger immediate updates
+- Prevents deduplication from blocking critical UI updates
+
 ### Debouncing Strategy
 
-Different components use specific debounce timings:
+Components use optimized debounce timings with special handling for empty transitions:
 
-- **Tree View Updates**: 150ms debounce for UI responsiveness
+- **Tree View Updates**: 50ms debounce (immediate for empty transitions)
 - **File Operations**: 500ms debounce to batch rapid changes
-- **MCP Sync**: Immediate sync to maintain consistency
+- **MCP Sync**: 0ms for empty transitions, 10ms otherwise
+
+### TodoSync Improvements
+
+The bidirectional sync mechanism includes:
+
+```typescript
+// Promise-based synchronization to handle concurrent updates
+private syncPromise: Promise<void> | null = null;
+
+// Proper race condition handling
+if (this.syncPromise) {
+  await this.syncPromise; // Wait for in-progress sync
+}
+```
+
+**Key Features:**
+- Promise-based sync queue prevents race conditions
+- Version tracking ensures sync order consistency
+- Comprehensive logging for debugging sync issues
+- Empty transition detection forces immediate sync
 
 ### Async Initialization
 
@@ -204,6 +234,16 @@ private async writeWithQueue(todos: TodoItem[], title?: string): Promise<void> {
 }
 ```
 
+## Critical Implementation Patterns
+
+**ALWAYS follow these patterns to avoid sync issues:**
+
+1. **Single Consolidated Event Pattern** - Never create separate events for different properties
+2. **Empty State Transitions** - Always force sync when todo count changes between 0 and n
+3. **Promise-Based Sync** - Use promise queuing to prevent race conditions
+4. **Hash-Based Deduplication** - Include version tracking for forced updates
+5. **Proper Test Context** - Initialize with mock storage to avoid "context not initialized" errors
+
 ## Coding Standards
 
 ### TypeScript Patterns
@@ -220,6 +260,9 @@ private async writeWithQueue(todos: TodoItem[], title?: string): Promise<void> {
 - Register `vscode.FileDecorationProvider` for todo item styling
 - Use `vscode.ThemeIcon` for consistent iconography
 - Handle tree view badges with `TreeView.badge` for task counts
+- Move toggle actions to overflow menus using grouped menu items without `navigation` group
+- Use conditional menu items with different titles/icons to show toggle states (checkbox-style)
+- Use `workbench.action.chat.open` with agent mode to integrate with VS Code's chat functionality
 
 ### File Organization
 
@@ -275,18 +318,20 @@ Available implementations:
 // Register MCP server provider (not individual tools)
 const mcpProvider = new TodoMCPServerProvider(context);
 const mcpDisposable = vscode.lm.registerMcpServerDefinitionProvider(
-  'todos-mcp-provider',
+  "todos-mcp-provider",
   mcpProvider
 );
 context.subscriptions.push(mcpDisposable);
 
 // MCP server handles tool registration internally
-export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider {
+export class TodoMCPServerProvider
+  implements vscode.McpServerDefinitionProvider
+{
   async provideServerDefinition(): Promise<McpServerDefinition> {
     return {
-      command: 'node',
+      command: "node",
       args: [serverPath, `--workspace-root=${workspaceRoot}`],
-      transport: { type: 'stdio' as const }
+      transport: { type: "stdio" as const },
     };
   }
 }
@@ -313,13 +358,41 @@ export class TodoTreeDataProvider
 }
 ```
 
+### Empty State Pattern
+
+When the todo list is empty, show an interactive empty state item with click action:
+
+```typescript
+export class EmptyStateTreeItem extends vscode.TreeItem {
+  constructor() {
+    super("No todos yet", vscode.TreeItemCollapsibleState.None);
+    this.description = "Get started by adding your first task";
+    this.iconPath = new vscode.ThemeIcon(
+      "info",
+      new vscode.ThemeColor("descriptionForeground")
+    );
+    this.tooltip = "Click to start planning with AI";
+    this.command = {
+      command: "todoManager.startPlanning",
+      title: "Start Planning",
+    };
+  }
+}
+```
+
+This enables users to click the empty state to open VS Code's chat with a planning prompt.
+
 ### Package.json Contributions
 
 See [`package.json`](../package.json) for full configuration:
 
 - **MCP Server Definition Providers**: Register with `mcpServerDefinitionProviders`
 - **Views**: Specify in `explorer` container with `id`, `name`, `icon`
-- **Commands**: Define with `command`, `title`, `icon` fields
+- **Commands**: Define with `command`, `title`, `icon` fields including:
+  - `todoManager.startPlanning` - Opens chat with planning prompt for empty state
+  - `todoManager.runTodo` - Opens chat to continue with a specific todo
+  - Task management commands (add, delete, toggle status)
+  - Configuration commands (auto-inject, auto-open view)
 - **Configuration**: Settings under `todoManager.*` namespace
 
 ## Data Models
@@ -336,6 +409,46 @@ See [`src/types.ts`](../src/types.ts) for complete type definitions:
 - Return descriptive error messages via `LanguageModelTextPart`
 - Use try/catch blocks around VS Code API calls
 - Dispose of resources properly in `deactivate()`
+- Delete/clear operations execute immediately without confirmation dialogs for better UX
+
+## Best Practices for MCP Sync
+
+### Handle Empty State Transitions
+Empty transitions (0→n or n→0 todos) require special handling:
+- Always force sync on empty transitions
+- Use immediate refresh (0ms debounce) for empty state changes
+- Test empty state transitions explicitly in your code
+
+### Async Operation Patterns
+When implementing sync between managers:
+```typescript
+// Use promise-based sync to prevent race conditions
+private syncPromise: Promise<void> | null = null;
+
+// Wait for in-progress operations
+if (this.syncPromise) {
+  await this.syncPromise;
+}
+```
+
+### Event Deduplication
+Prevent event loops with proper deduplication:
+- Use version tracking for forced updates
+- Compare state hashes before firing events
+- Log state transitions for debugging
+
+### Testing Async Code
+- Use adequate timeouts (300-500ms) for sync operations
+- Initialize test context properly with mock storage
+- Create isolated instances for each test to avoid state pollution
+
+### Debugging Sync Issues
+When debugging MCP/tree view sync problems:
+1. Add comprehensive logging at each sync step
+2. Log state transitions with counts: `${previousCount} -> ${currentCount}`
+3. Include operation versions in logs for tracking order
+4. Check for proper event subscription before triggering changes
+5. Verify storage initialization in test environments
 
 ## Security Notes
 
@@ -353,3 +466,7 @@ See [`src/types.ts`](../src/types.ts) for complete type definitions:
 - End-to-end MCP integration tests
 
 See test files in [`src/test/`](../src/test/) for examples.
+
+```
+
+```

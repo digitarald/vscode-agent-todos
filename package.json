@@ -44,15 +44,27 @@
       },
       {
         "command": "todoManager.toggleAutoInject",
-        "title": "Toggle Auto-inject",
+        "title": "Enable auto-inject into copilot-instructions.md",
+        "category": "Agent TODOs",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "todoManager.toggleAutoInjectEnabled",
+        "title": "Disable auto-inject into copilot-instructions.md",
         "category": "Agent TODOs",
         "icon": "$(sync)"
       },
       {
         "command": "todoManager.toggleAutoOpenView",
-        "title": "Toggle Auto-open View",
+        "title": "Enable auto-open view on changes",
         "category": "Agent TODOs",
-        "icon": "$(open-preview)"
+        "icon": "$(eye)"
+      },
+      {
+        "command": "todoManager.toggleAutoOpenViewEnabled",
+        "title": "Disable auto-open view on changes",
+        "category": "Agent TODOs",
+        "icon": "$(eye)"
       },
       {
         "command": "todoManager.deleteTodo",
@@ -131,6 +143,12 @@
         "title": "Run Todo in Chat",
         "category": "Agent TODOs",
         "icon": "$(play)"
+      },
+      {
+        "command": "todoManager.startPlanning",
+        "title": "Start Planning",
+        "category": "Agent TODOs",
+        "icon": "$(comment-discussion)"
       }
     ],
     "viewsContainers": {
@@ -166,13 +184,23 @@
         },
         {
           "command": "todoManager.toggleAutoInject",
-          "when": "view == todoManager",
-          "group": "navigation"
+          "when": "view == todoManager && !config.todoManager.autoInject",
+          "group": "1_toggles"
+        },
+        {
+          "command": "todoManager.toggleAutoInjectEnabled",
+          "when": "view == todoManager && config.todoManager.autoInject",
+          "group": "1_toggles"
         },
         {
           "command": "todoManager.toggleAutoOpenView",
-          "when": "view == todoManager",
-          "group": "navigation"
+          "when": "view == todoManager && !config.todoManager.autoOpenView",
+          "group": "1_toggles"
+        },
+        {
+          "command": "todoManager.toggleAutoOpenViewEnabled",
+          "when": "view == todoManager && config.todoManager.autoOpenView",
+          "group": "1_toggles"
         }
       ],
       "view/item/context": [

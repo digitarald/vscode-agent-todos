@@ -12,6 +12,16 @@ export async function activate(context: vscode.ExtensionContext) {
 		const todoManager = TodoManager.getInstance();
 		todoManager.initialize(context);
 
+		// Function to update toggle command titles based on current settings
+		const updateToggleCommandTitles = () => {
+			const config = vscode.workspace.getConfiguration('todoManager');
+			const autoInjectEnabled = config.get<boolean>('autoInject', false);
+			const autoOpenViewEnabled = config.get<boolean>('autoOpenView', true);
+
+			// We can't directly update command titles, but we can show the state in the menu
+			// This is handled via the when clauses in package.json and updated icons
+		};
+
 		// Register file decoration provider for todo styling
 		const decorationProvider = new TodoDecorationProvider();
 		const decorationProviderDisposable = vscode.window.registerFileDecorationProvider(decorationProvider);
@@ -93,11 +103,8 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		// Register commands
 		const clearTodosCommand = vscode.commands.registerCommand('todoManager.clearTodos', async () => {
-			const selection = await vscode.window.showInformationMessage('Are you sure you want to clear all todos?', 'Yes', 'No');
-			if (selection === 'Yes') {
-				await todoManager.clearTodos();
-				vscode.window.showInformationMessage('All todos cleared!');
-			}
+			await todoManager.clearTodos();
+			vscode.window.showInformationMessage('All todos cleared!');
 		});
 
 		const refreshTodosCommand = vscode.commands.registerCommand('todoManager.refreshTodos', () => {
@@ -136,7 +143,25 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
 		});
 
+		const toggleAutoInjectEnabledCommand = vscode.commands.registerCommand('todoManager.toggleAutoInjectEnabled', async () => {
+			const config = vscode.workspace.getConfiguration('todoManager');
+			const currentValue = config.get<boolean>('autoInject', false);
+			await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
+
+			const status = !currentValue ? 'enabled' : 'disabled';
+			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
+		});
+
 		const toggleAutoOpenViewCommand = vscode.commands.registerCommand('todoManager.toggleAutoOpenView', async () => {
+			const config = vscode.workspace.getConfiguration('todoManager');
+			const currentValue = config.get<boolean>('autoOpenView', true);
+			await config.update('autoOpenView', !currentValue, vscode.ConfigurationTarget.Workspace);
+
+			const status = !currentValue ? 'enabled' : 'disabled';
+			vscode.window.showInformationMessage(`Auto-open view ${status}. The Todos view will ${!currentValue ? 'automatically open' : 'not open'} when the todo list changes.`);
+		});
+
+		const toggleAutoOpenViewEnabledCommand = vscode.commands.registerCommand('todoManager.toggleAutoOpenViewEnabled', async () => {
 			const config = vscode.workspace.getConfiguration('todoManager');
 			const currentValue = config.get<boolean>('autoOpenView', true);
 			await config.update('autoOpenView', !currentValue, vscode.ConfigurationTarget.Workspace);
@@ -216,10 +241,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		const deleteSubtaskCommand = vscode.commands.registerCommand('todoManager.deleteSubtask', async (item: any) => {
 			if (item?.subtask && item?.parentTodoId) {
-				const selection = await vscode.window.showInformationMessage('Delete this subtask?', 'Yes', 'No');
-				if (selection === 'Yes') {
-					await todoManager.deleteSubtask(item.parentTodoId, item.subtask.id);
-				}
+				await todoManager.deleteSubtask(item.parentTodoId, item.subtask.id);
 			}
 		});
 
@@ -269,6 +291,14 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
+		const startPlanningCommand = vscode.commands.registerCommand('todoManager.startPlanning', async () => {
+			// Open chat with a planning prompt
+			await vscode.commands.executeCommand('workbench.action.chat.open', {
+				mode: 'agent',
+				query: 'Create a detailed plan to implement ...'
+			});
+		});
+
 		// Add all disposables to context
 		context.subscriptions.push(
 			treeView,
@@ -279,7 +309,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			toggleTodoStatusCommand,
 			deleteTodoCommand,
 			toggleAutoInjectCommand,
+			toggleAutoInjectEnabledCommand,
 			toggleAutoOpenViewCommand,
+			toggleAutoOpenViewEnabledCommand,
 			setStatusPendingCommand,
 			setStatusInProgressCommand,
 			setStatusCompletedCommand,
@@ -291,7 +323,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			deleteSubtaskCommand,
 			addEditDetailsCommand,
 			clearDetailsCommand,
-			runTodoCommand
+			runTodoCommand,
+			startPlanningCommand
 		);
 
 		// MCP disposables are now added in the async initialization

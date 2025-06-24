@@ -93,6 +93,7 @@ export class TodoTools {
     const autoInject = this.isAutoInjectEnabled();
 
     if (autoInject && !this.server.isStandalone()) {
+      console.log('[TodoTools] Read blocked - auto-inject is enabled');
       return {
         content: [{
           type: 'text',
@@ -103,6 +104,8 @@ export class TodoTools {
 
     const todos = this.todoManager.getTodos();
     const title = this.todoManager.getTitle();
+    console.log(`[TodoTools] Reading todos: ${todos.length} items, title: "${title}"`);
+    
     const result = {
       title,
       todos
@@ -186,8 +189,13 @@ export class TodoTools {
       }
     }
 
+    // Log the update operation
+    console.log(`[TodoTools] Updating todos via MCP: ${todos.length} items, title: ${title || 'no change'}`);
+    
     // Update todos
     await this.todoManager.updateTodos(todos, title);
+    
+    console.log('[TodoTools] Update completed, todos should sync to VS Code');
 
     // Generate success message
     const pendingCount = todos.filter(t => t.status === 'pending').length;
@@ -227,6 +235,7 @@ export class TodoTools {
     const titleMsg = title ? ` and title to "${title}"` : '';
 
     // Broadcast update via SSE
+    console.log('[TodoTools] Broadcasting update event');
     this.server.broadcastUpdate({
       type: 'todos-updated',
       todos,

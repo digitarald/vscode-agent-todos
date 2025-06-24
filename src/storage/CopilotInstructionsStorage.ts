@@ -27,7 +27,9 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             }
 
             const content = fs.readFileSync(filePath, 'utf8');
-            return this.parseTodosFromContent(content);
+            const result = this.parseTodosFromContent(content);
+            console.log(`[CopilotInstructionsStorage] Loaded ${result.todos.length} todos from file`);
+            return result;
         } catch (error) {
             console.error('Error loading todos from copilot instructions:', error);
             return { todos: [], title: 'Todos' };
@@ -66,6 +68,7 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             }
 
             fs.writeFileSync(filePath, newContent, 'utf8');
+            console.log(`[CopilotInstructionsStorage] Saved ${todos.length} todos to file`);
             this.emit('change');
         } catch (error) {
             console.error('Error saving todos to copilot instructions:', error);
@@ -112,6 +115,7 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
         }
 
         this.updateDebounceTimer = setTimeout(() => {
+            console.log('[CopilotInstructionsStorage] File changed externally, emitting change event');
             this.emit('change');
         }, 300);
     }
