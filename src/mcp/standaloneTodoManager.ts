@@ -4,6 +4,7 @@ import { TodoValidator } from '../todoValidator';
 import { EventEmitter } from 'events';
 import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
+import { StandaloneCopilotWriter } from './standaloneCopilotWriter';
 
 export class StandaloneTodoManager extends EventEmitter {
   private static instance: StandaloneTodoManager | null = null;
@@ -13,16 +14,23 @@ export class StandaloneTodoManager extends EventEmitter {
   private storageDisposable: { dispose: () => void } | undefined;
   private lastUpdateHash: string = '';
   private updateVersion: number = 0;
+  private copilotWriter: StandaloneCopilotWriter | null = null;
   
-  constructor(storage?: ITodoStorage) {
+  constructor(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }) {
     super();
     this.storage = storage || new InMemoryStorage();
+    if (autoInjectConfig) {
+      this.copilotWriter = new StandaloneCopilotWriter(
+        autoInjectConfig.workspaceRoot,
+        autoInjectConfig.filePath
+      );
+    }
     this.initialize();
   }
   
-  static getInstance(storage?: ITodoStorage): StandaloneTodoManager {
+  static getInstance(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }): StandaloneTodoManager {
     if (!StandaloneTodoManager.instance || storage) {
-      StandaloneTodoManager.instance = new StandaloneTodoManager(storage);
+      StandaloneTodoManager.instance = new StandaloneTodoManager(storage, autoInjectConfig);
     }
     return StandaloneTodoManager.instance;
   }
@@ -53,6 +61,11 @@ export class StandaloneTodoManager extends EventEmitter {
   private async saveTodos(): Promise<void> {
     try {
       await this.storage.save(this.todos, this.title);
+      
+      // Also write to copilot instructions if enabled
+      if (this.copilotWriter) {
+        await this.copilotWriter.updateInstructionsWithTodos(this.todos, this.title);
+      }
     } catch (error) {
       console.error('Failed to save todos:', error);
     }
@@ -94,6 +107,12 @@ export class StandaloneTodoManager extends EventEmitter {
   async clearTodos(): Promise<void> {
     this.todos = [];
     this.saveTodos();
+    
+    // Remove from copilot instructions if enabled
+    if (this.copilotWriter) {
+      await this.copilotWriter.removeInstructionsTodos();
+    }
+    
     this.fireChangeEvent();
   }
   
@@ -224,11 +243,26 @@ export class StandaloneTodoManager extends EventEmitter {
     return { dispose: () => {} };
   }
   
+  setAutoInject(config: { workspaceRoot: string; filePath?: string } | null): void {
+    if (config) {
+      this.copilotWriter = new StandaloneCopilotWriter(config.workspaceRoot, config.filePath);
+      // Write current todos to file
+      this.copilotWriter.updateInstructionsWithTodos(this.todos, this.title);
+    } else {
+      // Remove todos from file if disabling
+      if (this.copilotWriter) {
+        this.copilotWriter.removeInstructionsTodos();
+      }
+      this.copilotWriter = null;
+    }
+  }
+  
   
   dispose(): void {
     if (this.storageDisposable) {
       this.storageDisposable.dispose();
     }
     this.removeAllListeners();
+    this.copilotWriter = null;
   }
 }

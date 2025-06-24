@@ -2,6 +2,7 @@ This is a VS Code extension project. Please use the get_vscode_api with a query 
 
 IMPORTANT:
 
+- ALWAYS plan changes using detailed todos
 - ALWAYS keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation!
 - ALWAYS validate changes by running compile and test commands!
 - NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
@@ -10,7 +11,7 @@ IMPORTANT:
 
 ## Project Overview
 
-This extension provides AI assistants with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
+This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
 
 For more details:
 
@@ -36,8 +37,11 @@ graph TB
         ITS[ITodoStorage<br/>Interface]
         WSS[WorkspaceStateStorage<br/>Default]
         IMS[InMemoryStorage<br/>Testing/Standalone]
-        CIS[CopilotInstructionsStorage<br/>File-based]
-        CIM[CopilotInstructionsManager<br/>Singleton]
+    end
+
+    subgraph ExportLayer[Export Layer]
+        CIM[CopilotInstructionsManager<br/>Write-only Export]
+        SCW[StandaloneCopilotWriter<br/>Write-only Export]
     end
 
     subgraph MCPIntegration[MCP Integration]
@@ -69,11 +73,10 @@ graph TB
 
     %% Storage configuration
     TM --> WSS
-    STM -.-> IMS
-    STM -.-> CIS
+    STM --> IMS
     WSS -.-> ITS
     IMS -.-> ITS
-    CIS -.-> ITS
+    MCP --> WSS
 
     %% UI and decorations
     TTP --> VSC
@@ -85,10 +88,11 @@ graph TB
     TM -.->|onShouldOpenView| EXT
     TM -.->|onDidChange| TTP
 
-    %% Copilot sync
-    CIS --> CIM
-    CIM --> CI
-    TM -.->|auto-inject| CIM
+    %% Export to markdown (write-only)
+    TM -.->|auto-inject writes| CIM
+    CIM -->|write-only| CI
+    STM -.->|auto-inject writes| SCW
+    SCW -->|write-only| CI
 
     %% MCP server setup
     MCP --> MCPS
@@ -280,8 +284,7 @@ src/
 ├── storage/
 │   ├── ITodoStorage.ts         # Storage interface
 │   ├── WorkspaceStateStorage.ts # Default VS Code storage
-│   ├── InMemoryStorage.ts      # Memory-based storage
-│   └── CopilotInstructionsStorage.ts # File-based storage
+│   └── InMemoryStorage.ts      # Memory-based storage
 ├── utils/
 │   └── performance.ts          # Performance monitoring utility
 └── mcp/
@@ -291,6 +294,7 @@ src/
     ├── standaloneTodoManager.ts # Standalone manager singleton
     ├── todoSync.ts             # Bidirectional sync
     ├── types.ts                # MCP-specific types
+    ├── standaloneCopilotWriter.ts # Standalone markdown writer
     └── tools/
         └── todoTools.ts        # MCP tool implementations
 ```
@@ -310,9 +314,26 @@ const { todos, title } = await storage.load();
 
 Available implementations:
 
-- [`WorkspaceStateStorage`](../src/storage/WorkspaceStateStorage.ts) - VS Code workspace state
-- [`InMemoryStorage`](../src/storage/InMemoryStorage.ts) - Temporary in-memory storage
-- [`CopilotInstructionsStorage`](../src/storage/CopilotInstructionsStorage.ts) - File-based storage
+- [`WorkspaceStateStorage`](../src/storage/WorkspaceStateStorage.ts) - VS Code workspace state (default)
+- [`InMemoryStorage`](../src/storage/InMemoryStorage.ts) - Temporary in-memory storage (standalone mode)
+
+### Export Pattern
+
+The copilot-instructions.md file is treated as a write-only export destination, not a storage backend:
+
+```typescript
+// VS Code mode: Uses CopilotInstructionsManager
+if (autoInjectEnabled) {
+  await copilotInstructionsManager.updateInstructionsWithTodos(todos, title);
+}
+
+// Standalone mode: Uses StandaloneCopilotWriter
+if (autoInjectEnabled) {
+  await standaloneCopilotWriter.updateInstructionsWithTodos(todos, title);
+}
+```
+
+**Important**: The markdown file is NEVER read back. Todo data flows in one direction only: from storage → markdown file.
 
 ### MCP Server Provider
 
@@ -396,10 +417,12 @@ See [`package.json`](../package.json) for full configuration:
   - Task management commands (add, delete, toggle status)
   - Configuration commands (auto-inject, auto-open view)
 - **Configuration**: Settings under `agentTodos.*` namespace including:
-  - `agentTodos.autoInject` - Enable auto-injection into copilot instructions file
+  - `agentTodos.autoInject` - Enable write-only export to copilot instructions file
   - `agentTodos.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/copilot-instructions.md`)
   - `agentTodos.autoOpenView` - Automatically open todo view when list changes
   - `agentTodos.enableSubtasks` - Enable subtasks feature
+
+**Note on Auto-Inject**: When enabled, todos are exported to the markdown file on every change. The file is NEVER read back - it's a one-way export only. Todo data is always stored in WorkspaceStateStorage (VS Code) or InMemoryStorage (standalone).
 
 ## Data Models
 

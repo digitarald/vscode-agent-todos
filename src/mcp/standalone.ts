@@ -7,6 +7,7 @@ async function startStandaloneServer() {
   const port = parseInt(process.env.MCP_PORT || '3000', 10);
   const workspaceRoot = process.env.WORKSPACE_ROOT || process.cwd();
   const autoInject = process.env.MCP_AUTO_INJECT === 'true' || process.argv.includes('--auto-inject');
+  const autoInjectFilePath = process.env.MCP_AUTO_INJECT_FILE_PATH || '.github/copilot-instructions.md';
   
   console.log('Starting MCP Todo Server in standalone mode...');
   console.log(`Workspace root: ${workspaceRoot}`);
@@ -14,17 +15,17 @@ async function startStandaloneServer() {
   console.log(`Auto-inject: ${autoInject}`);
   
   if (autoInject) {
-    console.log(`Todo storage: .github/copilot-instructions.md`);
-  } else {
-    console.log(`Todo storage: In-memory (no persistence)`);
+    console.log(`Todo export file: ${autoInjectFilePath}`);
   }
+  console.log(`Todo storage: In-memory`);
   
   // Create and start the server
   const server = new TodoMCPServer({
     port,
     workspaceRoot,
     standalone: true,
-    autoInject
+    autoInject,
+    autoInjectFilePath
   });
   
   try {

@@ -7,7 +7,6 @@ import { MCPServerConfig } from './types';
 import { StandaloneTodoManager } from './standaloneTodoManager';
 import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
-import { CopilotInstructionsStorage } from '../storage/CopilotInstructionsStorage';
 
 // Dynamic imports for ESM modules
 let Server: any;
@@ -36,9 +35,13 @@ export class TodoMCPServer {
 
     // Initialize todo manager based on mode
     if (this.config.standalone) {
-      // Create appropriate storage based on autoInject setting
-      const storage = this.createStorage();
-      this.todoManager = StandaloneTodoManager.getInstance(storage);
+      // Always use InMemoryStorage for standalone mode
+      const storage = new InMemoryStorage();
+      const autoInjectConfig = this.config.autoInject && this.config.workspaceRoot ? {
+        workspaceRoot: this.config.workspaceRoot,
+        filePath: this.config.autoInjectFilePath
+      } : undefined;
+      this.todoManager = StandaloneTodoManager.getInstance(storage, autoInjectConfig);
     } else {
       // In VS Code mode, the manager will be set via setTodoManager
       this.todoManager = null;
@@ -370,15 +373,6 @@ export class TodoMCPServer {
     return this.todoManager;
   }
 
-  private createStorage(): ITodoStorage {
-    if (this.config.autoInject && this.config.workspaceRoot) {
-      return new CopilotInstructionsStorage(
-        this.config.workspaceRoot,
-        this.config.autoInjectFilePath
-      );
-    }
-    return new InMemoryStorage();
-  }
 
   public setStorage(storage: ITodoStorage): void {
     if (this.todoManager instanceof StandaloneTodoManager) {

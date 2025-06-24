@@ -19,9 +19,6 @@ export class TodoManager {
     public readonly onDidChangeConfiguration = this.onDidChangeConfigurationEmitter.event;
     private copilotInstructionsManager: CopilotInstructionsManager;
     private configurationDisposable: vscode.Disposable | undefined;
-    private fileWatcher: vscode.FileSystemWatcher | undefined;
-    private isUpdatingFile: boolean = false;
-    private updateDebounceTimer: NodeJS.Timeout | undefined;
     private context: vscode.ExtensionContext | undefined;
     private pendingUpdate: { todos?: TodoItem[], title?: string } | null = null;
     private updateInProgress = false;
@@ -46,12 +43,6 @@ export class TodoManager {
                 }
             });
 
-            // Initialize file watching if auto-inject is enabled
-            if (this.isAutoInjectEnabled()) {
-                this.startWatchingInstructionsFile();
-                // Sync from file on startup
-                this.syncFromInstructionsFile();
-            }
         } catch (error) {
             // Running in a context where vscode is not available (e.g., tests or standalone)
             console.log('TodoManager: Running without VS Code context');
@@ -68,8 +59,8 @@ export class TodoManager {
     public initialize(context?: vscode.ExtensionContext): void {
         this.context = context;
 
-        // Load todos from storage if auto-inject is disabled
-        if (!this.isAutoInjectEnabled() && context) {
+        // Load todos from storage
+        if (context) {
             this.loadFromStorage();
         }
     }
@@ -102,13 +93,9 @@ export class TodoManager {
         if (this.isAutoInjectEnabled()) {
             // Auto-inject is now enabled, update the instructions file
             await this.copilotInstructionsManager.updateInstructionsWithTodos(this.todos, this.title);
-            this.startWatchingInstructionsFile();
-            // Sync from file to get any existing todos
-            await this.syncFromInstructionsFile();
         } else {
             // Auto-inject is disabled, remove the todos from instructions
             await this.copilotInstructionsManager.removeInstructionsTodos();
-            this.stopWatchingInstructionsFile();
             // Save current todos to storage
             this.saveToStorage();
         }
@@ -124,104 +111,15 @@ export class TodoManager {
         if (this.isAutoInjectEnabled() && !this.updateInProgress) {
             await PerformanceMonitor.measure('updateInstructionsIfNeeded', async () => {
                 this.updateInProgress = true;
-                this.isUpdatingFile = true;
                 try {
                     await this.copilotInstructionsManager.updateInstructionsWithTodos(this.todos, this.title);
                 } finally {
-                    // Reset flags after a short delay to handle async file system events
-                    setTimeout(() => {
-                        this.isUpdatingFile = false;
-                        this.updateInProgress = false;
-                    }, 500);
+                    this.updateInProgress = false;
                 }
             });
         }
     }
 
-    private startWatchingInstructionsFile(): void {
-        if (this.fileWatcher) {
-            return; // Already watching
-        }
-
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (!workspaceFolder) {
-            return;
-        }
-
-        const pattern = new vscode.RelativePattern(workspaceFolder, this.copilotInstructionsManager.getInstructionsFilePath());
-        this.fileWatcher = vscode.workspace.createFileSystemWatcher(pattern);
-
-        // Watch for changes
-        this.fileWatcher.onDidChange((uri) => {
-            this.handleInstructionsFileChange();
-        });
-
-        this.fileWatcher.onDidCreate((uri) => {
-            this.handleInstructionsFileChange();
-        });
-
-        this.fileWatcher.onDidDelete((uri) => {
-            // If file is deleted while watching, clear todos
-            if (!this.isUpdatingFile) {
-                this.todos = [];
-                this.fireConsolidatedChange();
-            }
-        });
-
-        console.log('Started watching instructions file for changes');
-    }
-
-    private stopWatchingInstructionsFile(): void {
-        if (this.fileWatcher) {
-            this.fileWatcher.dispose();
-            this.fileWatcher = undefined;
-            console.log('Stopped watching instructions file');
-        }
-    }
-
-    private handleInstructionsFileChange(): void {
-        // Skip if we're the ones updating the file
-        if (this.isUpdatingFile) {
-            return;
-        }
-
-        // Debounce rapid changes
-        if (this.updateDebounceTimer) {
-            clearTimeout(this.updateDebounceTimer);
-        }
-
-        this.updateDebounceTimer = setTimeout(() => {
-            this.syncFromInstructionsFile();
-        }, 500); // Increased debounce time to reduce rapid updates
-    }
-
-    private async syncFromInstructionsFile(): Promise<void> {
-        await PerformanceMonitor.measure('syncFromInstructionsFile', async () => {
-            try {
-                const parsed = await this.copilotInstructionsManager.parseTodosFromInstructions();
-                if (!parsed) {
-                    return;
-                }
-
-                const { todos, title } = parsed;
-
-                // Check if todos actually changed to avoid unnecessary updates
-                const todosChanged = !this.areTodosEqual(this.todos, todos);
-                const titleChanged = title !== undefined && title !== this.title;
-
-                if (todosChanged || titleChanged) {
-                    this.todos = todos;
-                    if (title !== undefined) {
-                        this.title = title;
-                    }
-                    this.fireConsolidatedChange();
-                    console.log(`Synced ${todos.length} todos from instructions file`);
-                }
-            } catch (error) {
-                console.error('Error syncing from instructions file:', error);
-            }
-        });
-    }
 
     private areTodosEqual(todos1: TodoItem[], todos2: TodoItem[]): boolean {
         return TodoValidator.areTodosEqual(todos1, todos2);
@@ -461,9 +359,6 @@ export class TodoManager {
     }
 
     private saveToStorage(): void {
-        if (this.isAutoInjectEnabled()) {
-            return; // Don't save to storage if auto-inject is enabled
-        }
 
         if (!this.context) {
             console.warn('[TodoManager] Cannot save to storage: context not initialized');
@@ -501,7 +396,6 @@ export class TodoManager {
         if (this.configurationDisposable) {
             this.configurationDisposable.dispose();
         }
-        this.stopWatchingInstructionsFile();
         this.onShouldOpenViewEmitter.dispose();
         this.onDidChangeConfigurationEmitter.dispose();
         this.onDidChangeEmitter.dispose();

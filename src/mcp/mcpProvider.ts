@@ -5,7 +5,6 @@ import { TodoManager } from '../todoManager';
 import { StandaloneTodoManager } from './standaloneTodoManager';
 import { ITodoStorage } from '../storage/ITodoStorage';
 import { WorkspaceStateStorage } from '../storage/WorkspaceStateStorage';
-import { CopilotInstructionsStorage } from '../storage/CopilotInstructionsStorage';
 import * as net from 'net';
 import { PerformanceMonitor } from '../utils/performance';
 
@@ -64,19 +63,9 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       // For non-standalone mode, we need to create a standalone manager for the server
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
-      // Create appropriate storage based on auto-inject setting
-      const config = vscode.workspace.getConfiguration('agentTodos');
-      const isAutoInjectEnabled = config.get<boolean>('autoInject', false);
-      let storage: ITodoStorage;
-
-      if (isAutoInjectEnabled) {
-        console.log(`[MCPProvider] Using CopilotInstructionsStorage for workspace: ${workspaceRoot}`);
-        const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
-        storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
-      } else {
-        console.log('[MCPProvider] Using WorkspaceStateStorage');
-        storage = new WorkspaceStateStorage(this.context);
-      }
+      // Always use WorkspaceStateStorage for MCP
+      console.log('[MCPProvider] Using WorkspaceStateStorage');
+      const storage: ITodoStorage = new WorkspaceStateStorage(this.context);
 
       const standaloneManager = StandaloneTodoManager.getInstance(storage);
 
@@ -134,23 +123,8 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
     // Listen for configuration changes from VS Code settings
     const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('agentTodos')) {
-        // Handle auto-inject setting change
-        if (e.affectsConfiguration('agentTodos.autoInject') && this.server) {
-          const config = vscode.workspace.getConfiguration('agentTodos');
-          const isAutoInjectEnabled = config.get<boolean>('autoInject', false);
-          const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
-
-          let storage: ITodoStorage;
-          if (isAutoInjectEnabled) {
-            const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
-            storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
-          } else {
-            storage = new WorkspaceStateStorage(this.context);
-          }
-
-          // Update the server's storage
-          this.server.setStorage(storage);
-        }
+        // Auto-inject setting changed - no need to change storage
+        // Storage remains WorkspaceStateStorage, only export behavior changes
 
         // Notify that server definitions might have changed
         // (tools availability may have changed)
@@ -172,17 +146,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
           timestamp: Date.now()
         });
 
-        // Update storage if auto-inject setting changed
-        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
-        let storage: ITodoStorage;
-        if (config.autoInject) {
-          const vsCodeConfig = vscode.workspace.getConfiguration('agentTodos');
-          const filePath = vsCodeConfig.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
-          storage = new CopilotInstructionsStorage(workspaceRoot, filePath);
-        } else {
-          storage = new WorkspaceStateStorage(this.context);
-        }
-        this.server.setStorage(storage);
+        // No need to update storage - it remains WorkspaceStateStorage
       }
 
       // Notify that server definitions might have changed
