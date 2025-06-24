@@ -3,8 +3,15 @@
 		"module": "Node16",
 		"target": "ES2022",
 		"lib": [
-			"ES2022"
+			"ES2022",
+			"DOM"
 		],
+		"types": [
+			"node",
+			"vscode",
+			"mocha"
+		],
+		"moduleResolution": "Node16",
 		"sourceMap": true,
 		"rootDir": "src",
 		"strict": true,   /* enable all strict type-checking options */
