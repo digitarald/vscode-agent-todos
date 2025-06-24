@@ -441,14 +441,14 @@ export class TodoManager {
     }
 
     // Details management method
-    public async setTodoDetails(todoId: string, details: string | undefined): Promise<void> {
+    public async setTodoAdr(todoId: string, adr: string | undefined): Promise<void> {
         const todo = this.todos.find(t => t.id === todoId);
         if (todo) {
-            const sanitizedDetails = TodoValidator.sanitizeDetails(details);
-            if (sanitizedDetails === undefined) {
-                delete todo.details;
+            const sanitizedAdr = TodoValidator.sanitizeAdr(adr);
+            if (sanitizedAdr === undefined) {
+                delete todo.adr;
             } else {
-                todo.details = sanitizedDetails;
+                todo.adr = sanitizedAdr;
             }
             this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();

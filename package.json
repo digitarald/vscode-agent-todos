@@ -127,14 +127,14 @@
         "icon": "$(trash)"
       },
       {
-        "command": "agentTodos.addEditDetails",
-        "title": "Add/Edit Details",
+        "command": "agentTodos.addEditAdr",
+        "title": "Add/Edit ADR",
         "category": "Agent TODOs",
         "icon": "$(edit)"
       },
       {
-        "command": "agentTodos.clearDetails",
-        "title": "Clear Details",
+        "command": "agentTodos.clearAdr",
+        "title": "Clear ADR",
         "category": "Agent TODOs",
         "icon": "$(clear-all)"
       },
@@ -260,14 +260,14 @@
           "group": "4_subtasks"
         },
         {
-          "command": "agentTodos.addEditDetails",
+          "command": "agentTodos.addEditAdr",
           "when": "view == agentTodos && viewItem =~ /^todoItem/",
-          "group": "5_details"
+          "group": "5_adr"
         },
         {
-          "command": "agentTodos.clearDetails",
+          "command": "agentTodos.clearAdr",
           "when": "view == agentTodos && viewItem =~ /^todoItem/",
-          "group": "5_details"
+          "group": "5_adr"
         },
         {
           "command": "agentTodos.toggleSubtask",

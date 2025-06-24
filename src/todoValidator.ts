@@ -24,8 +24,8 @@ export class TodoValidator {
         }
 
         // Validate optional fields
-        if (todo.details !== undefined && typeof todo.details !== 'string') {
-            return { valid: false, error: 'Todo details must be a string' };
+        if (todo.adr !== undefined && typeof todo.adr !== 'string') {
+            return { valid: false, error: 'Todo adr must be a string' };
         }
 
         // Validate subtasks if present
@@ -112,8 +112,8 @@ export class TodoValidator {
             return false;
         }
 
-        // Compare details
-        if (todo1.details !== todo2.details) {
+        // Compare adr
+        if (todo1.adr !== todo2.adr) {
             return false;
         }
 
@@ -137,15 +137,15 @@ export class TodoValidator {
     }
 
     /**
-     * Sanitize and validate details
+     * Sanitize and validate adr
      */
-    static sanitizeDetails(details: string | undefined): string | undefined {
-        if (details === undefined || details.trim() === '') {
+    static sanitizeAdr(adr: string | undefined): string | undefined {
+        if (adr === undefined || adr.trim() === '') {
             return undefined;
         }
         
         // Trim and limit length
-        const sanitized = details.trim();
+        const sanitized = adr.trim();
         if (sanitized.length > 500) {
             return sanitized.substring(0, 500);
         }

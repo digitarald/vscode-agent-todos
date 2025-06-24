@@ -154,15 +154,15 @@ suite('MCP Todo Tools Tests', () => {
             assert.ok(result.content[0].text.includes('Subtasks: 1/2 completed'));
         });
 
-        test('Should handle todos with details', async () => {
+        test('Should handle todos with adr', async () => {
             const params = {
                 todos: [
                     {
                         id: '1',
-                        content: 'Task with details',
+                        content: 'Task with adr',
                         status: 'pending',
                         priority: 'high',
-                        details: 'Implementation notes here'
+                        adr: 'Architecture decision record here'
                     }
                 ]
             };
@@ -170,7 +170,7 @@ suite('MCP Todo Tools Tests', () => {
             const result = await todoTools.handleToolCall('todo_write', params);
 
             assert.strictEqual(result.isError, undefined);
-            assert.ok(result.content[0].text.includes('Details added to 1 task(s)'));
+            assert.ok(result.content[0].text.includes('ADR added to 1 task(s)'));
         });
     });
 

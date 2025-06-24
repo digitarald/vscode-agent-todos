@@ -140,27 +140,27 @@ suite('TodoManager Subtask Tests', () => {
         assert.strictEqual(todo?.subtasks?.[0].id, 'subtask-2');
     });
 
-    test('Should set todo details', async () => {
-        const details = 'Implementation details for this task';
+    test('Should set todo adr', async () => {
+        const adr = 'Architecture decision record for this task';
 
-        await todoManager.setTodoDetails(testTodoId, details);
+        await todoManager.setTodoAdr(testTodoId, adr);
 
         const todos = todoManager.getTodos();
         const todo = todos.find(t => t.id === testTodoId);
 
-        assert.strictEqual(todo?.details, details);
+        assert.strictEqual(todo?.adr, adr);
     });
 
-    test('Should clear todo details', async () => {
-        const details = 'Implementation details for this task';
+    test('Should clear todo adr', async () => {
+        const adr = 'Architecture decision record for this task';
 
-        await todoManager.setTodoDetails(testTodoId, details);
-        await todoManager.setTodoDetails(testTodoId, undefined);
+        await todoManager.setTodoAdr(testTodoId, adr);
+        await todoManager.setTodoAdr(testTodoId, undefined);
 
         const todos = todoManager.getTodos();
         const todo = todos.find(t => t.id === testTodoId);
 
-        assert.strictEqual(todo?.details, undefined);
+        assert.strictEqual(todo?.adr, undefined);
     });
 
     test('Should compare todos with subtasks correctly', async () => {

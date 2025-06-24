@@ -136,7 +136,7 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
             return '- No current todos';
         }
 
-        // Helper function to format a single todo with subtasks and details
+        // Helper function to format a single todo with subtasks and adr
         const formatTodo = (todo: TodoItem): string => {
             // Determine checkbox based on status
             const checkbox = todo.status === 'completed' ? '[x]' :
@@ -156,9 +156,9 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 });
             }
 
-            // Add details if present
-            if (todo.details) {
-                result += `  _${todo.details}_\n`;
+            // Add adr if present
+            if (todo.adr) {
+                result += `  _${todo.adr}_\n`;
             }
 
             return result;
@@ -237,10 +237,10 @@ export class CopilotInstructionsStorage extends EventEmitter implements ITodoSto
                 continue;
             }
 
-            // Check if this is a details line (indented with 2 spaces and italic)
+            // Check if this is an adr line (indented with 2 spaces and italic)
             if (line.startsWith('  _') && line.endsWith('_') && currentTodo) {
-                const details = line.substring(3, line.length - 1).trim();
-                currentTodo.details = details;
+                const adr = line.substring(3, line.length - 1).trim();
+                currentTodo.adr = adr;
                 continue;
             }
 

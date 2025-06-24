@@ -245,33 +245,33 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		// Details commands
-		const addEditDetailsCommand = vscode.commands.registerCommand('agentTodos.addEditDetails', async (item: any) => {
+		// ADR commands
+		const addEditAdrCommand = vscode.commands.registerCommand('agentTodos.addEditAdr', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
 				const todo = todoManager.getTodos().find(t => t.id === todoId);
-				const currentDetails = todo?.details || '';
-				const details = await vscode.window.showInputBox({
-					prompt: 'Enter implementation details or notes',
-					placeHolder: 'Implementation details',
-					value: currentDetails,
+				const currentAdr = todo?.adr || '';
+				const adr = await vscode.window.showInputBox({
+					prompt: 'Enter architecture decisions or implementation rationale',
+					placeHolder: 'Architecture Decision Record',
+					value: currentAdr,
 					validateInput: (value) => {
 						if (value.length > 500) {
-							return 'Details must be less than 500 characters';
+							return 'ADR must be less than 500 characters';
 						}
 						return null;
 					}
 				});
-				if (details !== undefined) {
-					await todoManager.setTodoDetails(todoId, details);
+				if (adr !== undefined) {
+					await todoManager.setTodoAdr(todoId, adr);
 				}
 			}
 		});
 
-		const clearDetailsCommand = vscode.commands.registerCommand('agentTodos.clearDetails', async (item: any) => {
+		const clearAdrCommand = vscode.commands.registerCommand('agentTodos.clearAdr', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
 			if (todoId) {
-				await todoManager.setTodoDetails(todoId, undefined);
+				await todoManager.setTodoAdr(todoId, undefined);
 			}
 		});
 
@@ -322,8 +322,8 @@ export async function activate(context: vscode.ExtensionContext) {
 			addSubtaskCommand,
 			toggleSubtaskCommand,
 			deleteSubtaskCommand,
-			addEditDetailsCommand,
-			clearDetailsCommand,
+			addEditAdrCommand,
+			clearAdrCommand,
 			runTodoCommand,
 			startPlanningCommand
 		);

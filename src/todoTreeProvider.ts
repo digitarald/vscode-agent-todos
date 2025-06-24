@@ -45,9 +45,9 @@ export class TodoTreeItem extends vscode.TreeItem {
 
         let tooltipText = `${statusLabel}: ${todo.content}\n${priorityEmoji} ${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)} priority`;
 
-        // Add details to tooltip if present
-        if (todo.details) {
-            tooltipText += `\n\nDetails: ${todo.details}`;
+        // Add adr to tooltip if present
+        if (todo.adr) {
+            tooltipText += `\n\nADR: ${todo.adr}`;
         }
 
         // Add subtask count if present
@@ -59,8 +59,8 @@ export class TodoTreeItem extends vscode.TreeItem {
         this.tooltip = tooltipText;
 
         // Set resourceUri for FileDecorationProvider
-        const hasDetailsFlag = todo.details ? '/details' : '';
-        this.resourceUri = vscode.Uri.parse(`todo://${todo.status}/${todo.priority}/${todo.id}${hasDetailsFlag}`);
+        const hasAdrFlag = todo.adr ? '/adr' : '';
+        this.resourceUri = vscode.Uri.parse(`todo://${todo.status}/${todo.priority}/${todo.id}${hasAdrFlag}`);
 
         // Set different icons and colors based on status and priority
         switch (todo.status) {
@@ -82,8 +82,8 @@ export class TodoTreeItem extends vscode.TreeItem {
         }
 
         // Set contextValue for commands and menus
-        const hasDetails = todo.details ? ' has-details' : '';
-        this.contextValue = `todoItem todo-${todo.status} todo-${todo.priority}${hasDetails}`;
+        const hasAdr = todo.adr ? ' has-adr' : '';
+        this.contextValue = `todoItem todo-${todo.status} todo-${todo.priority}${hasAdr}`;
 
         // Add description to show subtask count and/or details indicator
         const descriptions: string[] = [];
@@ -93,7 +93,7 @@ export class TodoTreeItem extends vscode.TreeItem {
             descriptions.push(`${completed}/${total}`);
         }
 
-        if (todo.details) {
+        if (todo.adr) {
             descriptions.push('•');
         }
 

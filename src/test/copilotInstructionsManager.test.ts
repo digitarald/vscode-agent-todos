@@ -35,14 +35,14 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         assert.ok(markdown.includes('  - [x] sub-2: Subtask 2'));
     });
 
-    test('Should format todos with details in markdown', async () => {
+    test('Should format todos with adr in markdown', async () => {
         const todos: TodoItem[] = [
             {
                 id: 'todo-1',
                 content: 'Main task',
                 status: 'completed',
                 priority: 'medium',
-                details: 'Used async/await pattern for better error handling'
+                adr: 'Used async/await pattern for better error handling'
             }
         ];
 
@@ -75,7 +75,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         assert.ok(!markdown.includes('Subtask 1'));
     });
 
-    test('Should handle todos with both subtasks and details', async () => {
+    test('Should handle todos with both subtasks and adr', async () => {
         await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
         const todos: TodoItem[] = [
@@ -88,7 +88,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                     { id: 'sub-1', content: 'Research', status: 'completed' },
                     { id: 'sub-2', content: 'Implementation', status: 'pending' }
                 ],
-                details: 'Using new API approach'
+                adr: 'Using new API approach'
             }
         ];
 
@@ -107,7 +107,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         // Mock file system for testing
         const mockContent = `<todos rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
 - [ ] todo-1: Main task 🔴
-  _Implementation details here_
+  _Architecture decision record here_
   - [ ] subtask-1: Subtask 1
   - [x] subtask-2: Subtask 2
 - [x] todo-2: Another task 🟡
@@ -148,7 +148,7 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
                 content: 'Task with custom ID',
                 status: 'in_progress',
                 priority: 'high',
-                details: 'Important implementation note',
+                adr: 'Important architecture decision',
                 subtasks: [
                     { id: 'custom-sub-456', content: 'First step', status: 'completed' },
                     { id: 'custom-sub-789', content: 'Second step', status: 'pending' }
@@ -172,13 +172,13 @@ suite('CopilotInstructionsManager Subtask Tests', () => {
         assert.ok(markdown.includes('custom-sub-789:'));
         assert.ok(markdown.includes('another-id-999:'));
 
-        // Verify order: details before subtasks
+        // Verify order: adr before subtasks
         const lines = markdown.split('\n');
         const taskIndex = lines.findIndex((l: string) => l.includes('Task with custom ID'));
-        const detailsIndex = lines.findIndex((l: string) => l.includes('Important implementation note'));
+        const adrIndex = lines.findIndex((l: string) => l.includes('Important architecture decision'));
         const subtask1Index = lines.findIndex((l: string) => l.includes('First step'));
 
-        assert.ok(taskIndex < detailsIndex, 'Task should come before details');
-        assert.ok(detailsIndex < subtask1Index, 'Details should come before subtasks');
+        assert.ok(taskIndex < adrIndex, 'Task should come before adr');
+        assert.ok(adrIndex < subtask1Index, 'ADR should come before subtasks');
     });
 });

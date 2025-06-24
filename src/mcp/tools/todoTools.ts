@@ -70,7 +70,7 @@ IMPORTANT: Use PROACTIVELY and FREQUENTLY:
 Returns all todos with status/priority/content.
 Empty list if no todos exist yet.
 Essential for maintaining context and avoiding duplicate work.`;
-      
+
       tools.push({
         name: 'todo_read',
         description: readDescription,
@@ -96,7 +96,7 @@ USE PROACTIVELY FOR:
 • Multiple user requests
 • Capturing new instructions
 • Marking tasks in_progress BEFORE starting work
-• Marking completed IMMEDIATELY after finishing
+• Marking completed IMMEDIATELY after finishing, optionally adding implementation notes
 
 SKIP FOR:
 • Single straightforward tasks
@@ -110,15 +110,15 @@ RULES:
 • Break complex tasks into specific actionable items
 
 REQUIRED FIELDS:
-• id: unique identifier
+• id: short unique identifier
 • content: clear action (min 1 char)
 • status: pending/in_progress/completed
 • priority: high/medium/low
+• adr (optional): context, decision log and/or implementation notes
 
 SUBTASKS:
 • Break down complex tasks into manageable subtasks
 • Each subtask needs: id, content, status (pending/completed)
-• Use details field to track implementation notes and decisions
 
 Note: This replaces the entire list, so include all existing todos to keep.`
       : `Creates and manages a structured task list for tracking progress and organizing work.
@@ -129,7 +129,7 @@ USE PROACTIVELY FOR:
 • Multiple user requests
 • Capturing new instructions
 • Marking tasks in_progress BEFORE starting work
-• Marking completed IMMEDIATELY after finishing
+• Marking completed IMMEDIATELY after finishing, optionally adding implementation notes
 
 SKIP FOR:
 • Single straightforward tasks
@@ -142,14 +142,15 @@ RULES:
 • Complete current tasks before starting new ones
 • Break complex tasks into specific actionable items
 
-REQUIRED FIELDS:
-• id: unique identifier
+FIELDS:
+• id: short unique identifier
 • content: clear action (min 1 char)
 • status: pending/in_progress/completed
 • priority: high/medium/low
+• adr (optional): context, decision log and/or implementation notes
 
 Note: This replaces the entire list, so include all existing todos to keep.`;
-    
+
     tools.push({
       name: 'todo_write',
       description: writeDescription,
@@ -196,7 +197,7 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
     const todos = this.todoManager.getTodos();
     const title = this.todoManager.getTitle();
     console.log(`[TodoTools] Reading todos: ${todos.length} items, title: "${title}"`);
-    
+
     const result = {
       title,
       todos
@@ -282,10 +283,10 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
 
     // Log the update operation
     console.log(`[TodoTools] Updating todos via MCP: ${todos.length} items, title: ${title || 'no change'}`);
-    
+
     // Update todos
     await this.todoManager.updateTodos(todos, title);
-    
+
     console.log('[TodoTools] Update completed, todos should sync to VS Code');
 
     // Generate success message
@@ -313,9 +314,9 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
       }
     }
 
-    // Count todos with details
-    const todosWithDetails = todos.filter(t => t.details);
-    const detailsInfo = todosWithDetails.length > 0 ? `\nDetails added to ${todosWithDetails.length} task(s)` : '';
+    // Count todos with adr
+    const todosWithAdr = todos.filter(t => t.adr);
+    const adrInfo = todosWithAdr.length > 0 ? `\nADR added to ${todosWithAdr.length} task(s)` : '';
 
     const reminder = inProgressTaskCount === 0 && pendingCount > 0 ? '\nReminder: Mark a task as in_progress BEFORE starting work on it.' : '';
 
@@ -439,7 +440,7 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
     return {
       content: [{
         type: 'text',
-        text: `Successfully updated ${todos.length} todo items ${statusSummary}${titleMsg}${subtaskInfo}${detailsInfo}${reminder}${autoInjectNote}`
+        text: `Successfully updated ${todos.length} todo items ${statusSummary}${titleMsg}${subtaskInfo}${adrInfo}${reminder}${autoInjectNote}`
       }]
     };
   }
@@ -512,9 +513,9 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
         }
       };
 
-      schema.properties.todos.items.properties.details = {
+      schema.properties.todos.items.properties.adr = {
         type: 'string',
-        description: 'Implementation notes, progress tracking, or decisions'
+        description: 'Architecture decisions, rationale, or implementation notes'
       };
     }
 

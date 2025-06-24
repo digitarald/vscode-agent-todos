@@ -104,9 +104,9 @@ export class CopilotInstructionsManager {
                     ' 🟢';
             let result = `- ${checkbox} ${todo.id}: ${todo.content}${priorityBadge}\n`;
 
-            // Add details if present (before subtasks)
-            if (todo.details) {
-                result += `  _${todo.details}_\n`;
+            // Add adr if present (before subtasks)
+            if (todo.adr) {
+                result += `  _${todo.adr}_\n`;
             }
 
             // Add subtasks if enabled and present
@@ -273,10 +273,10 @@ export class CopilotInstructionsManager {
                     continue;
                 }
 
-                // Check if this is a details line (indented with 2 spaces and italic)
+                // Check if this is an adr line (indented with 2 spaces and italic)
                 if (line.startsWith('  _') && line.endsWith('_') && currentTodo) {
-                    const details = line.substring(3, line.length - 1).trim();
-                    currentTodo.details = details;
+                    const adr = line.substring(3, line.length - 1).trim();
+                    currentTodo.adr = adr;
                     continue;
                 }
 

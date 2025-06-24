@@ -14,7 +14,7 @@ export interface TodoItem {
     status: TodoStatus;
     priority: TodoPriority;
     subtasks?: Subtask[];
-    details?: string;
+    adr?: string;
 }
 
 export interface TodoWriteInput {

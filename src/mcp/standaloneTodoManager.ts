@@ -135,10 +135,10 @@ export class StandaloneTodoManager extends EventEmitter {
     }
   }
   
-  async setTodoDetails(todoId: string, details: string | undefined): Promise<void> {
+  async setTodoAdr(todoId: string, adr: string | undefined): Promise<void> {
     const todo = this.todos.find(t => t.id === todoId);
     if (todo) {
-      todo.details = details;
+      todo.adr = adr;
       this.saveTodos();
       this.fireChangeEvent();
     }
