@@ -2,7 +2,8 @@ This is a VS Code extension project. Please use the get_vscode_api with a query 
 
 IMPORTANT:
 
-- Keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation.
+- ALWAYS keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation!
+- ALWAYS validate changes by running compile and test commands!
 - NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
 - NEVER make changes backwards compatible unless explicitly requested by the User.
 - NEVER create one-off scripts to test changes.
@@ -21,63 +22,101 @@ For more details:
 
 ```mermaid
 graph TB
-    subgraph "VS Code Extension"
-        EXT[Extension Entry]
+    subgraph VSCodeExtension[VS Code Extension]
+        EXT[Extension Entry<br/>extension.ts]
         TM[TodoManager<br/>Singleton]
         TTP[TodoTreeProvider]
-        CIM[CopilotInstructionsManager]
-        SM[SubtaskManager]
+        TDP[TodoDecorationProvider]
+        SM[SubtaskManager<br/>Static Methods]
+        TV[TodoValidator<br/>Static Methods]
+        PM[PerformanceMonitor<br/>Static Class]
     end
 
-    subgraph "Storage Layer"
+    subgraph StorageLayer[Storage Layer]
         ITS[ITodoStorage<br/>Interface]
-        WSS[WorkspaceStateStorage]
-        IMS[InMemoryStorage]
-        CIS[CopilotInstructionsStorage]
+        WSS[WorkspaceStateStorage<br/>Default]
+        IMS[InMemoryStorage<br/>Testing/Standalone]
+        CIS[CopilotInstructionsStorage<br/>File-based]
+        CIM[CopilotInstructionsManager<br/>Singleton]
     end
 
-    subgraph "MCP Integration"
-        MCP[MCPProvider]
-        MCPS[MCP Server<br/>HTTP/SSE]
-        TT[TodoTools<br/>read/write]
-        TS[TodoSync]
-        STM[StandaloneTodoManager]
+    subgraph MCPIntegration[MCP Integration]
+        MCP[TodoMCPServerProvider]
+        MCPS[TodoMCPServer<br/>HTTP/SSE]
+        TT[TodoTools<br/>read/write handlers]
+        TS[TodoSync<br/>Bidirectional]
+        STM[StandaloneTodoManager<br/>Singleton]
+        
+        subgraph SessionMgmt[Session Management]
+            TRM[Transports Map]
+            SRM[Servers Map]
+            STR[StreamableHTTPServerTransport]
+        end
     end
 
-    subgraph "External"
+    subgraph ExternalInterfaces[External Interfaces]
         VSC[VS Code API]
-        CI[Copilot Instructions<br/>.github/copilot-instructions.md]
+        CI[copilot-instructions.md]
         MC[MCP Clients<br/>AI Assistants]
+        MCPAPI[VS Code MCP API]
     end
 
-    %% Core flows
+    %% Core initialization
     EXT --> TM
-    TM --> ITS
-    ITS -.-> WSS
-    ITS -.-> IMS
-    ITS -.-> CIS
+    EXT --> TTP
+    EXT --> TDP
+    EXT --> MCP
+    
+    %% Storage configuration
+    TM --> WSS
+    STM -.-> IMS
+    STM -.-> CIS
+    WSS -.-> ITS
+    IMS -.-> ITS
+    CIS -.-> ITS
 
-    %% UI updates
-    TM --> TTP
+    %% UI and decorations
     TTP --> VSC
+    TDP --> VSC
+    TM --> TTP
+    TM --> TDP
+    
+    %% View events
+    TM -.->|onShouldOpenView| EXT
+    TM -.->|onDidChange| TTP
 
     %% Copilot sync
-    TM <--> CIM
-    CIM <--> CI
+    CIS --> CIM
+    CIM --> CI
+    TM -.->|auto-inject| CIM
 
-    %% MCP server
-    EXT --> MCP
+    %% MCP server setup
     MCP --> MCPS
+    MCP --> MCPAPI
     MCPS --> TT
-    MCPS <--> TS
+    MCPS --> STR
+    STR --> TRM
+    STR --> SRM
+    
+    %% Bidirectional sync
+    MCP --> TS
     TS <--> TM
     TS <--> STM
-
-    %% External clients
-    MC <--> MCPS
-
-    %% Subtasks
+    
+    %% Tool handling
+    TT --> STM
+    TT --> TS
+    
+    %% External communication
+    MC <-->|HTTP POST/GET/SSE| MCPS
+    
+    %% Utility usage
     TM --> SM
+    TM --> TV
+    TM -.-> PM
+    STM --> SM
+    STM --> TV
+    CIM -.-> PM
 ```
 
 ## Performance Optimizations
@@ -100,6 +139,7 @@ todoManager.onDidChange((change) => {
 ```
 
 **Key Requirements:**
+
 - Always use the single `onDidChange` event that provides both todos and title
 - Never create or use separate events for different properties
 - All managers (TodoManager, StandaloneTodoManager) must implement the same event interface
@@ -121,6 +161,7 @@ private fireConsolidatedChange(): void {
 ### Debouncing Strategy
 
 Different components use specific debounce timings:
+
 - **Tree View Updates**: 150ms debounce for UI responsiveness
 - **File Operations**: 500ms debounce to batch rapid changes
 - **MCP Sync**: Immediate sync to maintain consistency
@@ -146,11 +187,11 @@ private async writeWithQueue(todos: TodoItem[], title?: string): Promise<void> {
     this.pendingWrite = { todos, title };
     return;
   }
-  
+
   this.writeInProgress = true;
   try {
     await this.performWrite(todos, title);
-    
+
     // Process any pending write
     if (this.pendingWrite) {
       const pending = this.pendingWrite;
@@ -174,10 +215,11 @@ private async writeWithQueue(todos: TodoItem[], title?: string): Promise<void> {
 
 ### VS Code API Usage
 
-- Always use `vscode.lm.registerTool()` for language model tools (see https://code.visualstudio.com/api/extension-guides/tools)
+- Use `vscode.lm.registerMcpServerDefinitionProvider()` for MCP server integration
 - Implement `vscode.TreeDataProvider<T>` for tree views
+- Register `vscode.FileDecorationProvider` for todo item styling
 - Use `vscode.ThemeIcon` for consistent iconography
-- Follow activation event patterns: `onLanguageModelTool:tool_name`
+- Handle tree view badges with `TreeView.badge` for task counts
 
 ### File Organization
 
@@ -195,11 +237,15 @@ src/
 │   ├── WorkspaceStateStorage.ts # Default VS Code storage
 │   ├── InMemoryStorage.ts      # Memory-based storage
 │   └── CopilotInstructionsStorage.ts # File-based storage
+├── utils/
+│   └── performance.ts          # Performance monitoring utility
 └── mcp/
     ├── mcpProvider.ts          # VS Code MCP integration
     ├── server.ts               # HTTP/SSE server
     ├── standalone.ts           # Standalone entry point
+    ├── standaloneTodoManager.ts # Standalone manager singleton
     ├── todoSync.ts             # Bidirectional sync
+    ├── types.ts                # MCP-specific types
     └── tools/
         └── todoTools.ts        # MCP tool implementations
 ```
@@ -223,19 +269,25 @@ Available implementations:
 - [`InMemoryStorage`](../src/storage/InMemoryStorage.ts) - Temporary in-memory storage
 - [`CopilotInstructionsStorage`](../src/storage/CopilotInstructionsStorage.ts) - File-based storage
 
-### Language Model Tools
+### MCP Server Provider
 
 ```typescript
-// Use this pattern for tool registration
-const tool = vscode.lm.registerTool("tool_name", new ToolClass());
-context.subscriptions.push(tool);
+// Register MCP server provider (not individual tools)
+const mcpProvider = new TodoMCPServerProvider(context);
+const mcpDisposable = vscode.lm.registerMcpServerDefinitionProvider(
+  'todos-mcp-provider',
+  mcpProvider
+);
+context.subscriptions.push(mcpDisposable);
 
-// Tool implementation must extend LanguageModelTool<T>
-class TodoReadTool implements vscode.LanguageModelTool<{}> {
-  async invoke(options: vscode.LanguageModelToolInvocationOptions<{}>) {
-    return new vscode.LanguageModelToolResult([
-      new vscode.LanguageModelTextPart(JSON.stringify(data)),
-    ]);
+// MCP server handles tool registration internally
+export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider {
+  async provideServerDefinition(): Promise<McpServerDefinition> {
+    return {
+      command: 'node',
+      args: [serverPath, `--workspace-root=${workspaceRoot}`],
+      transport: { type: 'stdio' as const }
+    };
   }
 }
 ```

@@ -68,7 +68,7 @@ export class StandaloneTodoManager extends EventEmitter {
   async setTitle(title: string): Promise<void> {
     this.title = title;
     this.saveTodos();
-    this.emit('todosChanged');
+    this.fireChangeEvent();
   }
   
   async updateTodos(todos: TodoItem[], title?: string): Promise<void> {
@@ -82,19 +82,24 @@ export class StandaloneTodoManager extends EventEmitter {
       this.title = title;
     }
     this.saveTodos();
-    this.emit('todosChanged');
+    this.fireChangeEvent();
+  }
+  
+  // Alias for updateTodos to match VS Code TodoManager interface
+  async setTodos(todos: TodoItem[], title?: string): Promise<void> {
+    return this.updateTodos(todos, title);
   }
   
   async clearTodos(): Promise<void> {
     this.todos = [];
     this.saveTodos();
-    this.emit('todosChanged');
+    this.fireChangeEvent();
   }
   
   async deleteTodo(todoId: string): Promise<void> {
     this.todos = this.todos.filter(todo => todo.id !== todoId);
     this.saveTodos();
-    this.emit('todosChanged');
+    this.fireChangeEvent();
   }
   
   async toggleTodoStatus(todoId: string): Promise<void> {

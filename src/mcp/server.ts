@@ -108,7 +108,6 @@ export class TodoMCPServer {
           // Create transport with session
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => newSessionId,
-            enableJsonResponse: true,  // Return JSON for POST requests, not SSE
             onsessioninitialized: (sessionId: string) => {
               console.log(`Session initialized: ${sessionId}`);
               this.transports.set(sessionId, transport);
@@ -206,10 +205,28 @@ export class TodoMCPServer {
 
     server.setRequestHandler(CallToolRequestSchema, async (request: any, extra: any) => {
       const { name, arguments: args } = request.params;
-      return await this.todoTools!.handleToolCall(name, args, {
+      
+      console.log('[MCPServer] CallToolRequest:', {
+        toolName: name,
+        hasExtra: !!extra,
+        extraKeys: extra ? Object.keys(extra) : [],
+        hasSendNotification: !!extra?.sendNotification,
+        sendNotificationType: typeof extra?.sendNotification,
+        requestParams: Object.keys(request.params),
+        hasMeta: !!request.params._meta,
+        metaContent: request.params._meta,
+        fullRequest: JSON.stringify(request, null, 2),
+        fullExtra: JSON.stringify(extra, null, 2)
+      });
+      
+      const context = {
         sendNotification: extra?.sendNotification,
         _meta: request.params._meta
-      });
+      };
+      
+      console.log('[MCPServer] Passing context to tool:', JSON.stringify(context, null, 2));
+      
+      return await this.todoTools!.handleToolCall(name, args, context);
     });
   }
 

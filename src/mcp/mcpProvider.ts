@@ -69,18 +69,22 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
     let storage: ITodoStorage;
 
     if (isAutoInjectEnabled) {
+      console.log(`[MCPProvider] Using CopilotInstructionsStorage for workspace: ${workspaceRoot}`);
       storage = new CopilotInstructionsStorage(workspaceRoot);
     } else {
+      console.log('[MCPProvider] Using WorkspaceStateStorage');
       storage = new WorkspaceStateStorage(this.context);
     }
 
     const standaloneManager = StandaloneTodoManager.getInstance(storage);
+    
+    // Setup sync BEFORE starting the server to ensure we capture all events
+    this.todoSync = new TodoSync(vscodeManager, standaloneManager);
+    
     this.server.setTodoManager(standaloneManager);
 
     // Start the server (this will call initialize internally)
     await this.server.start();
-
-    this.todoSync = new TodoSync(vscodeManager, standaloneManager);
 
     // Setup workspace roots handling
     this.setupWorkspaceRoots();

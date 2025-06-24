@@ -13,6 +13,8 @@ export class TodoSync {
     this.vscodeManager = vscodeManager;
     this.standaloneManager = standaloneManager;
     
+    console.log('[TodoSync] Initializing bidirectional sync');
+    
     // Initial sync from VS Code to standalone
     this.syncToStandalone();
     
@@ -38,7 +40,10 @@ export class TodoSync {
     this.lastSyncHash = currentHash;
     
     try {
+      console.log(`[TodoSync] Syncing to Standalone: ${todos.length} todos, title: ${title}`);
       this.standaloneManager.updateTodos(todos, title);
+    } catch (error) {
+      console.error('[TodoSync] Error syncing to standalone:', error);
     } finally {
       // Reset flag after a short delay to ensure all cascading updates are complete
       setTimeout(() => {
@@ -65,8 +70,14 @@ export class TodoSync {
     this.lastSyncHash = currentHash;
     
     try {
-      console.log(`[TodoSync] Syncing to VS Code: ${todos.length} todos`);
-      this.vscodeManager.setTodos(todos, title);
+      console.log(`[TodoSync] Syncing to VS Code: ${todos.length} todos, title: ${title}`);
+      if (this.vscodeManager.setTodos) {
+        this.vscodeManager.setTodos(todos, title);
+      } else {
+        console.error('[TodoSync] vscodeManager.setTodos method not found');
+      }
+    } catch (error) {
+      console.error('[TodoSync] Error syncing to VS Code:', error);
     } finally {
       // Reset flag after a short delay to ensure all cascading updates are complete
       setTimeout(() => {
@@ -78,11 +89,13 @@ export class TodoSync {
   private setupSync(): void {
     // Use consolidated change event
     this.syncDisposable = this.vscodeManager.onDidChange(() => {
+      console.log('[TodoSync] VS Code manager changed');
       this.debouncedSyncToStandalone();
     });
     
     // Sync from standalone to VS Code
     this.standaloneManager.onDidChange(() => {
+      console.log('[TodoSync] Standalone manager changed');
       this.debouncedSyncToVSCode();
     });
   }

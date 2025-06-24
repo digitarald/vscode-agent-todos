@@ -32,15 +32,15 @@ export class TodoTools {
   constructor(
     private todoManager: TodoManagerLike,
     private server: MCPServerLike
-  ) {}
+  ) { }
 
   async getAvailableTools(): Promise<any[]> {
     const tools = [];
-    
+
     // Check if we're in standalone mode or if auto-inject is disabled
     const autoInject = this.isAutoInjectEnabled();
     const subtasksEnabled = this.isSubtasksEnabled();
-    
+
     // Only add todo_read if auto-inject is disabled
     if (!autoInject) {
       tools.push({
@@ -57,7 +57,7 @@ export class TodoTools {
         }
       });
     }
-    
+
     // Always add todo_write
     tools.push({
       name: 'todo_write',
@@ -67,7 +67,7 @@ export class TodoTools {
         title: 'Update Todos'
       }
     });
-    
+
     return tools;
   }
 
@@ -91,7 +91,7 @@ export class TodoTools {
   private async handleRead(): Promise<ToolResult> {
     // Check if auto-inject is enabled
     const autoInject = this.isAutoInjectEnabled();
-    
+
     if (autoInject && !this.server.isStandalone()) {
       return {
         content: [{
@@ -100,14 +100,14 @@ export class TodoTools {
         }]
       };
     }
-    
+
     const todos = this.todoManager.getTodos();
     const title = this.todoManager.getTitle();
     const result = {
       title,
       todos
     };
-    
+
     return {
       content: [{
         type: 'text',
@@ -118,10 +118,23 @@ export class TodoTools {
 
   private async handleWrite(params: TodoWriteParams, context?: ToolContext): Promise<ToolResult> {
     const { todos, title } = params;
-    
+
+    // Debug logging for context
+    console.log('[TodoTools.handleWrite] Context received:', {
+      hasContext: !!context,
+      hasSendNotification: !!context?.sendNotification,
+      sendNotificationType: typeof context?.sendNotification,
+      hasMeta: !!context?._meta,
+      hasProgressToken: !!context?._meta?.progressToken,
+      progressToken: context?._meta?.progressToken,
+      contextKeys: context ? Object.keys(context) : [],
+      metaKeys: context?._meta ? Object.keys(context._meta) : [],
+      fullContext: JSON.stringify(context, null, 2)
+    });
+
     // Get current state before update for comparison
     const previousTodos = this.todoManager.getTodos();
-    
+
     // Validate input
     if (!Array.isArray(todos)) {
       return {
@@ -132,7 +145,7 @@ export class TodoTools {
         isError: true
       };
     }
-    
+
     // Check for multiple in_progress tasks
     const inProgressCount = todos.filter(t => t.status === 'in_progress').length;
     if (inProgressCount > 1) {
@@ -144,10 +157,10 @@ export class TodoTools {
         isError: true
       };
     }
-    
+
     // Check if subtasks are enabled
     const subtasksEnabled = this.isSubtasksEnabled();
-    
+
     // Validate each todo
     for (const todo of todos) {
       const validation = TodoValidator.validateTodo(todo);
@@ -160,7 +173,7 @@ export class TodoTools {
           isError: true
         };
       }
-      
+
       // Check if subtasks are disabled but todo has subtasks
       if (todo.subtasks && !subtasksEnabled && !this.server.isStandalone()) {
         return {
@@ -172,17 +185,17 @@ export class TodoTools {
         };
       }
     }
-    
+
     // Update todos
     await this.todoManager.updateTodos(todos, title);
-    
+
     // Generate success message
     const pendingCount = todos.filter(t => t.status === 'pending').length;
     const inProgressTaskCount = todos.filter(t => t.status === 'in_progress').length;
     const completedCount = todos.filter(t => t.status === 'completed').length;
-    
+
     let statusSummary = `(${pendingCount} pending, ${inProgressTaskCount} in progress, ${completedCount} completed)`;
-    
+
     // Count subtasks if enabled
     let subtaskInfo = '';
     if (subtasksEnabled) {
@@ -190,29 +203,29 @@ export class TodoTools {
       if (todosWithSubtasks.length > 0) {
         let totalSubtasks = 0;
         let completedSubtasks = 0;
-        
+
         for (const todo of todosWithSubtasks) {
           const counts = SubtaskManager.countCompletedSubtasks(todo);
           totalSubtasks += counts.total;
           completedSubtasks += counts.completed;
         }
-        
+
         subtaskInfo = `\nSubtasks: ${completedSubtasks}/${totalSubtasks} completed across ${todosWithSubtasks.length} tasks`;
       }
     }
-    
+
     // Count todos with details
     const todosWithDetails = todos.filter(t => t.details);
     const detailsInfo = todosWithDetails.length > 0 ? `\nDetails added to ${todosWithDetails.length} task(s)` : '';
-    
+
     const reminder = inProgressTaskCount === 0 && pendingCount > 0 ? '\nReminder: Mark a task as in_progress BEFORE starting work on it.' : '';
-    
-    const autoInjectNote = this.isAutoInjectEnabled() && !this.server.isStandalone() 
-      ? '\nNote: Todos are automatically synced to <todos> in .github/copilot-instructions.md' 
+
+    const autoInjectNote = this.isAutoInjectEnabled() && !this.server.isStandalone()
+      ? '\nNote: Todos are automatically synced to <todos> in .github/copilot-instructions.md'
       : '';
-    
+
     const titleMsg = title ? ` and title to "${title}"` : '';
-    
+
     // Broadcast update via SSE
     this.server.broadcastUpdate({
       type: 'todos-updated',
@@ -220,57 +233,109 @@ export class TodoTools {
       title,
       timestamp: Date.now()
     });
-    
+
     // Send smart completion notification
-    if (context?.sendNotification && context._meta?.progressToken) {
-      let notificationLabel = "";
-      
-      // Determine what changed
-      const totalTodos = todos.length;
-      const completedTodos = todos.filter(t => t.status === 'completed');
-      const completedCount = completedTodos.length;
-      
-      // Check if this is initialization (no previous todos)
-      if (previousTodos.length === 0 && todos.length > 0) {
-        notificationLabel = `Initialized todos for ${title || 'untitled'}`;
-      }
-      // Check if all todos are completed
-      else if (completedCount === totalTodos && totalTodos > 0) {
-        notificationLabel = `Completed all todos for ${title || 'untitled'}`;
-      }
-      // Find newly completed tasks by comparing with previous state
-      else {
-        // Create a map of previous todos by ID for quick lookup
-        const previousTodoMap = new Map(previousTodos.map(t => [t.id, t]));
-        
-        // Find tasks that were just completed (not completed before, completed now)
-        const newlyCompleted = todos.filter(todo => {
-          const prevTodo = previousTodoMap.get(todo.id);
-          return todo.status === 'completed' && 
-                 prevTodo && 
-                 prevTodo.status !== 'completed';
+    console.log('[TodoTools.handleWrite] Checking notification conditions:', {
+      hasSendNotification: !!context?.sendNotification,
+      hasProgressToken: !!context?._meta?.progressToken,
+      willSendNotification: !!(context?.sendNotification && context._meta?.progressToken)
+    });
+
+    try {
+      if (context?.sendNotification && context._meta?.progressToken) {
+        console.log('[TodoTools.handleWrite] Preparing to send notification');
+        console.log('[TodoTools.handleWrite] previousTodos:', previousTodos);
+        let notificationLabel = "";
+
+        // Determine what changed
+        const totalTodos = todos.length;
+        const completedTodos = todos.filter(t => t.status === 'completed');
+        const completedCount = completedTodos.length;
+
+        console.log('[TodoTools.handleWrite] Change detection:', {
+          previousTodosLength: previousTodos.length,
+          newTodosLength: todos.length,
+          completedCount,
+          totalTodos,
+          title
         });
-        
-        if (newlyCompleted.length > 0) {
-          // Get the most recently completed task
-          const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
-          notificationLabel = `Completed (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
+
+        // Check if this is initialization (no previous todos)
+        if (previousTodos.length === 0 && todos.length > 0) {
+          notificationLabel = `Initialized todos for ${title || 'untitled'}`;
+          console.log('[TodoTools.handleWrite] Initialization case detected:', notificationLabel);
+        }
+        // Check if all todos are completed
+        else if (completedCount === totalTodos && totalTodos > 0) {
+          notificationLabel = `Completed all todos for ${title || 'untitled'}`;
+          console.log('[TodoTools.handleWrite] All completed case detected:', notificationLabel);
+        }
+        // Find newly completed tasks by comparing with previous state
+        else {
+          console.log('[TodoTools.handleWrite] Checking for newly completed tasks');
+          // Create a map of previous todos by ID for quick lookup
+          const previousTodoMap = new Map(previousTodos.map(t => [t.id, t]));
+
+          // Find tasks that were just completed (not completed before, completed now)
+          const newlyCompleted = todos.filter(todo => {
+            const prevTodo = previousTodoMap.get(todo.id);
+            return todo.status === 'completed' &&
+              prevTodo &&
+              prevTodo.status !== 'completed';
+          });
+
+          console.log('[TodoTools.handleWrite] Newly completed tasks:', newlyCompleted.length);
+
+          if (newlyCompleted.length > 0) {
+            // Get the most recently completed task
+            const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
+            notificationLabel = `Completed (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
+            console.log('[TodoTools.handleWrite] Newly completed case detected:', notificationLabel);
+          } else {
+            console.log('[TodoTools.handleWrite] No newly completed tasks found');
+          }
+        }
+
+        // Only send notification if we have a meaningful message
+        if (notificationLabel) {
+          console.log('[TodoTools.handleWrite] Sending notification:', {
+            notificationLabel,
+            progressToken: context._meta.progressToken
+          });
+
+          try {
+            const notificationPayload = {
+              method: "notifications/progress",
+              params: {
+                progress: 1,
+                progressToken: context._meta.progressToken,
+                message: notificationLabel
+              }
+            };
+
+            console.log('[TodoTools.handleWrite] Notification payload:', JSON.stringify(notificationPayload, null, 2));
+
+            await context.sendNotification(notificationPayload);
+
+            console.log('[TodoTools.handleWrite] Notification sent successfully');
+          } catch (error) {
+            // Log error but don't throw - notifications are optional
+            console.error('[TodoTools.handleWrite] Failed to send notification:', {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            });
+          }
+        } else {
+          console.log('[TodoTools.handleWrite] No notification label generated, skipping notification');
         }
       }
-      
-      // Only send notification if we have a meaningful message
-      if (notificationLabel) {
-        await context.sendNotification({
-          method: "notifications/progress",
-          params: { 
-            progress: 1, 
-            progressToken: context._meta.progressToken,
-            label: notificationLabel
-          }
-        });
-      }
+    } catch (notificationError) {
+      console.error('[TodoTools.handleWrite] Error in notification handling:', {
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+        stack: notificationError instanceof Error ? notificationError.stack : undefined
+      });
     }
-    
+
     return {
       content: [{
         type: 'text',
@@ -319,7 +384,7 @@ export class TodoTools {
       },
       required: ['todos']
     };
-    
+
     // Add subtasks and details if enabled
     if (subtasksEnabled) {
       schema.properties.todos.items.properties.subtasks = {
@@ -328,17 +393,17 @@ export class TodoTools {
         items: {
           type: 'object',
           properties: {
-            id: { 
+            id: {
               type: 'string',
               description: 'Unique identifier for subtask'
             },
-            content: { 
-              type: 'string', 
+            content: {
+              type: 'string',
               minLength: 1,
               description: 'Subtask description'
             },
-            status: { 
-              type: 'string', 
+            status: {
+              type: 'string',
               enum: ['pending', 'completed'],
               description: 'Subtask completion status'
             }
@@ -346,13 +411,13 @@ export class TodoTools {
           required: ['id', 'content', 'status']
         }
       };
-      
+
       schema.properties.todos.items.properties.details = {
         type: 'string',
         description: 'Optional implementation details or notes'
       };
     }
-    
+
     return schema;
   }
 
@@ -360,7 +425,7 @@ export class TodoTools {
     if (this.server.isStandalone()) {
       return false; // Always show tools in standalone mode
     }
-    
+
     try {
       const vscode = require('vscode');
       return vscode.workspace.getConfiguration('todoManager').get('autoInject', false);
@@ -373,7 +438,7 @@ export class TodoTools {
     if (this.server.isStandalone()) {
       return true; // Always enable subtasks in standalone mode
     }
-    
+
     try {
       const vscode = require('vscode');
       return vscode.workspace.getConfiguration('todoManager').get('enableSubtasks', true);
