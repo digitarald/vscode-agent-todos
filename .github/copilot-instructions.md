@@ -269,6 +269,8 @@ private async writeWithQueue(todos: TodoItem[], title?: string): Promise<void> {
 - Move toggle actions to overflow menus using grouped menu items without `navigation` group
 - Use conditional menu items with different titles/icons to show toggle states (checkbox-style)
 - Use `workbench.action.chat.open` with agent mode to integrate with VS Code's chat functionality
+- Set context keys with `vscode.commands.executeCommand('setContext', key, value)` for conditional UI visibility
+  - `agentTodos.hasTodos` - Set to true when todo list has items, false when empty (controls clear button visibility)
 
 ### File Organization
 

@@ -51,10 +51,20 @@ export async function activate(context: vscode.ExtensionContext) {
 		};
 		updateBadge();
 
+		// Set initial context key for non-empty todos
+		const updateContextKeys = () => {
+			const hasTodos = todoManager.getTodos().length > 0;
+			vscode.commands.executeCommand('setContext', 'agentTodos.hasTodos', hasTodos);
+		};
+		updateContextKeys();
+
 		// Listen for changes to update title and badge
 		todoManager.onDidChange((change) => {
 			treeView.title = change.title;
 			updateBadge();
+			// Update context key for non-empty todos
+			const hasTodos = change.todos.length > 0;
+			vscode.commands.executeCommand('setContext', 'agentTodos.hasTodos', hasTodos);
 		});
 
 		// Listen for auto-open view events
