@@ -24,6 +24,7 @@ export class TodoMCPServer {
   private isRunning: boolean = false;
   private transports: Map<string, any> = new Map();
   private servers: Map<string, any> = new Map();
+  private todoSync: any = null;
 
   constructor(config: MCPServerConfig = {}) {
     this.config = {
@@ -70,7 +71,7 @@ export class TodoMCPServer {
     // Import and initialize tools
     const { TodoTools } = await import('./tools/todoTools.js');
     if (this.todoManager) {
-      this.todoTools = new TodoTools(this.todoManager, this);
+      this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
     } else {
       console.warn('No todo manager available during initialization');
     }
@@ -341,7 +342,7 @@ export class TodoMCPServer {
     this.todoManager = manager;
     // Re-initialize tools if they exist
     if (this.todoTools) {
-      this.todoTools = new TodoTools(this.todoManager, this);
+      this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
     }
 
     // Listen for todo changes to broadcast updates
@@ -354,6 +355,14 @@ export class TodoMCPServer {
           timestamp: Date.now()
         });
       });
+    }
+  }
+
+  public setTodoSync(todoSync: any): void {
+    this.todoSync = todoSync;
+    // Update tools if they exist
+    if (this.todoTools) {
+      this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
     }
   }
 
@@ -379,7 +388,7 @@ export class TodoMCPServer {
       this.todoManager = new StandaloneTodoManager(storage);
       // Re-initialize tools if they exist
       if (this.todoTools) {
-        this.todoTools = new TodoTools(this.todoManager, this);
+        this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
       }
     }
   }

@@ -84,6 +84,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       this.todoSync = new TodoSync(vscodeManager, standaloneManager);
 
       this.server.setTodoManager(standaloneManager);
+      this.server.setTodoSync(this.todoSync);
 
       // Start the server (this will call initialize internally)
       await this.server.start();

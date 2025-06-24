@@ -230,7 +230,7 @@ export class TodoManager {
     private fireConsolidatedChange(): void {
         let previousTodoCount = 0;
         let isEmptyTransition = false;
-        
+
         try {
             if (this.lastUpdateHash) {
                 const previousData = JSON.parse(this.lastUpdateHash);
@@ -239,22 +239,22 @@ export class TodoManager {
         } catch (e) {
             // Ignore parse errors
         }
-        
+
         const currentTodoCount = this.todos.length;
         isEmptyTransition = (previousTodoCount > 0 && currentTodoCount === 0) ||
-                           (previousTodoCount === 0 && currentTodoCount > 0);
-        
+            (previousTodoCount === 0 && currentTodoCount > 0);
+
         // Include version in hash for forced updates
-        const currentHash = JSON.stringify({ 
-            todos: this.todos, 
+        const currentHash = JSON.stringify({
+            todos: this.todos,
             title: this.title,
             version: isEmptyTransition ? ++this.updateVersion : this.updateVersion
         });
-        
+
         if (currentHash !== this.lastUpdateHash || isEmptyTransition) {
             console.log(`[TodoManager] Firing change event: ${previousTodoCount} -> ${currentTodoCount} todos, title: "${this.getTitle()}"${isEmptyTransition ? ' (empty transition)' : ''}`);
             this.lastUpdateHash = currentHash;
-            
+
             // Fire consolidated event only
             this.onDidChangeEmitter.fire({ todos: this.todos, title: this.getTitle() });
         } else {
@@ -264,6 +264,10 @@ export class TodoManager {
 
     public getTodos(): TodoItem[] {
         return [...this.todos];
+    }
+
+    public getBaseTitle(): string {
+        return this.title;
     }
 
     public getTitle(): string {

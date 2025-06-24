@@ -29,10 +29,15 @@ interface TodoManagerLike {
 }
 
 export class TodoTools {
+  private todoSync: any;
+
   constructor(
     private todoManager: TodoManagerLike,
-    private server: MCPServerLike
-  ) { }
+    private server: MCPServerLike,
+    todoSync?: any
+  ) {
+    this.todoSync = todoSync;
+  }
 
   async getAvailableTools(): Promise<any[]> {
     const tools = [];
@@ -229,6 +234,16 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
 
     // Get current state before update for comparison
     const previousTodos = this.todoManager.getTodos();
+    const previousTitle = this.todoManager.getTitle();
+    
+    console.log('[TodoTools.handleWrite] State before update:', {
+      previousTodoCount: previousTodos.length,
+      previousTitle: previousTitle,
+      newTodoCount: todos.length,
+      newTitle: title || 'no change',
+      todoSync: !!this.todoSync,
+      server: this.server.isStandalone() ? 'standalone' : 'vscode'
+    });
 
     // Validate input
     if (!Array.isArray(todos)) {
@@ -284,8 +299,25 @@ Note: This replaces the entire list, so include all existing todos to keep.`;
     // Log the update operation
     console.log(`[TodoTools] Updating todos via MCP: ${todos.length} items, title: ${title || 'no change'}`);
 
+    // Mark this as an external change if we have a todoSync instance
+    if (this.todoSync) {
+      console.log('[TodoTools] Marking change as external (MCP-initiated)');
+      this.todoSync.markExternalChange();
+    }
+
     // Update todos
     await this.todoManager.updateTodos(todos, title);
+
+    // Get state after update
+    const finalTodos = this.todoManager.getTodos();
+    const finalTitle = this.todoManager.getTitle();
+    
+    console.log('[TodoTools.handleWrite] State after update:', {
+      finalTodoCount: finalTodos.length,
+      finalTitle: finalTitle,
+      todosSaved: finalTodos.length === todos.length,
+      titleSaved: title === undefined || finalTitle === title
+    });
 
     console.log('[TodoTools] Update completed, todos should sync to VS Code');
 
