@@ -17,7 +17,8 @@ suite('MCP Dynamic Subtasks Configuration', () => {
         // Create server with test configuration
         server = new TodoMCPServer({
             port: 0,
-            standalone: false
+            standalone: false,
+            enableSubtasks: true
         });
 
         // Create a standalone manager with in-memory storage
@@ -41,110 +42,64 @@ suite('MCP Dynamic Subtasks Configuration', () => {
     });
 
     test('Tool schemas update when subtasks setting changes', async () => {
-        let subtasksEnabled = true;
-
-        // Mock the getConfiguration to control the subtasks setting
-        vscode.workspace.getConfiguration = (section?: string) => {
-            const config = originalGetConfig(section);
-            if (section === 'agentTodos') {
-                // Override the get method for our test
-                return {
-                    ...config,
-                    get: (key: string, defaultValue?: any) => {
-                        if (key === 'enableSubtasks') {
-                            return subtasksEnabled;
-                        }
-                        return config.get(key, defaultValue);
-                    }
-                };
-            }
-            return config;
-        };
-
-        // Get initial tools with subtasks enabled
-        const todoTools = server.getTodoTools();
+        // Initially subtasks are enabled (from setup)
+        let todoTools = server.getTodoTools();
         let tools = await todoTools.getAvailableTools();
-        let writeToolSchema = tools.find(t => t.name === 'todo_write')?.inputSchema;
-        assert.ok(writeToolSchema.properties.todos.items.properties.subtasks, 'Schema should include subtasks when enabled');
-        assert.ok(writeToolSchema.properties.todos.items.properties.adr, 'Schema should include adr when subtasks enabled');
+        let writeTool = tools.find(t => t.name === 'todo_write');
+        
+        assert.ok(writeTool, 'Write tool should exist');
+        assert.ok(writeTool.inputSchema.properties.todos.items.properties.subtasks, 'Schema should include subtasks when enabled');
+        assert.ok(writeTool.description.includes('<subtasks>'), 'Write tool description should mention subtasks when enabled');
 
-        // Disable subtasks
-        subtasksEnabled = false;
-
-        // Simulate configuration change broadcast
+        // Disable subtasks via configuration update
         server.broadcastUpdate({
             type: 'configuration-changed',
             config: {
-                autoInject: false,
                 enableSubtasks: false
-            },
-            timestamp: Date.now()
+            }
         });
 
         // Get tools again after configuration change
+        todoTools = server.getTodoTools();
         tools = await todoTools.getAvailableTools();
-        writeToolSchema = tools.find(t => t.name === 'todo_write')?.inputSchema;
-        assert.ok(!writeToolSchema.properties.todos.items.properties.subtasks, 'Schema should not include subtasks when disabled');
-        assert.ok(writeToolSchema.properties.todos.items.properties.adr, 'Schema should always include adr (independent of subtasks setting)');
+        writeTool = tools.find(t => t.name === 'todo_write');
+        
+        assert.ok(writeTool, 'Write tool should still exist');
+        assert.ok(!writeTool.inputSchema.properties.todos.items.properties.subtasks, 'Schema should not include subtasks when disabled');
+        assert.ok(!writeTool.description.includes('<subtasks>'), 'Write tool description should not mention subtasks when disabled');
 
         // Re-enable subtasks
-        subtasksEnabled = true;
-
-        // Simulate configuration change broadcast again
         server.broadcastUpdate({
             type: 'configuration-changed',
             config: {
-                autoInject: false,
                 enableSubtasks: true
-            },
-            timestamp: Date.now()
+            }
         });
 
         // Verify tools are updated again
+        todoTools = server.getTodoTools();
         tools = await todoTools.getAvailableTools();
-        writeToolSchema = tools.find(t => t.name === 'todo_write')?.inputSchema;
-        assert.ok(writeToolSchema.properties.todos.items.properties.subtasks, 'Schema should include subtasks again when re-enabled');
-        assert.ok(writeToolSchema.properties.todos.items.properties.adr, 'Schema should always include adr (independent of subtasks setting)');
+        writeTool = tools.find(t => t.name === 'todo_write');
+        
+        assert.ok(writeTool, 'Write tool should still exist');
+        assert.ok(writeTool.inputSchema.properties.todos.items.properties.subtasks, 'Schema should include subtasks again when re-enabled');
+        assert.ok(writeTool.description.includes('<subtasks>'), 'Write tool description should mention subtasks again when re-enabled');
     });
 
     test('Tool descriptions update based on subtasks setting', async () => {
-        let subtasksEnabled = true;
-
-        // Mock the getConfiguration
-        vscode.workspace.getConfiguration = (section?: string) => {
-            const config = originalGetConfig(section);
-            if (section === 'agentTodos') {
-                return {
-                    ...config,
-                    get: (key: string, defaultValue?: any) => {
-                        if (key === 'enableSubtasks') {
-                            return subtasksEnabled;
-                        }
-                        return config.get(key, defaultValue);
-                    }
-                };
-            }
-            return config;
-        };
-
         const todoTools = server.getTodoTools();
 
-        // Test with subtasks enabled
+        // Test with subtasks enabled (from setup)
         let tools = await todoTools.getAvailableTools();
         let writeTool = tools.find(t => t.name === 'todo_write');
         assert.ok(writeTool?.description.includes('<subtasks>'), 'Write tool description should mention subtasks when enabled');
 
         // Disable subtasks
-        subtasksEnabled = false;
-
-        // Broadcast configuration change
         server.broadcastUpdate({
             type: 'configuration-changed',
             config: {
-                autoInject: false,
                 enableSubtasks: false
-            },
-            timestamp: Date.now()
+            }
         });
 
         tools = await todoTools.getAvailableTools();
@@ -153,24 +108,13 @@ suite('MCP Dynamic Subtasks Configuration', () => {
     });
 
     test('Subtasks validation respects current configuration', async () => {
-        let subtasksEnabled = false;
-
-        // Mock the getConfiguration to disable subtasks
-        vscode.workspace.getConfiguration = (section?: string) => {
-            const config = originalGetConfig(section);
-            if (section === 'agentTodos') {
-                return {
-                    ...config,
-                    get: (key: string, defaultValue?: any) => {
-                        if (key === 'enableSubtasks') {
-                            return subtasksEnabled;
-                        }
-                        return config.get(key, defaultValue);
-                    }
-                };
+        // Update server configuration to disable subtasks
+        server.broadcastUpdate({
+            type: 'configuration-changed',
+            config: {
+                enableSubtasks: false
             }
-            return config;
-        };
+        });
 
         const todoTools = server.getTodoTools();
 

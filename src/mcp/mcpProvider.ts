@@ -50,11 +50,16 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       // Find an available port
       this.serverPort = await this.findAvailablePort();
 
+      // Get current configuration
+      const config = vscode.workspace.getConfiguration('agentTodos');
+      const enableSubtasks = config.get<boolean>('enableSubtasks', true);
+
       // Create server instance
       this.server = new TodoMCPServer({
         port: this.serverPort,
         workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
-        standalone: false
+        standalone: false,
+        enableSubtasks
       });
 
       // Setup sync between VS Code TodoManager and standalone manager

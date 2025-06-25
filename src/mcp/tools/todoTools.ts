@@ -18,6 +18,7 @@ interface ToolContext {
 interface MCPServerLike {
   isStandalone(): boolean;
   broadcastUpdate(event: any): void;
+  getConfig(): any;
 }
 
 interface TodoManagerLike {
@@ -52,48 +53,100 @@ export class TodoTools {
     // - Auto-inject is disabled AND there are todos to read
     if (this.server.isStandalone() || (!autoInject && hasTodos)) {
       const readDescription = subtasksEnabled
-        ? `CRITICAL WORKFLOW TOOL: Always check current tasks before making any changes or starting work.
+        ? `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
 
-# MANDATORY USAGE - Never Skip This Tool
-• **IMMEDIATELY** at conversation start (before any other actions)
-• **BEFORE** planning any development work or code changes
-• **WHEN** user mentions tasks, features, bugs, or project planning
-• **AFTER** completing work to maintain accurate context
-• **EVERY** 3-4 messages to stay synchronized with active work
-• **WHENEVER** uncertain about priorities or next steps
+<when-to-use>
+You should make use of this tool as often as possible, especially in the following situations:
+• At the beginning of conversations to see what's pending
+• Before starting new tasks to prioritize work
+• When the user asks about previous tasks or plans
+• Whenever you're uncertain about what to do next
+• After completing tasks to update your understanding of remaining work
+• After every few messages to ensure you're on track
+• When working on tasks that would benefit from a todo list
+</when-to-use>
 
-# Tool Purpose
-Retrieves all active todos with status/priority/content plus subtasks and implementation details.
-Returns empty list only if no planning has occurred yet.
+<persistence-reminder>
+CRITICAL: Keep checking todos throughout the conversation. Do not assume you remember - always verify current state. You CANNOT maintain context between conversations without reading todos.
+</persistence-reminder>
 
-# Why This Matters
-- Prevents duplicate work and conflicting efforts
-- Maintains development workflow continuity
-- Ensures proper task prioritization
-- Critical for maintaining project context
+<instructions>
+  <comprehensive-coverage>
+  This tool tracks ALL work types:
+  • Development (features, bugs, refactoring, optimization)
+  • Research (analysis, exploration, investigation, learning)
+  • Documentation (guides, API docs, specifications, tutorials)
+  • Planning (architecture, roadmaps, strategies, workflows)
+  • Reviews (code review, security audit, performance analysis)
+  </comprehensive-coverage>
 
-**If list is empty, use todo_write immediately to start planning work.**`
-        : `CRITICAL WORKFLOW TOOL: Always check current tasks before making any changes or starting work.
+  <skip-conditions>
+  Only skip when:
+  • User explicitly says "start fresh" or "ignore previous todos"
+  • You JUST updated todos (< 30 seconds ago)
+  • Pure factual questions with zero task implications
+  • Auto-inject is enabled (todos already in context)
+  </skip-conditions>
+</instructions>
 
-# MANDATORY USAGE - Never Skip This Tool
-• **IMMEDIATELY** at conversation start (before any other actions)
-• **BEFORE** planning any development work or code changes
-• **WHEN** user mentions tasks, features, bugs, or project planning
-• **AFTER** completing work to maintain accurate context
-• **EVERY** 3-4 messages to stay synchronized with active work
-• **WHENEVER** uncertain about priorities or next steps
+<usage-notes>
+• This tool takes no parameters - leave the input blank
+• Returns a list of todo items with their status, priority, and content
+• Use this information to track progress and plan next steps
+• If no todos exist yet, an empty list will be returned
+• When empty: Immediately use todo_write to plan the requested work
+</usage-notes>
 
-# Tool Purpose
-Retrieves all active todos with status/priority/content.
-Returns empty list only if no planning has occurred yet.
+<response>
+Returns JSON with title and todos array. Each todo includes id, content, status, priority, adr, and subtasks (if enabled).
+</response>`
+        : `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
 
-# Why This Matters
-- Prevents duplicate work and conflicting efforts
-- Maintains development workflow continuity
-- Ensures proper task prioritization
-- Critical for maintaining project context
+<when-to-use>
+You should make use of this tool as often as possible, especially in the following situations:
+• At the beginning of conversations to see what's pending
+• Before starting new tasks to prioritize work
+• When the user asks about previous tasks or plans
+• Whenever you're uncertain about what to do next
+• After completing tasks to update your understanding of remaining work
+• After every few messages to ensure you're on track
+• When working on tasks that would benefit from a todo list
+</when-to-use>
 
-**If list is empty, use todo_write immediately to start planning work.**`;
+<persistence-reminder>
+CRITICAL: Keep checking todos throughout the conversation. Do not assume you remember - always verify current state. You CANNOT maintain context between conversations without reading todos.
+</persistence-reminder>
+
+<instructions>
+  <comprehensive-coverage>
+  This tool tracks ALL work types:
+  • Development (features, bugs, refactoring, optimization)
+  • Research (analysis, exploration, investigation, learning)
+  • Documentation (guides, API docs, specifications, tutorials)
+  • Planning (architecture, roadmaps, strategies, workflows)
+  • Reviews (code review, security audit, performance analysis)
+  </comprehensive-coverage>
+
+  <skip-conditions>
+  Only skip when:
+  • User explicitly says "start fresh" or "ignore previous todos"
+  • You JUST updated todos (< 30 seconds ago)
+  • Pure factual questions with zero task implications
+  • Auto-inject is enabled (todos already in context)
+  </skip-conditions>
+</instructions>
+
+<usage-notes>
+• This tool takes no parameters - leave the input blank
+• Returns a list of todo items with their status, priority, and content
+• Use this information to track progress and plan next steps
+• If no todos exist yet, an empty list will be returned
+• When empty: Immediately use todo_write to plan the requested work
+</usage-notes>
+
+<response>
+Returns JSON with title and todos array. Each todo includes id, content, status, priority, and adr.
+</response>`;
 
       tools.push({
         name: 'todo_read',
@@ -126,66 +179,95 @@ Returns empty list only if no planning has occurred yet.
   }
 
   private buildWriteDescription(subtasksEnabled: boolean): string {
-    const basePrompt = `ESSENTIAL PLANNING TOOL: Plan ALL development work before coding. Use this tool for ANY user request involving code changes.
+    const basePrompt = `Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
 
-# Role and Objective
-Transform user requests into structured, actionable tasks that drive development forward systematically.
+<when-to-use>
+Use this tool proactively in these scenarios:
+1. Complex multi-step tasks - When a task requires 3 or more distinct steps or actions
+2. Non-trivial and complex tasks - Tasks that require careful planning or multiple operations
+3. User explicitly requests todo list - When the user directly asks you to use the todo list
+4. User provides multiple tasks - When users provide a list of things to be done
+5. After receiving new instructions - Immediately capture user requirements as todos
+6. When you start working on a task - Mark it as in_progress BEFORE beginning work
+7. After completing a task - Mark it as completed and add any new follow-up tasks
 
-# Instructions - When To Use This Tool
+Skip when:
+• Single, straightforward task
+• Task is trivial (< 3 steps)
+• Purely conversational or informational
+</when-to-use>
 
-## ALWAYS Use For (Never Skip These):
-• **ANY** user request requiring code changes or multiple steps
-• **IMMEDIATELY** when user mentions features, bugs, improvements, or tasks
-• **ALL** development work (planning is mandatory before implementation)
-• **EVERY** multi-file change or refactoring request
-• **ARCHITECTURE** decisions and technical planning sessions
-• **BREAKING DOWN** user requirements into actionable steps
+<persistence-reminder>
+CRITICAL: Keep planning until the user's request is FULLY broken down. Do not stop at high-level tasks - decompose until each task is independently actionable (2-4 hour chunks).
+</persistence-reminder>
 
-## NEVER Skip For:
-• Complex multi-step tasks (3+ actions) - planning is mandatory
-• Any coding task - no exceptions to planning requirement
-• User feature requests - break down immediately into tasks
-• Multiple user requests in single conversation
-• Technical debt or refactoring work
-• New functionality implementation
+<instructions>
+  <threshold-rule>
+  Use todos for ANY work requiring 3+ steps OR multiple contexts/files
+  </threshold-rule>
+  
+  <task-categories>
+  This tool tracks ALL work types:
+  • Coding: features, bugs, refactoring, optimization, security
+  • Research: codebase exploration, technology evaluation, root cause analysis
+  • Documentation: API docs, guides, architecture docs, migration guides
+  • Planning: system design, roadmaps, technical debt, process improvements
+  • Learning: framework deep-dives, technology exploration, codebase onboarding
+  </task-categories>
 
-# Workflow Requirements - Strict Adherence Required
-1. **Plan Before Code**: NEVER write code without planning tasks first
-2. **Single Progress**: Only ONE task can be in_progress at any time
-3. **Real-time Updates**: Mark in_progress BEFORE starting, completed IMMEDIATELY when done
-4. **Incremental Progress**: Break complex requests into specific, testable steps
-5. **Document Decisions**: Use adr field for architectural decisions and implementation notes
+  <workflow-rules>
+  ⚠️ PLAN FIRST: Never start work without todos for 3+ step tasks
+  ⚠️ SINGLE PROGRESS: Only ONE task can be in_progress at any time
+  ⚠️ IMMEDIATE UPDATES: Mark in_progress BEFORE starting, completed IMMEDIATELY when done
+  ⚠️ COMPLETE FIRST: Finish current task before starting next
+  ⚠️ DOCUMENT BLOCKERS: Keep tasks in_progress with ADR notes if blocked
+  </workflow-rules>
+  
+  <status-transitions>
+  • pending → in_progress: BEFORE starting work
+  • in_progress → completed: IMMEDIATELY after finishing
+  • Never leave tasks in_progress when switching
+  </status-transitions>
+</instructions>
 
-# Parameters - Required Fields
-• **id**: Short, unique kebab-case identifier (e.g., "fix-login-bug")
-• **content**: Clear, actionable task description (minimum 1 character)
-• **status**: One of pending/in_progress/completed (enforce single in_progress rule)
-• **priority**: Set based on user needs - high/medium/low
-• **adr**: Optional but recommended for technical context, decisions, rationale`;
+<parameter-guidance>
+  <todos>Complete array replacing entire todo list - include ALL existing incomplete todos</todos>
+  <id>kebab-case verb-noun (e.g., "implement-auth", "fix-memory-leak")</id>
+  <content>Specific, actionable description of what needs to be done</content>
+  <status>pending/in_progress/completed - only ONE in_progress allowed</status>
+  <priority>high (urgent/blocking), medium (important), low (nice-to-have)</priority>
+  <adr>Architecture decisions, trade-offs, blockers, implementation notes</adr>`;
 
     const subtasksSection = subtasksEnabled ? `
+  <subtasks>Break complex tasks into smaller steps - use for tasks with 3+ phases</subtasks>` : '';
 
-# Subtasks - Required for Complex Tasks
-• **ALWAYS** break complex tasks (3+ steps) into manageable subtasks
-• **EACH** subtask requires: id, content, status (pending/completed)
-• **USE** for any task involving multiple files, functions, or major steps
-• **MARK** subtasks completed as you finish each step to track progress` : '';
+    const footer = `
+</parameter-guidance>
 
-    const footerNote = `
+<critical-warning>
+⚠️ This tool REPLACES the entire todo list - always include existing todos you want to keep
+⚠️ Use todo_read first if uncertain about current todos
+⚠️ Never lose existing work by forgetting to include current todos in the update
+</critical-warning>
 
-# CRITICAL WARNING - Data Replacement
-⚠️ **This tool REPLACES the entire todo list** - include existing todos you want to keep.
-⚠️ **Use todo_read first** if uncertain about current todos before updating.
-⚠️ **NEVER lose existing work** by forgetting to include current todos in the update.
-
-# Success Pattern
+<success-pattern>
 1. Read current todos (if any exist)
-2. Plan new work by adding/updating tasks  
-3. Mark appropriate task as in_progress before coding
-4. Update progress as you work
-5. Mark completed when finished`;
+2. Analyze task complexity (3+ steps = use todos)
+3. Plan new work by adding/updating tasks
+4. Mark appropriate task as in_progress before coding
+5. Update progress as you work
+6. Mark completed when finished
+</success-pattern>
 
-    return basePrompt + subtasksSection + footerNote;
+<best-practices>
+• Front-load research and investigation tasks
+• Make each task independently verifiable
+• Use subtasks for multi-day efforts
+• Document assumptions and decisions in ADR
+• Keep task descriptions specific and measurable
+</best-practices>`;
+
+    return basePrompt + subtasksSection + footer;
   }
 
   async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
@@ -578,12 +660,9 @@ Transform user requests into structured, actionable tasks that drive development
       return false; // Always show tools in standalone mode
     }
 
-    try {
-      const vscode = require('vscode');
-      return vscode.workspace.getConfiguration('agentTodos').get('autoInject', false);
-    } catch (error) {
-      return false; // Default to false if vscode not available
-    }
+    // Get autoInject from server configuration
+    const config = this.server.getConfig();
+    return config.autoInject || false;
   }
 
   private isSubtasksEnabled(): boolean {
@@ -591,11 +670,8 @@ Transform user requests into structured, actionable tasks that drive development
       return true; // Always enable subtasks in standalone mode
     }
 
-    try {
-      const vscode = require('vscode');
-      return vscode.workspace.getConfiguration('agentTodos').get('enableSubtasks', true);
-    } catch (error) {
-      return true; // Default to true if vscode not available
-    }
+    // Get enableSubtasks from server configuration
+    const config = this.server.getConfig();
+    return config.enableSubtasks !== undefined ? config.enableSubtasks : true;
   }
 }

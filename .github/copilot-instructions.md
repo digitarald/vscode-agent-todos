@@ -11,35 +11,62 @@ IMPORTANT:
 
 ## Tool Prompt Optimization Strategy
 
-The MCP todo tools use **highly optimized prompts** designed to trigger proactive usage by AI agents, following OpenAI GPT-4.1 prompting best practices:
+The MCP todo tools use **advanced prompt engineering** combining best practices from Claude 4 and GPT-4.1 guides:
 
 ### Key Optimization Principles:
 
-1. **Imperative Language**: Commands like "ALWAYS", "IMMEDIATELY", "MANDATORY" instead of passive descriptions
-2. **Planning-First Messaging**: Emphasizes planning as essential before any coding work
-3. **Psychological Triggers**: Uses urgency words and patterns that compel immediate action
-4. **Development Workflow Integration**: Directly connects todo usage to coding workflows
-5. **Mandatory Usage Patterns**: Explicitly lists when tools MUST be used (not just suggested)
-6. **Structured Sections**: Clear role/objective, instructions, workflow requirements following GPT-4.1 guide
-7. **Detailed Parameter Descriptions**: Rich context for each schema field to guide proper usage
+1. **XML Tag Structure**: Semantic tags like `<role>`, `<objective>`, `<instructions>` for clear parsing
+2. **Persistence Reminders**: Multiple reinforcement points throughout prompts
+3. **Explicit Thresholds**: Clear "3+ steps" rule for todo usage
+4. **Thinking Examples**: Show AI reasoning process within examples
+5. **Comprehensive Task Types**: Beyond coding - research, documentation, planning, learning
+6. **Workflow Enforcement**: Strong rules about status transitions and timing
 
-### OpenAI GPT-4.1 Optimizations Applied:
+### Combined Best Practices Applied:
 
-- **Agentic Persistence**: Tool descriptions encourage continued usage until completion
-- **Clear Tool Purpose**: Specific when/why to use each tool with concrete examples
-- **Instruction Structure**: Markdown sections with clear hierarchy and formatting
-- **Parameter Clarity**: Detailed JSON schema descriptions with examples and constraints
-- **Workflow Integration**: Tools positioned as critical workflow components, not optional aids
+**From Claude 4:**
+- **XML Tags for Structure**: `<tool-description>`, `<persistence-reminder>`, `<examples>`
+- **Rich Examples**: Multiple scenarios with thinking process shown
+- **Explicit Instructions**: Clear, specific directives
+- **Positive Framing**: "Do this" rather than "don't do that"
 
-### Current Prompt Features:
+**From GPT-4.1:**
+- **Role and Objective First**: Clear agent identity and purpose
+- **Persistence Philosophy**: "Keep going until done" messaging
+- **Planning-First Approach**: Extensive planning before execution
+- **Agentic Workflow**: Step-by-step reasoning framework
 
-- **todo_read**: Structured with "CRITICAL WORKFLOW TOOL" and "MANDATORY USAGE" sections
-- **todo_write**: Organized with "Role and Objective", "Instructions", "Workflow Requirements"
-- **Rich Descriptions**: Parameter schemas include context, examples, and usage guidance
-- **Warning Systems**: Critical warnings about data replacement and workflow requirements
-- **Success Patterns**: Step-by-step guidance for proper tool usage workflows
+### Current Enhanced Features:
 
-These optimizations significantly increase the likelihood that AI agents will proactively use the todo management tools during development conversations.
+**todo_read Prompt:**
+- `<purpose>` and `<when-to-use>` mirroring Claude's own tool patterns
+- `<persistence-reminder>` for continuous usage
+- Simplified structure without verbose examples
+- Clear `<usage-notes>` for practical guidance
+- Expanded to cover all work types, not just coding
+
+**todo_write Prompt:**
+- `<when-to-use>` with numbered scenarios from Claude's patterns
+- `<threshold-rule>` with explicit 3+ steps criteria
+- `<task-categories>` covering all work types concisely
+- `<parameter-guidance>` in streamlined format
+- `<success-pattern>` with 6-step workflow
+- Removed large example sections for brevity
+
+### Key Improvements:
+
+1. **Claude's Tool Patterns**: Incorporated `<purpose>` and `<when-to-use>` sections from Claude's own tools
+2. **Streamlined Structure**: Removed verbose examples and output-format sections
+3. **Proactive Usage**: Numbered scenarios encouraging frequent tool use
+4. **Explicit Thresholds**: Clear 3+ steps or multiple contexts rule
+5. **Concise Parameter Guidance**: Simplified format with inline descriptions
+6. **Persistent Reminders**: Multiple touchpoints reinforcing continuous usage
+
+These enhancements create more effective prompts by:
+- Mirroring successful patterns from Claude's built-in tools
+- Reducing cognitive load with concise, actionable instructions
+- Maintaining clarity while removing unnecessary verbosity
+- Focusing on practical usage over theoretical examples
 
 ## Project Overview
 

@@ -32,12 +32,12 @@ suite('MCP Todo Tools Tests', () => {
 
             const readTool = tools.find(t => t.name === 'todo_read');
             assert.ok(readTool);
-            assert.ok(readTool.description.startsWith('Read the current task list'));
+            assert.ok(readTool.description.startsWith('Use this tool to read the current to-do list'));
             assert.deepStrictEqual(readTool.inputSchema.properties, {});
 
             const writeTool = tools.find(t => t.name === 'todo_write');
             assert.ok(writeTool);
-            assert.ok(writeTool.description.includes('Creates and manages a structured task list'));
+            assert.ok(writeTool.description.includes('create and manage a structured task list'));
             assert.ok(writeTool.inputSchema.properties.todos);
             assert.ok(writeTool.inputSchema.properties.title);
         });

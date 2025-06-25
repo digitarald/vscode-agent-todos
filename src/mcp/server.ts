@@ -30,7 +30,8 @@ export class TodoMCPServer {
       port: config.port || 3000,
       workspaceRoot: config.workspaceRoot || process.cwd(),
       standalone: config.standalone === true,
-      autoInject: config.autoInject || false
+      autoInject: config.autoInject || false,
+      enableSubtasks: config.enableSubtasks !== undefined ? config.enableSubtasks : true
     };
 
     // Initialize todo manager based on mode
@@ -274,6 +275,17 @@ export class TodoMCPServer {
     // In HTTP mode with sessions, updates aren't broadcast
     // Each session maintains its own state
     console.log('Update event:', event);
+
+    // Update server configuration if this is a configuration change
+    if (event.type === 'configuration-changed' && event.config) {
+      if (event.config.autoInject !== undefined) {
+        this.config.autoInject = event.config.autoInject;
+      }
+      if (event.config.enableSubtasks !== undefined) {
+        this.config.enableSubtasks = event.config.enableSubtasks;
+      }
+      console.log('Server configuration updated:', this.config);
+    }
 
     // If this is a configuration change event OR todos update, we should reinitialize tools
     // to ensure they reflect the latest configuration and todo state
