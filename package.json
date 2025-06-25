@@ -149,6 +149,24 @@
         "title": "Start Planning",
         "category": "Agent TODOs",
         "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "agentTodos.saveTodos",
+        "title": "Save to File",
+        "category": "Agent TODOs",
+        "icon": "$(save)"
+      },
+      {
+        "command": "agentTodos.loadTodos",
+        "title": "Load from File",
+        "category": "Agent TODOs",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "agentTodos.openSettings",
+        "title": "Open Settings",
+        "category": "Agent TODOs",
+        "icon": "$(settings-gear)"
       }
     ],
     "viewsContainers": {
@@ -183,24 +201,19 @@
           "group": "navigation"
         },
         {
-          "command": "agentTodos.toggleAutoInject",
-          "when": "view == agentTodos && !config.agentTodos.autoInject",
-          "group": "1_toggles"
+          "command": "agentTodos.openSettings",
+          "when": "view == agentTodos",
+          "group": "navigation"
         },
         {
-          "command": "agentTodos.toggleAutoInjectEnabled",
-          "when": "view == agentTodos && config.agentTodos.autoInject",
-          "group": "1_toggles"
+          "command": "agentTodos.saveTodos",
+          "when": "view == agentTodos && agentTodos.hasTodos",
+          "group": "2_file_operations"
         },
         {
-          "command": "agentTodos.toggleAutoOpenView",
-          "when": "view == agentTodos && !config.agentTodos.autoOpenView",
-          "group": "1_toggles"
-        },
-        {
-          "command": "agentTodos.toggleAutoOpenViewEnabled",
-          "when": "view == agentTodos && config.agentTodos.autoOpenView",
-          "group": "1_toggles"
+          "command": "agentTodos.loadTodos",
+          "when": "view == agentTodos",
+          "group": "2_file_operations"
         }
       ],
       "view/item/context": [

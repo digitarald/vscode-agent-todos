@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { TodoItem } from './types';
+import { TodoMarkdownFormatter } from './utils/todoMarkdownFormatter';
 
 export class CopilotInstructionsManager {
     private static instance: CopilotInstructionsManager;
@@ -92,41 +93,8 @@ export class CopilotInstructionsManager {
             // Default to true when vscode is not available
         }
 
-        // Helper function to format a single todo with subtasks and details
-        const formatTodo = (todo: TodoItem): string => {
-            // Determine checkbox based on status
-            const checkbox = todo.status === 'completed' ? '[x]' :
-                todo.status === 'in_progress' ? '[-]' :
-                    '[ ]';
-
-            const priorityBadge = todo.priority === 'high' ? ' 🔴' :
-                todo.priority === 'medium' ? ' 🟡' :
-                    ' 🟢';
-            let result = `- ${checkbox} ${todo.id}: ${todo.content}${priorityBadge}\n`;
-
-            // Add adr if present (before subtasks)
-            if (todo.adr) {
-                result += `  _${todo.adr}_\n`;
-            }
-
-            // Add subtasks if enabled and present
-            if (subtasksEnabled && todo.subtasks && todo.subtasks.length > 0) {
-                todo.subtasks.forEach(subtask => {
-                    const subtaskCheckbox = subtask.status === 'completed' ? '[x]' : '[ ]';
-                    result += `  - ${subtaskCheckbox} ${subtask.id}: ${subtask.content}\n`;
-                });
-            }
-
-            return result;
-        };
-
-        // Format todos in their original order
-        let markdown = '';
-        todos.forEach(todo => {
-            markdown += formatTodo(todo);
-        });
-
-        return markdown.trim();
+        // Use the shared formatter, but without title since we handle that differently
+        return TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined, subtasksEnabled);
     }
 
     public async updateInstructionsWithTodos(todos: TodoItem[], title?: string): Promise<void> {

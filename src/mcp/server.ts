@@ -7,12 +7,17 @@ import { MCPServerConfig } from './types';
 import { StandaloneTodoManager } from './standaloneTodoManager';
 import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
+import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 
 // Dynamic imports for ESM modules
 let Server: any;
 let StreamableHTTPServerTransport: any;
 let ListToolsRequestSchema: any;
 let CallToolRequestSchema: any;
+let ListResourcesRequestSchema: any;
+let ReadResourceRequestSchema: any;
+let SubscribeRequestSchema: any;
+let UnsubscribeRequestSchema: any;
 
 export class TodoMCPServer {
   private app: Express;
@@ -24,6 +29,7 @@ export class TodoMCPServer {
   private transports: Map<string, any> = new Map();
   private servers: Map<string, any> = new Map();
   private todoSync: any = null;
+  private resourceSubscriptions: Map<string, Set<string>> = new Map(); // sessionId -> resource URIs
 
   constructor(config: MCPServerConfig = {}) {
     this.config = {
@@ -72,6 +78,10 @@ export class TodoMCPServer {
     StreamableHTTPServerTransport = httpModule.StreamableHTTPServerTransport;
     ListToolsRequestSchema = typesModule.ListToolsRequestSchema;
     CallToolRequestSchema = typesModule.CallToolRequestSchema;
+    ListResourcesRequestSchema = typesModule.ListResourcesRequestSchema;
+    ReadResourceRequestSchema = typesModule.ReadResourceRequestSchema;
+    SubscribeRequestSchema = typesModule.SubscribeRequestSchema;
+    UnsubscribeRequestSchema = typesModule.UnsubscribeRequestSchema;
 
     // Import and initialize tools
     const { TodoTools } = await import('./tools/todoTools.js');
@@ -135,7 +145,10 @@ export class TodoMCPServer {
             },
             {
               capabilities: {
-                tools: {}
+                tools: {},
+                resources: {
+                  subscribe: true
+                }
               }
             }
           );
@@ -235,6 +248,92 @@ export class TodoMCPServer {
 
       return await this.todoTools!.handleToolCall(name, args, context);
     });
+
+    // Register resource handlers
+    server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      return {
+        resources: [{
+          uri: "todos://todos",
+          name: "Todo List",
+          description: "Current todo list in markdown format",
+          mimeType: "text/markdown"
+        }]
+      };
+    });
+
+    server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
+      if (request.params.uri === "todos://todos") {
+        // Get current todos
+        const todos = this.todoManager.getTodos();
+        const title = this.todoManager.getBaseTitle();
+        
+        // Format as markdown
+        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title, true);
+        
+        return {
+          contents: [{
+            uri: "todos://todos",
+            mimeType: "text/markdown",
+            text: markdown
+          }]
+        };
+      }
+      
+      throw new Error(`Resource not found: ${request.params.uri}`);
+    });
+
+    // Handle resource subscriptions
+    server.setRequestHandler(SubscribeRequestSchema, async (request: any, extra: any) => {
+      const sessionId = this.getSessionIdFromExtra(extra);
+      if (!sessionId) {
+        throw new Error('No session ID found for subscription');
+      }
+      
+      const resourceUri = request.params.uri;
+      
+      // Add subscription
+      if (!this.resourceSubscriptions.has(sessionId)) {
+        this.resourceSubscriptions.set(sessionId, new Set());
+      }
+      this.resourceSubscriptions.get(sessionId)!.add(resourceUri);
+      
+      console.log(`[MCPServer] Session ${sessionId} subscribed to resource: ${resourceUri}`);
+      
+      return { success: true };
+    });
+
+    server.setRequestHandler(UnsubscribeRequestSchema, async (request: any, extra: any) => {
+      const sessionId = this.getSessionIdFromExtra(extra);
+      if (!sessionId) {
+        throw new Error('No session ID found for unsubscription');
+      }
+      
+      const resourceUri = request.params.uri;
+      
+      // Remove subscription
+      const subscriptions = this.resourceSubscriptions.get(sessionId);
+      if (subscriptions) {
+        subscriptions.delete(resourceUri);
+        if (subscriptions.size === 0) {
+          this.resourceSubscriptions.delete(sessionId);
+        }
+      }
+      
+      console.log(`[MCPServer] Session ${sessionId} unsubscribed from resource: ${resourceUri}`);
+      
+      return { success: true };
+    });
+  }
+
+  private getSessionIdFromExtra(extra: any): string | undefined {
+    // The session ID should be available in the extra context
+    // This might need adjustment based on the actual SDK implementation
+    for (const [sessionId, server] of this.servers) {
+      if (server === extra?.server) {
+        return sessionId;
+      }
+    }
+    return undefined;
   }
 
   private updateAllSessionHandlers(): void {
@@ -260,6 +359,9 @@ export class TodoMCPServer {
       server.close();
       this.servers.delete(sessionId);
     }
+
+    // Clean up resource subscriptions
+    this.resourceSubscriptions.delete(sessionId);
 
     console.log(`Cleaned up session: ${sessionId}`);
   }
@@ -300,6 +402,31 @@ export class TodoMCPServer {
       
       // Update handlers for all active sessions to reflect new tool schemas
       this.updateAllSessionHandlers();
+      
+      // Send resource update notifications to subscribed sessions
+      if (event.type === 'todos-updated') {
+        this.notifyResourceSubscribers('todos://todos');
+      }
+    }
+  }
+
+  private notifyResourceSubscribers(resourceUri: string): void {
+    // Notify all sessions that are subscribed to this resource
+    for (const [sessionId, subscriptions] of this.resourceSubscriptions) {
+      if (subscriptions.has(resourceUri)) {
+        const server = this.servers.get(sessionId);
+        if (server) {
+          try {
+            // Send resource update notification
+            server.sendNotification('notifications/resources/updated', {
+              uri: resourceUri
+            });
+            console.log(`[MCPServer] Notified session ${sessionId} of resource update: ${resourceUri}`);
+          } catch (error) {
+            console.error(`[MCPServer] Failed to notify session ${sessionId}:`, error);
+          }
+        }
+      }
     }
   }
 

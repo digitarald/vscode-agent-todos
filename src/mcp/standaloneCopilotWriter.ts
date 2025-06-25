@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { TodoItem } from '../types';
+import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 
 /**
  * Standalone writer for copilot instructions that doesn't depend on VS Code APIs
@@ -23,40 +24,8 @@ export class StandaloneCopilotWriter {
             return '- No current todos';
         }
 
-        // Helper function to format a single todo
-        const formatTodo = (todo: TodoItem): string => {
-            const checkbox = todo.status === 'completed' ? '[x]' :
-                todo.status === 'in_progress' ? '[-]' :
-                    '[ ]';
-
-            const priorityBadge = todo.priority === 'high' ? ' 🔴' :
-                todo.priority === 'medium' ? ' 🟡' :
-                    ' 🟢';
-            let result = `- ${checkbox} ${todo.id}: ${todo.content}${priorityBadge}\n`;
-
-            // Add adr if present
-            if (todo.adr) {
-                result += `  _${todo.adr}_\n`;
-            }
-
-            // Add subtasks if present
-            if (todo.subtasks && todo.subtasks.length > 0) {
-                todo.subtasks.forEach(subtask => {
-                    const subtaskCheckbox = subtask.status === 'completed' ? '[x]' : '[ ]';
-                    result += `  - ${subtaskCheckbox} ${subtask.id}: ${subtask.content}\n`;
-                });
-            }
-
-            return result;
-        };
-
-        // Format todos in their original order
-        let markdown = '';
-        todos.forEach(todo => {
-            markdown += formatTodo(todo);
-        });
-
-        return markdown.trim();
+        // Use the shared formatter
+        return TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined, true);
     }
 
     public async updateInstructionsWithTodos(todos: TodoItem[], title?: string): Promise<void> {

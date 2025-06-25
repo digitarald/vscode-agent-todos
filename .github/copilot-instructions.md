@@ -9,6 +9,20 @@ IMPORTANT:
 - NEVER make changes backwards compatible unless explicitly requested by the User.
 - NEVER create one-off scripts to test changes.
 
+## New Features (2025-06-25)
+
+### Save/Load Todo Lists
+- **Save Command** (`agentTodos.saveTodos`): Export current todos to a markdown file
+- **Load Command** (`agentTodos.loadTodos`): Import todos from a markdown file
+- Uses consistent markdown format with checkboxes, priorities (🔴🟡🟢), subtasks, and ADR notes
+- Available in the tree view menu when todos exist
+
+### MCP Resource Support
+- Todos are now exposed as an MCP resource at `todos://todos`
+- Returns current todo list in markdown format
+- Supports subscriptions for real-time updates
+- Clients receive notifications when todos change
+
 ## Tool Prompt Optimization Strategy
 
 The MCP todo tools use **advanced prompt engineering** combining best practices from Claude 4 and GPT-4.1 guides:

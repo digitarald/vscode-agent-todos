@@ -3,6 +3,7 @@ import { TodoManager } from './todoManager';
 import { TodoTreeDataProvider, TodoDecorationProvider } from './todoTreeProvider';
 import { SubtaskManager } from './subtaskManager';
 import { TodoMCPServerProvider } from './mcp/mcpProvider';
+import { TodoMarkdownFormatter } from './utils/todoMarkdownFormatter';
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('Todos extension is now active!');
@@ -108,10 +109,11 @@ export async function activate(context: vscode.ExtensionContext) {
 			vscode.window.showInformationMessage('All todos cleared!');
 		});
 
+		// Manual refresh command - rarely needed due to automatic refresh mechanism
+		// Useful for edge cases: external storage modifications, extension crashes, API failures, or debugging
 		const refreshTodosCommand = vscode.commands.registerCommand('agentTodos.refreshTodos', () => {
 			treeDataProvider.refresh();
 			decorationProvider.refresh();
-			vscode.window.showInformationMessage('Todos refreshed!');
 		});
 
 		// Command to refresh decorations only (used internally)
@@ -301,6 +303,94 @@ export async function activate(context: vscode.ExtensionContext) {
 			});
 		});
 
+		// Save todos to markdown file
+		const saveTodosCommand = vscode.commands.registerCommand('agentTodos.saveTodos', async () => {
+			const todos = todoManager.getTodos();
+			const title = todoManager.getBaseTitle();
+			
+			if (todos.length === 0) {
+				vscode.window.showWarningMessage('No todos to save');
+				return;
+			}
+			
+			const defaultFileName = 'todo.md';
+			const saveUri = await vscode.window.showSaveDialog({
+				defaultUri: vscode.Uri.file(defaultFileName),
+				filters: {
+					'Markdown': ['md'],
+					'All Files': ['*']
+				},
+				saveLabel: 'Save Todos'
+			});
+			
+			if (!saveUri) {
+				return; // User cancelled
+			}
+			
+			try {
+				const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title, true);
+				const content = Buffer.from(markdown, 'utf8');
+				await vscode.workspace.fs.writeFile(saveUri, content);
+				vscode.window.showInformationMessage(`Todos saved to ${saveUri.fsPath}`);
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to save todos: ${error}`);
+			}
+		});
+
+		// Load todos from markdown file
+		const loadTodosCommand = vscode.commands.registerCommand('agentTodos.loadTodos', async () => {
+			const openUri = await vscode.window.showOpenDialog({
+				canSelectFiles: true,
+				canSelectFolders: false,
+				canSelectMany: false,
+				filters: {
+					'Markdown': ['md'],
+					'All Files': ['*']
+				},
+				openLabel: 'Load Todos'
+			});
+			
+			if (!openUri || openUri.length === 0) {
+				return; // User cancelled
+			}
+			
+			try {
+				const fileContent = await vscode.workspace.fs.readFile(openUri[0]);
+				const content = Buffer.from(fileContent).toString('utf8');
+				
+				const { todos: parsedTodos, title } = TodoMarkdownFormatter.parseMarkdown(content);
+				const validatedTodos = TodoMarkdownFormatter.validateAndSanitizeTodos(parsedTodos);
+				
+				if (validatedTodos.length === 0) {
+					vscode.window.showWarningMessage('No valid todos found in the file');
+					return;
+				}
+				
+				// Ask for confirmation before replacing
+				const currentTodos = todoManager.getTodos();
+				if (currentTodos.length > 0) {
+					const choice = await vscode.window.showWarningMessage(
+						`This will replace ${currentTodos.length} existing todo(s) with ${validatedTodos.length} todo(s) from the file. Continue?`,
+						'Yes', 'No'
+					);
+					
+					if (choice !== 'Yes') {
+						return;
+					}
+				}
+				
+				await todoManager.setTodos(validatedTodos, title || 'Todos');
+				vscode.window.showInformationMessage(`Loaded ${validatedTodos.length} todo(s) from ${openUri[0].fsPath}`);
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to load todos: ${error}`);
+			}
+		});
+
+		// Open settings command
+		const openSettingsCommand = vscode.commands.registerCommand('agentTodos.openSettings', async () => {
+			await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:digitarald.agent-todos');
+		});
+
 		// Add all disposables to context
 		context.subscriptions.push(
 			treeView,
@@ -326,7 +416,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			addEditAdrCommand,
 			clearAdrCommand,
 			runTodoCommand,
-			startPlanningCommand
+			startPlanningCommand,
+			saveTodosCommand,
+			loadTodosCommand,
+			openSettingsCommand
 		);
 
 		// MCP disposables are now added in the async initialization
