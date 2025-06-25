@@ -9,6 +9,7 @@ export interface TodoEvent {
   config?: {
     autoInject?: boolean;
     enableSubtasks?: boolean;
+    autoInjectFilePath?: string;
   };
   timestamp: number;
 }

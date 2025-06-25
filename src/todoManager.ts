@@ -15,7 +15,7 @@ export class TodoManager {
     private readonly onShouldOpenViewEmitter = new vscode.EventEmitter<void>();
     public readonly onShouldOpenView = this.onShouldOpenViewEmitter.event;
     // Add configuration change event emitter
-    private readonly onDidChangeConfigurationEmitter = new vscode.EventEmitter<{ autoInject: boolean; enableSubtasks: boolean }>();
+    private readonly onDidChangeConfigurationEmitter = new vscode.EventEmitter<{ autoInject: boolean; enableSubtasks: boolean; autoInjectFilePath: string }>();
     public readonly onDidChangeConfiguration = this.onDidChangeConfigurationEmitter.event;
     private copilotInstructionsManager: CopilotInstructionsManager;
     private configurationDisposable: vscode.Disposable | undefined;
@@ -34,11 +34,12 @@ export class TodoManager {
                 if (event.affectsConfiguration('agentTodos.autoInject')) {
                     await this.handleAutoInjectSettingChange();
                 }
-                // Also broadcast changes for other configuration settings that affect MCP tools
-                if (event.affectsConfiguration('agentTodos.enableSubtasks')) {
+                // Broadcast changes for all configuration settings that affect MCP tools
+                if (event.affectsConfiguration('agentTodos')) {
                     this.onDidChangeConfigurationEmitter.fire({
                         autoInject: this.isAutoInjectEnabled(),
-                        enableSubtasks: this.isSubtasksEnabled()
+                        enableSubtasks: this.isSubtasksEnabled(),
+                        autoInjectFilePath: this.getAutoInjectFilePath()
                     });
                 }
             });
@@ -89,6 +90,14 @@ export class TodoManager {
         }
     }
 
+    private getAutoInjectFilePath(): string {
+        try {
+            return vscode.workspace.getConfiguration('agentTodos').get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+        } catch (error) {
+            return '.github/copilot-instructions.md'; // Default when vscode is not available
+        }
+    }
+
     private async handleAutoInjectSettingChange(): Promise<void> {
         if (this.isAutoInjectEnabled()) {
             // Auto-inject is now enabled, update the instructions file
@@ -103,7 +112,8 @@ export class TodoManager {
         // Broadcast configuration change event
         this.onDidChangeConfigurationEmitter.fire({
             autoInject: this.isAutoInjectEnabled(),
-            enableSubtasks: this.isSubtasksEnabled()
+            enableSubtasks: this.isSubtasksEnabled(),
+            autoInjectFilePath: this.getAutoInjectFilePath()
         });
     }
 

@@ -31,7 +31,8 @@ export class TodoMCPServer {
       workspaceRoot: config.workspaceRoot || process.cwd(),
       standalone: config.standalone === true,
       autoInject: config.autoInject || false,
-      enableSubtasks: config.enableSubtasks !== undefined ? config.enableSubtasks : true
+      enableSubtasks: config.enableSubtasks !== undefined ? config.enableSubtasks : true,
+      autoInjectFilePath: config.autoInjectFilePath || '.github/copilot-instructions.md'
     };
 
     // Initialize todo manager based on mode
@@ -283,6 +284,9 @@ export class TodoMCPServer {
       }
       if (event.config.enableSubtasks !== undefined) {
         this.config.enableSubtasks = event.config.enableSubtasks;
+      }
+      if (event.config.autoInjectFilePath !== undefined) {
+        this.config.autoInjectFilePath = event.config.autoInjectFilePath;
       }
       console.log('Server configuration updated:', this.config);
     }

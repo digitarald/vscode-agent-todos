@@ -32,7 +32,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
 
   async resolveMcpServerDefinition(
     definition: vscode.McpServerDefinition,
-    token: vscode.CancellationToken
+    _token: vscode.CancellationToken
   ): Promise<vscode.McpServerDefinition> {
     // Ensure server is started
     await this.ensureServerStarted();
@@ -53,20 +53,21 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       // Get current configuration
       const config = vscode.workspace.getConfiguration('agentTodos');
       const enableSubtasks = config.get<boolean>('enableSubtasks', true);
+      const autoInject = config.get<boolean>('autoInject', false);
+      const autoInjectFilePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
 
       // Create server instance
       this.server = new TodoMCPServer({
         port: this.serverPort,
         workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
         standalone: false,
-        enableSubtasks
+        enableSubtasks,
+        autoInject,
+        autoInjectFilePath
       });
 
       // Setup sync between VS Code TodoManager and standalone manager
       const vscodeManager = TodoManager.getInstance();
-
-      // For non-standalone mode, we need to create a standalone manager for the server
-      const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
 
       // Always use WorkspaceStateStorage for MCP
       console.log('[MCPProvider] Using WorkspaceStateStorage');
@@ -114,7 +115,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
     }
 
     // Update on workspace folder changes
-    const disposable = vscode.workspace.onDidChangeWorkspaceFolders((e) => {
+    const disposable = vscode.workspace.onDidChangeWorkspaceFolders(() => {
       const newRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       if (newRoot && this.server) {
         this.server.setWorkspaceRoot(newRoot);
@@ -146,7 +147,8 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
           type: 'configuration-changed',
           config: {
             autoInject: config.autoInject,
-            enableSubtasks: config.enableSubtasks
+            enableSubtasks: config.enableSubtasks,
+            autoInjectFilePath: config.autoInjectFilePath
           },
           timestamp: Date.now()
         });
