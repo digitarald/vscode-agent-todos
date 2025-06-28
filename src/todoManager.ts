@@ -183,7 +183,9 @@ export class TodoManager {
         const totalCount = this.todos.length;
 
         if (totalCount === 0) {
-            return this.title;
+            // Return empty string only for default title to avoid "Agent TODOs: Todos"
+            // Custom titles should still be shown even when empty
+            return this.title === 'Todos' ? '' : this.title;
         }
 
         return `${this.title} (${completedCount}/${totalCount})`;
