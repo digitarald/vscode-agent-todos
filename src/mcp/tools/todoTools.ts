@@ -497,12 +497,12 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
         // Check if this is initialization (no previous todos)
         if (previousTodos.length === 0 && todos.length > 0) {
-          notificationLabel = `Initialized todos for ${title || 'untitled'}`;
+          notificationLabel = `Todos: ${title || 'untitled'}`;
           console.log('[TodoTools.handleWrite] Initialization case detected:', notificationLabel);
         }
         // Check if all todos are completed
         else if (completedCount === totalTodos && totalTodos > 0) {
-          notificationLabel = `Completed all todos for ${title || 'untitled'}`;
+          notificationLabel = `Completed ${title || 'untitled'}`;
           console.log('[TodoTools.handleWrite] All completed case detected:', notificationLabel);
         }
         // Find newly completed tasks by comparing with previous state
@@ -524,7 +524,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           if (newlyCompleted.length > 0) {
             // Get the most recently completed task
             const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
-            notificationLabel = `Completed (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
+            notificationLabel = `✅ (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
             console.log('[TodoTools.handleWrite] Newly completed case detected:', notificationLabel);
           } else {
             console.log('[TodoTools.handleWrite] No newly completed tasks found');
