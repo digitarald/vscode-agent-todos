@@ -33,7 +33,7 @@ suite('MCP Provider Tests', () => {
         assert.ok(definitions[0] instanceof vscode.McpHttpServerDefinition);
 
         const httpDef = definitions[0] as vscode.McpHttpServerDefinition;
-        assert.strictEqual(httpDef.label, 'Agent TODOs');
+        assert.strictEqual(httpDef.label, 'AgentTODOs');
         assert.ok(httpDef.uri.toString().includes('http://localhost:'));
         assert.ok(httpDef.uri.toString().includes('/mcp'));
     });
