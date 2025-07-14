@@ -12,6 +12,11 @@ on:
 permissions:
   contents: write
 
+# Prevent multiple auto-release runs, but let them complete naturally
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
 jobs:
   ci:
     name: Run CI

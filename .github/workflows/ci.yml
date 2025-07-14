@@ -10,9 +10,10 @@ on:
   workflow_call:
 
 # Skip CI if auto-release will run (avoid duplicate runs)
+# Only cancel for PRs, not for main branch pushes which should complete as "skipped"
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   # Skip standalone CI for main branch pushes when auto-release will handle it
