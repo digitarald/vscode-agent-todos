@@ -30,6 +30,7 @@ export class TodoMCPServer {
   private servers: Map<string, any> = new Map();
   private todoSync: any = null;
   private resourceSubscriptions: Map<string, Set<string>> = new Map(); // sessionId -> resource URIs
+  private readonly loggerName = 'TodoMCPServer';
 
   constructor(config: MCPServerConfig = {}) {
     this.config = {
@@ -88,7 +89,7 @@ export class TodoMCPServer {
     if (this.todoManager) {
       this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
     } else {
-      console.warn('No todo manager available during initialization');
+      console.warn('[TodoMCPServer] No todo manager available during initialization');
     }
 
     // Setup routes after initialization
@@ -124,8 +125,14 @@ export class TodoMCPServer {
           // Create transport with session
           transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: () => newSessionId,
-            onsessioninitialized: (sessionId: string) => {
-              console.log(`Session initialized: ${sessionId}`);
+            onsessioninitialized: async (sessionId: string) => {
+              // Send initialization complete log message
+              await server.sendLoggingMessage({
+                level: 'info',
+                logger: this.loggerName,
+                data: `Session initialized: ${sessionId}`
+              });
+              console.log(`[TodoMCPServer] Session initialized: ${sessionId}`);
               this.transports.set(sessionId, transport);
             }
           });
@@ -148,7 +155,8 @@ export class TodoMCPServer {
                 tools: {},
                 resources: {
                   subscribe: true
-                }
+                },
+                logging: {}
               }
             }
           );
@@ -162,7 +170,15 @@ export class TodoMCPServer {
           // Connect server to transport
           await server.connect(transport);
 
-          console.log(`Created new MCP session: ${newSessionId}`);
+          // Log new session creation
+          if (server) {
+            await server.sendLoggingMessage({
+              level: 'info',
+              logger: this.loggerName,
+              data: `New MCP session created: ${newSessionId}`
+            });
+          }
+          console.log(`[TodoMCPServer] Created new MCP session: ${newSessionId}`);
         }
 
         if (!transport) {
@@ -175,7 +191,7 @@ export class TodoMCPServer {
         // Handle the request
         await transport.handleRequest(req, res, req.body);
       } catch (error) {
-        console.error('Error handling MCP request:', error);
+        console.error('[TodoMCPServer] Error handling MCP request:', error);
         res.status(500).json({
           jsonrpc: '2.0',
           error: {
@@ -226,7 +242,14 @@ export class TodoMCPServer {
     server.setRequestHandler(CallToolRequestSchema, async (request: any, extra: any) => {
       const { name, arguments: args } = request.params;
 
-      console.log('[MCPServer] CallToolRequest:', {
+      // Log tool invocation
+      await server.sendLoggingMessage({
+        level: 'debug',
+        logger: this.loggerName,
+        data: `Tool invoked: ${request.params.name}`
+      });
+      
+      console.log('[TodoMCPServer] CallToolRequest:', {
         toolName: name,
         hasExtra: !!extra,
         extraKeys: extra ? Object.keys(extra) : [],
@@ -244,7 +267,7 @@ export class TodoMCPServer {
         _meta: request.params._meta
       };
 
-      console.log('[MCPServer] Passing context to tool:', JSON.stringify(context, null, 2));
+      console.log('[TodoMCPServer] Passing context to tool:', JSON.stringify(context, null, 2));
 
       return await this.todoTools!.handleToolCall(name, args, context);
     });
@@ -297,7 +320,14 @@ export class TodoMCPServer {
       }
       this.resourceSubscriptions.get(sessionId)!.add(resourceUri);
       
-      console.log(`[MCPServer] Session ${sessionId} subscribed to resource: ${resourceUri}`);
+      // Log subscription
+      await server.sendLoggingMessage({
+        level: 'debug',
+        logger: this.loggerName,
+        data: `Session ${sessionId} subscribed to resource: ${resourceUri}`
+      });
+      
+      console.log(`[TodoMCPServer] Session ${sessionId} subscribed to resource: ${resourceUri}`);
       
       return { success: true };
     });
@@ -319,7 +349,14 @@ export class TodoMCPServer {
         }
       }
       
-      console.log(`[MCPServer] Session ${sessionId} unsubscribed from resource: ${resourceUri}`);
+      // Log unsubscription
+      await server.sendLoggingMessage({
+        level: 'debug',
+        logger: this.loggerName,
+        data: `Session ${sessionId} unsubscribed from resource: ${resourceUri}`
+      });
+      
+      console.log(`[TodoMCPServer] Session ${sessionId} unsubscribed from resource: ${resourceUri}`);
       
       return { success: true };
     });
@@ -336,12 +373,23 @@ export class TodoMCPServer {
     return undefined;
   }
 
-  private updateAllSessionHandlers(): void {
-    console.log(`[MCPServer] Updating handlers for ${this.servers.size} active sessions`);
+  private async updateAllSessionHandlers(): Promise<void> {
+    console.log(`[TodoMCPServer] Updating handlers for ${this.servers.size} active sessions`);
     
     // Re-register handlers for all active sessions
     for (const [sessionId, server] of this.servers) {
-      console.log(`[MCPServer] Re-registering handlers for session: ${sessionId}`);
+      console.log(`[TodoMCPServer] Re-registering handlers for session: ${sessionId}`);
+      
+      // Log handler update to MCP
+      try {
+        await server.sendLoggingMessage({
+          level: 'debug',
+          logger: this.loggerName,
+          data: `Re-registered handlers for session: ${sessionId}`
+        });
+      } catch (error) {
+        // Session might be closing, ignore logging errors
+      }
       this.registerHandlers(server);
     }
   }
@@ -363,21 +411,34 @@ export class TodoMCPServer {
     // Clean up resource subscriptions
     this.resourceSubscriptions.delete(sessionId);
 
-    console.log(`Cleaned up session: ${sessionId}`);
+    console.log(`[TodoMCPServer] Cleaned up session: ${sessionId}`);
   }
 
   private setupEventHandlers(): void {
     // Clean up stale sessions periodically
     setInterval(() => {
       // In a real implementation, you'd track last activity and clean up stale sessions
-      console.log(`Active sessions: ${this.transports.size}`);
+      console.log(`[TodoMCPServer] Active sessions: ${this.transports.size}`);
     }, 60000); // Every minute
   }
 
-  public broadcastUpdate(event: any): void {
+  public async broadcastUpdate(event: any): Promise<void> {
     // In HTTP mode with sessions, updates aren't broadcast
     // Each session maintains its own state
-    console.log('Update event:', event);
+    console.log('[TodoMCPServer] Broadcast update event:', event);
+    
+    // Log update to all sessions
+    for (const [, server] of this.servers) {
+      try {
+        await server.sendLoggingMessage({
+          level: 'info',
+          logger: this.loggerName,
+          data: `Update broadcasted: ${event.type}`
+        });
+      } catch (error) {
+        // Session might be closing, ignore logging errors
+      }
+    }
 
     // Update server configuration if this is a configuration change
     if (event.type === 'configuration-changed' && event.config) {
@@ -390,7 +451,20 @@ export class TodoMCPServer {
       if (event.config.autoInjectFilePath !== undefined) {
         this.config.autoInjectFilePath = event.config.autoInjectFilePath;
       }
-      console.log('Server configuration updated:', this.config);
+      console.log('[TodoMCPServer] Server configuration updated:', this.config);
+      
+      // Log configuration details to MCP
+      for (const server of this.servers.values()) {
+        try {
+          await server.sendLoggingMessage({
+            level: 'info',
+            logger: this.loggerName,
+            data: `Configuration updated - autoInject: ${this.config.autoInject}, enableSubtasks: ${this.config.enableSubtasks}`
+          });
+        } catch (error) {
+          // Session might be closing, ignore logging errors
+        }
+      }
     }
 
     // If this is a configuration change event OR todos update, we should reinitialize tools
@@ -398,7 +472,20 @@ export class TodoMCPServer {
     if ((event.type === 'configuration-changed' || event.type === 'todos-updated') && this.todoTools && this.todoManager) {
       // Recreate tools with updated configuration/state
       this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
-      console.log(`MCP tools reinitialized due to ${event.type}`);
+      console.log(`[TodoMCPServer] MCP tools reinitialized due to ${event.type}`);
+      
+      // Log tool reinitialization
+      for (const server of this.servers.values()) {
+        try {
+          await server.sendLoggingMessage({
+            level: 'info',
+            logger: this.loggerName,
+            data: `Tools reinitialized due to ${event.type}`
+          });
+        } catch (error) {
+          // Session might be closing, ignore logging errors
+        }
+      }
       
       // Update handlers for all active sessions to reflect new tool schemas
       this.updateAllSessionHandlers();
@@ -410,7 +497,7 @@ export class TodoMCPServer {
     }
   }
 
-  private notifyResourceSubscribers(resourceUri: string): void {
+  private async notifyResourceSubscribers(resourceUri: string): Promise<void> {
     // Notify all sessions that are subscribed to this resource
     for (const [sessionId, subscriptions] of this.resourceSubscriptions) {
       if (subscriptions.has(resourceUri)) {
@@ -421,9 +508,16 @@ export class TodoMCPServer {
             server.sendNotification('notifications/resources/updated', {
               uri: resourceUri
             });
-            console.log(`[MCPServer] Notified session ${sessionId} of resource update: ${resourceUri}`);
+            // Log successful notification
+            await server.sendLoggingMessage({
+              level: 'debug',
+              logger: this.loggerName,
+              data: `Notified session ${sessionId} of resource update: ${resourceUri}`
+            });
+            
+            console.log(`[TodoMCPServer] Notified session ${sessionId} of resource update: ${resourceUri}`);
           } catch (error) {
-            console.error(`[MCPServer] Failed to notify session ${sessionId}:`, error);
+            console.error(`[TodoMCPServer] Failed to notify session ${sessionId}:`, error);
           }
         }
       }
@@ -445,9 +539,15 @@ export class TodoMCPServer {
 
       this.httpServer.listen(serverPort, () => {
         this.isRunning = true;
-        console.log(`MCP Todo Server (HTTP) running on http://localhost:${serverPort}`);
-        console.log(`Health check: http://localhost:${serverPort}/health`);
-        console.log(`MCP endpoint: http://localhost:${serverPort}/mcp`);
+        console.log(`[TodoMCPServer] HTTP server started on port ${serverPort}`);
+        console.log(`[TodoMCPServer] Health check: http://localhost:${serverPort}/health`);
+        console.log(`[TodoMCPServer] MCP endpoint: http://localhost:${serverPort}/mcp`);
+        console.log(`[TodoMCPServer] Server configuration:`, {
+          standalone: this.config.standalone,
+          autoInject: this.config.autoInject,
+          enableSubtasks: this.config.enableSubtasks,
+          workspaceRoot: this.config.workspaceRoot
+        });
         this.setupEventHandlers();
         resolve();
       });

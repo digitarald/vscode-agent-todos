@@ -81,7 +81,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				// Register MCP server provider - check if API is available
 				if (vscode.lm && typeof vscode.lm.registerMcpServerDefinitionProvider === 'function') {
 					mcpDisposable = vscode.lm.registerMcpServerDefinitionProvider(
-						'todos-mcp-provider',
+						'digitarald.agent-todos.mcp-provider',
 						mcpProvider
 					);
 					context.subscriptions.push(mcpDisposable);

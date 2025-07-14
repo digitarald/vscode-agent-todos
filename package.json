@@ -19,7 +19,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onMcpServerDefinitionProvider:todos-mcp-provider"
+    "onMcpServerDefinitionProvider:digitarald.agent-todos.mcp-provider"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -328,8 +328,8 @@
     ],
     "mcpServerDefinitionProviders": [
       {
-        "id": "todos-mcp-provider",
-        "label": "Todos"
+        "id": "digitarald.agent-todos.mcp-provider",
+        "label": "Agent TODOs"
       }
     ]
   },

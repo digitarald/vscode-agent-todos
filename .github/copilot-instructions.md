@@ -1,3 +1,14 @@
+<todos title="Debug MCP Settings Sync Issue" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
+- [x] test-settings-values: Create test to verify current VS Code settings are reaching MCP server tools ✅
+  _Identified the core issue: VS Code workspace configuration listener wasn't updating MCP server config_
+- [x] examine-tool-schemas: Check if tool schemas are updating based on settings changes ✅
+  _Found that direct VS Code settings changes bypassed MCP server configuration updates_
+- [x] verify-broadcast-mechanism: Ensure settings changes are properly broadcast to all MCP sessions ✅
+  _Fixed missing configuration broadcast in setupConfigurationHandling method_
+- [x] fix-settings-sync: Implement fixes for any identified settings sync issues ✅
+  _Updated mcpProvider to read current VS Code settings and broadcast to MCP server on config changes_
+</todos>
+
 This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
 
 IMPORTANT:
@@ -451,6 +462,22 @@ todoManager.onDidChangeConfiguration((config) => {
   });
 });
 
+// CRITICAL: VS Code workspace configuration changes must also update MCP server
+const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+  if (e.affectsConfiguration('agentTodos') && this.server) {
+    const config = vscode.workspace.getConfiguration('agentTodos');
+    this.server.broadcastUpdate({
+      type: 'configuration-changed',
+      config: {
+        autoInject: config.get<boolean>('autoInject', false),
+        enableSubtasks: config.get<boolean>('enableSubtasks', true),
+        autoInjectFilePath: config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md')
+      },
+      timestamp: Date.now()
+    });
+  }
+});
+
 // Todo changes also trigger tool updates for conditional visibility
 todoManager.onDidChange((change) => {
   server.broadcastUpdate({
@@ -474,6 +501,7 @@ private updateAllSessionHandlers(): void {
 - All active MCP sessions receive updated tool definitions
 - No server restart required for configuration changes
 - Subtasks can be enabled/disabled dynamically via VS Code settings
+- **FIXED**: VS Code settings changes now properly propagate to MCP server tools
 - `todo_read` tool dynamically appears/disappears based on todo list state:
   - Hidden when todo list is empty (unless in standalone mode)
   - Appears when todos are added

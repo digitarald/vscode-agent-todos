@@ -100,9 +100,9 @@ suite('MCP Integration Tests', () => {
         
         let broadcastCalled = false;
         const originalBroadcast = server.broadcastUpdate.bind(server);
-        server.broadcastUpdate = (event) => {
+        server.broadcastUpdate = async (event) => {
             broadcastCalled = true;
-            originalBroadcast(event);
+            await originalBroadcast(event);
         };
         
         // Change todos

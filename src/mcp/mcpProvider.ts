@@ -95,11 +95,13 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
   }
 
   private async findAvailablePort(): Promise<number> {
+    console.log('[TodoMCPProvider] Finding available port');
     return PerformanceMonitor.measure('findAvailablePort', () => {
       return new Promise<number>((resolve, reject) => {
         const server = net.createServer();
         server.listen(0, () => {
           const port = (server.address() as net.AddressInfo).port;
+          console.log('[TodoMCPProvider] Found available port:', port);
           server.close(() => resolve(port));
         });
         server.on('error', reject);
@@ -129,8 +131,24 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
     // Listen for configuration changes from VS Code settings
     const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('agentTodos')) {
-        // Auto-inject setting changed - no need to change storage
-        // Storage remains WorkspaceStateStorage, only export behavior changes
+        // Get current VS Code configuration and broadcast to MCP server
+        if (this.server) {
+          const config = vscode.workspace.getConfiguration('agentTodos');
+          const autoInject = config.get<boolean>('autoInject', false);
+          const enableSubtasks = config.get<boolean>('enableSubtasks', true);
+          const autoInjectFilePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+
+          // Broadcast configuration change to MCP server
+          this.server.broadcastUpdate({
+            type: 'configuration-changed',
+            config: {
+              autoInject,
+              enableSubtasks,
+              autoInjectFilePath
+            },
+            timestamp: Date.now()
+          });
+        }
 
         // Notify that server definitions might have changed
         // (tools availability may have changed)
