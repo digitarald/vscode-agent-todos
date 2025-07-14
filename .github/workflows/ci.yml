@@ -29,11 +29,28 @@ jobs:
           # Always run CI for PRs and other branches
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "Skipping standalone CI - auto-release will handle it"
+            echo "::notice::Skipping standalone CI - auto-release workflow will handle testing"
+            echo "This is expected behavior for main branch pushes."
           else
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "Running CI"
+            echo "Running CI for ${{ github.event_name }} on ${{ github.ref }}"
           fi
+
+  ci-skip-message:
+    name: CI Skipped - Auto-release will handle testing
+    needs: check-skip
+    if: needs.check-skip.outputs.should-run == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Skip message
+        run: |
+          echo "## ✅ CI Workflow Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "CI was skipped for this main branch push because the auto-release workflow will handle testing." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This is expected behavior and indicates the workflow is working correctly." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Testing will run as part of the auto-release workflow." >> $GITHUB_STEP_SUMMARY
 
   test:
     name: CI Test on ${{ matrix.os }} with Node ${{ matrix.node }}
@@ -109,7 +126,7 @@ jobs:
 
   test-summary:
     name: Test Summary
-    needs: test
+    needs: [check-skip, test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -121,8 +138,14 @@ jobs:
           echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [[ "${{ needs.test.result }}" == "success" ]]; then
+          if [[ "${{ needs.check-skip.outputs.should-run }}" == "false" ]]; then
+            echo "✅ Tests skipped - handled by auto-release workflow" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "This is expected for main branch pushes." >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.test.result }}" == "success" ]]; then
             echo "✅ All tests passed!" >> $GITHUB_STEP_SUMMARY
+          elif [[ "${{ needs.test.result }}" == "skipped" ]]; then
+            echo "⏭️ Tests were skipped" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ Some tests failed. Please check the logs." >> $GITHUB_STEP_SUMMARY
           fi

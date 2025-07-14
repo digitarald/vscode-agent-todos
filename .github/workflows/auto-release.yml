@@ -81,6 +81,12 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "Will create pre-release version: v$NEW_VERSION"
 
+      - name: Skip message
+        if: steps.check_changes.outputs.has_changes != 'true'
+        run: |
+          echo "::notice::No changes detected since last release. Skipping release process."
+          echo "This is expected behavior - the workflow completed successfully."
+
       - name: Use Node.js
         if: steps.check_changes.outputs.has_changes == 'true'
         uses: actions/setup-node@v4
@@ -184,11 +190,12 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Summary
+        if: always()
         run: |
           if [[ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]]; then
-            echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+            echo "## ✅ Release Created Successfully" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ Successfully created pre-release v${{ steps.version.outputs.version }}!" >> $GITHUB_STEP_SUMMARY
+            echo "Successfully created pre-release v${{ steps.version.outputs.version }}!" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "- **Version:** v${{ steps.version.outputs.version }} (Pre-release)" >> $GITHUB_STEP_SUMMARY
             echo "- **GitHub Release:** ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
@@ -196,7 +203,12 @@ jobs:
               echo "- **VS Code Marketplace:** [Published](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)" >> $GITHUB_STEP_SUMMARY
             fi
           else
-            echo "## No Release Needed" >> $GITHUB_STEP_SUMMARY
+            echo "## ✅ Workflow Completed Successfully" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            echo "No changes detected since the last release. Skipping release." >> $GITHUB_STEP_SUMMARY
+            echo "No changes detected since the last release. This is expected behavior." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "The workflow will:" >> $GITHUB_STEP_SUMMARY
+            echo "- Run automatically when new commits are pushed to main" >> $GITHUB_STEP_SUMMARY
+            echo "- Create a new pre-release when changes are detected" >> $GITHUB_STEP_SUMMARY
+            echo "- Skip release creation when no changes are found (like this run)" >> $GITHUB_STEP_SUMMARY
           fi
