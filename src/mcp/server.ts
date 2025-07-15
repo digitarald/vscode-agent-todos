@@ -9,7 +9,6 @@ import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
 import { SubtaskManager } from '../subtaskManager';
-import { z } from 'zod';
 
 // Dynamic imports for ESM modules
 let McpServer: any;
