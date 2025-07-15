@@ -79,6 +79,10 @@ export class StandaloneTodoManager extends EventEmitter {
     return this.title;
   }
   
+  getBaseTitle(): string {
+    return this.title;
+  }
+
   async setTitle(title: string): Promise<void> {
     this.title = title;
     this.saveTodos();

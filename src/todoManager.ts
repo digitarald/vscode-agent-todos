@@ -76,8 +76,12 @@ export class TodoManager {
 
     private isAutoOpenViewEnabled(): boolean {
         try {
-            return vscode.workspace.getConfiguration('agentTodos').get<boolean>('autoOpenView', true);
+            const config = vscode.workspace.getConfiguration('agentTodos');
+            const value = config.get<boolean>('autoOpenView', true);
+            console.log(`[TodoManager] isAutoOpenViewEnabled: ${value}`);
+            return value;
         } catch (error) {
+            console.log(`[TodoManager] isAutoOpenViewEnabled error: ${error}, defaulting to true`);
             return true; // Default to true when vscode is not available
         }
     }
@@ -207,6 +211,7 @@ export class TodoManager {
         await PerformanceMonitor.measure('agentTodos.setTodos', async () => {
             const hadTodos = this.todos.length > 0;
             const previousTodoCount = this.todos.length;
+            const previousTodos = [...this.todos]; // Save previous todos for comparison
 
             console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
 
@@ -218,10 +223,16 @@ export class TodoManager {
 
             // Check if we should open the view
             const hasTodos = this.todos.length > 0;
-            const todosChanged = previousTodoCount !== this.todos.length || !this.areTodosEqual(this.todos, todos);
+            const todosChanged = previousTodoCount !== this.todos.length || !this.areTodosEqual(previousTodos, todos);
+            const autoOpenEnabled = this.isAutoOpenViewEnabled();
 
-            if (this.isAutoOpenViewEnabled() && hasTodos && todosChanged) {
+            console.log(`[TodoManager] View opening check: autoOpenEnabled=${autoOpenEnabled}, hasTodos=${hasTodos}, todosChanged=${todosChanged}, previousCount=${previousTodoCount}, newCount=${this.todos.length}`);
+
+            if (autoOpenEnabled && hasTodos && todosChanged) {
+                console.log('[TodoManager] Firing onShouldOpenView event');
                 this.onShouldOpenViewEmitter.fire();
+            } else {
+                console.log('[TodoManager] Not firing onShouldOpenView event');
             }
 
             await this.updateInstructionsIfNeeded();

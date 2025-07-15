@@ -98,6 +98,7 @@ suite('MCP Settings Synchronization', () => {
         const mockTodoManager = {
             getTodos: () => [],
             getTitle: () => 'Test',
+            getBaseTitle: () => 'Test',
             updateTodos: async () => {},
             setTitle: async () => {},
             onDidChange: () => ({ dispose: () => {} })

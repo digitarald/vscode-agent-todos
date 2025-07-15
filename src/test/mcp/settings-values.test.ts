@@ -176,8 +176,8 @@ suite('MCP Settings Values Verification', () => {
         const vsCodeEnableSubtasks = config.get<boolean>('enableSubtasks', true);
 
         // Test internal methods (accessing private methods for debugging)
-        const isAutoInjectEnabled = (todoTools as any).isAutoInjectEnabled();
-        const isSubtasksEnabled = (todoTools as any).isSubtasksEnabled();
+        const isAutoInjectEnabled = todoTools.getAutoInjectEnabled();
+        const isSubtasksEnabled = todoTools.getSubtasksEnabled();
 
         console.log('[Test] TodoTools internal state:', {
             isAutoInjectEnabled,

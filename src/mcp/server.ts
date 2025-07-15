@@ -514,7 +514,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     }
 
     const todos = this.todoManager.getTodos();
-    const title = this.todoManager.getTitle();
+    const title = this.todoManager.getBaseTitle();
     console.log(`[TodoMCPServer] Reading todos: ${todos.length} items, title: "${title}"`);
 
     const result = {
@@ -818,7 +818,10 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
               isError: true
             };
         }
-      }
+      },
+      // Public methods for testing
+      getAutoInjectEnabled: () => this.isAutoInjectEnabled(),
+      getSubtasksEnabled: () => this.isSubtasksEnabled()
     };
   }
 

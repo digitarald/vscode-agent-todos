@@ -69,7 +69,7 @@ suite('MCP Todo Tools Tests', () => {
             const result = await todoTools.handleToolCall('todo_read', {});
 
             const data = JSON.parse(result.content[0].text);
-            assert.strictEqual(data.title, 'Test List (0/1)');
+            assert.strictEqual(data.title, 'Test List');
             assert.strictEqual(data.todos.length, 1);
             assert.strictEqual(data.todos[0].content, 'Test todo');
         });

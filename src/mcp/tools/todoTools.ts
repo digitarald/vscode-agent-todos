@@ -24,6 +24,7 @@ interface MCPServerLike {
 interface TodoManagerLike {
   getTodos(): TodoItem[];
   getTitle(): string;
+  getBaseTitle(): string;
   updateTodos(todos: TodoItem[], title?: string): Promise<void>;
   setTitle(title: string): Promise<void>;
   onDidChange(callback: (change: { todos: TodoItem[], title: string }) => void): { dispose: () => void };
@@ -302,7 +303,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     }
 
     const todos = this.todoManager.getTodos();
-    const title = this.todoManager.getTitle();
+    const title = this.todoManager.getBaseTitle();
     console.log(`[TodoTools] Reading todos: ${todos.length} items, title: "${title}"`);
 
     const result = {
@@ -673,5 +674,14 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     // Get enableSubtasks from server configuration
     const config = this.server.getConfig();
     return config.enableSubtasks !== undefined ? config.enableSubtasks : true;
+  }
+
+  // Public methods for testing
+  public getAutoInjectEnabled(): boolean {
+    return this.isAutoInjectEnabled();
+  }
+
+  public getSubtasksEnabled(): boolean {
+    return this.isSubtasksEnabled();
   }
 }
