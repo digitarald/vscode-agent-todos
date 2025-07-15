@@ -63,11 +63,11 @@ suite('MCP Dynamic Todo Read Tool', () => {
         const todoTools = server.getTodoTools();
         const tools = await todoTools.getAvailableTools();
         
-        const readTool = tools.find(t => t.name === 'todo_read');
+        const readTool = tools.find((t: any) => t.name === 'todo_read');
         assert.ok(!readTool, 'todo_read tool should not be available when todo list is empty');
         
         // todo_write should still be available
-        const writeTool = tools.find(t => t.name === 'todo_write');
+        const writeTool = tools.find((t: any) => t.name === 'todo_write');
         assert.ok(writeTool, 'todo_write tool should always be available');
     });
 
@@ -77,7 +77,7 @@ suite('MCP Dynamic Todo Read Tool', () => {
         
         let todoTools = server.getTodoTools();
         let tools = await todoTools.getAvailableTools();
-        assert.ok(!tools.find(t => t.name === 'todo_read'), 'todo_read should not be available initially');
+        assert.ok(!tools.find((t: any) => t.name === 'todo_read'), 'todo_read should not be available initially');
         
         // Add a todo
         await todoManager.updateTodos([{
@@ -98,7 +98,7 @@ suite('MCP Dynamic Todo Read Tool', () => {
         todoTools = server.getTodoTools();
         tools = await todoTools.getAvailableTools();
         
-        const readTool = tools.find(t => t.name === 'todo_read');
+        const readTool = tools.find((t: any) => t.name === 'todo_read');
         assert.ok(readTool, 'todo_read tool should be available after adding todos');
     });
 
@@ -113,7 +113,7 @@ suite('MCP Dynamic Todo Read Tool', () => {
         
         let todoTools = server.getTodoTools();
         let tools = await todoTools.getAvailableTools();
-        assert.ok(tools.find(t => t.name === 'todo_read'), 'todo_read should be available with todos');
+        assert.ok(tools.find((t: any) => t.name === 'todo_read'), 'todo_read should be available with todos');
         
         // Clear todos
         await todoManager.updateTodos([]);
@@ -129,7 +129,7 @@ suite('MCP Dynamic Todo Read Tool', () => {
         todoTools = server.getTodoTools();
         tools = await todoTools.getAvailableTools();
         
-        const readTool = tools.find(t => t.name === 'todo_read');
+        const readTool = tools.find((t: any) => t.name === 'todo_read');
         assert.ok(!readTool, 'todo_read tool should disappear when all todos are removed');
     });
 
@@ -149,7 +149,7 @@ suite('MCP Dynamic Todo Read Tool', () => {
         const todoTools = standaloneServer.getTodoTools();
         const tools = await todoTools.getAvailableTools();
         
-        const readTool = tools.find(t => t.name === 'todo_read');
+        const readTool = tools.find((t: any) => t.name === 'todo_read');
         assert.ok(readTool, 'todo_read tool should always be available in standalone mode');
         
         await standaloneServer.stop();
@@ -194,7 +194,7 @@ suite('MCP Dynamic Todo Read Tool', () => {
         const todoTools = server.getTodoTools();
         const tools = await todoTools.getAvailableTools();
         
-        const readTool = tools.find(t => t.name === 'todo_read');
+        const readTool = tools.find((t: any) => t.name === 'todo_read');
         assert.ok(!readTool, 'todo_read tool should be hidden when auto-inject is enabled, even with todos');
     });
 });

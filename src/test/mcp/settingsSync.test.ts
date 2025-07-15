@@ -190,7 +190,7 @@ suite('MCP Settings Synchronization', () => {
 
         // Verify todo_read is available when autoInject is false
         let tools = await server.getTodoTools().getAvailableTools();
-        let hasReadTool = tools.some(t => t.name === 'todo_read');
+        let hasReadTool = tools.some((t: any) => t.name === 'todo_read');
         assert.ok(hasReadTool, 'todo_read should be available when autoInject is false');
 
         // Simulate VS Code configuration change by directly calling the internal handler
@@ -207,7 +207,7 @@ suite('MCP Settings Synchronization', () => {
 
         // Verify tool availability changed
         tools = await server.getTodoTools().getAvailableTools();
-        hasReadTool = tools.some(t => t.name === 'todo_read');
+        hasReadTool = tools.some((t: any) => t.name === 'todo_read');
         assert.ok(!hasReadTool, 'todo_read should NOT be available when autoInject is true');
 
         // Reset

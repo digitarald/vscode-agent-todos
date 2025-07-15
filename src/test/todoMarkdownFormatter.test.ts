@@ -1,10 +1,11 @@
 import * as assert from 'assert';
+import { suite, test } from 'mocha';
 import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoItem } from '../types';
 
-describe('TodoMarkdownFormatter', () => {
-    describe('formatTodosAsMarkdown', () => {
-        it('should format todos with title', () => {
+suite('TodoMarkdownFormatter', () => {
+    suite('formatTodosAsMarkdown', () => {
+        test('should format todos with title', () => {
             const todos: TodoItem[] = [
                 {
                     id: 'todo-1',
@@ -27,7 +28,7 @@ describe('TodoMarkdownFormatter', () => {
             assert.strictEqual(result.includes('- [x] todo-2: Second task 🟡'), true);
         });
 
-        it('should format todos with subtasks', () => {
+        test('should format todos with subtasks', () => {
             const todos: TodoItem[] = [
                 {
                     id: 'todo-1',
@@ -48,7 +49,7 @@ describe('TodoMarkdownFormatter', () => {
             assert.strictEqual(result.includes('  - [ ] sub-2: Subtask 2'), true);
         });
 
-        it('should format todos with ADR', () => {
+        test('should format todos with ADR', () => {
             const todos: TodoItem[] = [
                 {
                     id: 'todo-1',
@@ -66,8 +67,8 @@ describe('TodoMarkdownFormatter', () => {
         });
     });
 
-    describe('parseMarkdown', () => {
-        it('should parse markdown with title', () => {
+    suite('parseMarkdown', () => {
+        test('should parse markdown with title', () => {
             const markdown = `# My Tasks
 
 - [ ] todo-1: First task 🔴
@@ -93,7 +94,7 @@ describe('TodoMarkdownFormatter', () => {
             });
         });
 
-        it('should parse todos with subtasks', () => {
+        test('should parse todos with subtasks', () => {
             const markdown = `- [-] todo-1: Main task 🔴
   - [x] sub-1: Subtask 1
   - [ ] sub-2: Subtask 2`;
@@ -110,7 +111,7 @@ describe('TodoMarkdownFormatter', () => {
             });
         });
 
-        it('should parse todos with ADR', () => {
+        test('should parse todos with ADR', () => {
             const markdown = `- [ ] todo-1: Task with decision 🟢
   _This is an important decision_`;
             
@@ -121,8 +122,8 @@ describe('TodoMarkdownFormatter', () => {
         });
     });
 
-    describe('validateAndSanitizeTodos', () => {
-        it('should generate unique IDs for duplicates', () => {
+    suite('validateAndSanitizeTodos', () => {
+        test('should generate unique IDs for duplicates', () => {
             const todos: TodoItem[] = [
                 { id: 'todo-1', content: 'Task 1', status: 'pending', priority: 'medium' },
                 { id: 'todo-1', content: 'Task 2', status: 'pending', priority: 'medium' }
@@ -134,7 +135,7 @@ describe('TodoMarkdownFormatter', () => {
             assert.notStrictEqual(result[0].id, result[1].id);
         });
 
-        it('should skip todos with empty content', () => {
+        test('should skip todos with empty content', () => {
             const todos: TodoItem[] = [
                 { id: 'todo-1', content: 'Valid task', status: 'pending', priority: 'medium' },
                 { id: 'todo-2', content: '', status: 'pending', priority: 'medium' },
@@ -147,7 +148,7 @@ describe('TodoMarkdownFormatter', () => {
             assert.strictEqual(result[0].content, 'Valid task');
         });
 
-        it('should fix invalid status and priority', () => {
+        test('should fix invalid status and priority', () => {
             const todos: any[] = [
                 { id: 'todo-1', content: 'Task', status: 'invalid', priority: 'wrong' }
             ];

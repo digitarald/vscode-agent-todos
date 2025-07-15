@@ -93,9 +93,9 @@ suite('MCP Settings Values Verification', () => {
 
         // Get available tools
         const tools = await server.getTodoTools().getAvailableTools();
-        const hasReadTool = tools.some(t => t.name === 'todo_read');
+        const hasReadTool = tools.some((t: any) => t.name === 'todo_read');
 
-        console.log('[Test] Available tools:', tools.map(t => t.name));
+        console.log('[Test] Available tools:', tools.map((t: any) => t.name));
         console.log('[Test] Has todo_read tool:', hasReadTool);
 
         // If autoInject is false, todo_read should be available (since we have todos)
@@ -144,7 +144,7 @@ suite('MCP Settings Values Verification', () => {
 
         // Get tools and check schema
         let tools = await server.getTodoTools().getAvailableTools();
-        let writeTool = tools.find(t => t.name === 'todo_write');
+        let writeTool = tools.find((t: any) => t.name === 'todo_write');
         
         assert.ok(writeTool, 'Write tool should exist');
         assert.ok(writeTool.inputSchema.properties.todos.items.properties.subtasks,
@@ -156,7 +156,7 @@ suite('MCP Settings Values Verification', () => {
 
         // Check schema again
         tools = await server.getTodoTools().getAvailableTools();
-        writeTool = tools.find(t => t.name === 'todo_write');
+        writeTool = tools.find((t: any) => t.name === 'todo_write');
         
         assert.ok(writeTool, 'Write tool should still exist');
         assert.ok(!writeTool.inputSchema.properties.todos.items.properties.subtasks,

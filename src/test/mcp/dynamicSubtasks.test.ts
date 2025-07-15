@@ -45,7 +45,7 @@ suite('MCP Dynamic Subtasks Configuration', () => {
         // Initially subtasks are enabled (from setup)
         let todoTools = server.getTodoTools();
         let tools = await todoTools.getAvailableTools();
-        let writeTool = tools.find(t => t.name === 'todo_write');
+        let writeTool = tools.find((t: any) => t.name === 'todo_write');
         
         assert.ok(writeTool, 'Write tool should exist');
         assert.ok(writeTool.inputSchema.properties.todos.items.properties.subtasks, 'Schema should include subtasks when enabled');
@@ -62,7 +62,7 @@ suite('MCP Dynamic Subtasks Configuration', () => {
         // Get tools again after configuration change
         todoTools = server.getTodoTools();
         tools = await todoTools.getAvailableTools();
-        writeTool = tools.find(t => t.name === 'todo_write');
+        writeTool = tools.find((t: any) => t.name === 'todo_write');
         
         assert.ok(writeTool, 'Write tool should still exist');
         assert.ok(!writeTool.inputSchema.properties.todos.items.properties.subtasks, 'Schema should not include subtasks when disabled');
@@ -79,7 +79,7 @@ suite('MCP Dynamic Subtasks Configuration', () => {
         // Verify tools are updated again
         todoTools = server.getTodoTools();
         tools = await todoTools.getAvailableTools();
-        writeTool = tools.find(t => t.name === 'todo_write');
+        writeTool = tools.find((t: any) => t.name === 'todo_write');
         
         assert.ok(writeTool, 'Write tool should still exist');
         assert.ok(writeTool.inputSchema.properties.todos.items.properties.subtasks, 'Schema should include subtasks again when re-enabled');
@@ -91,7 +91,7 @@ suite('MCP Dynamic Subtasks Configuration', () => {
 
         // Test with subtasks enabled (from setup)
         let tools = await todoTools.getAvailableTools();
-        let writeTool = tools.find(t => t.name === 'todo_write');
+        let writeTool = tools.find((t: any) => t.name === 'todo_write');
         assert.ok(writeTool?.description.includes('<subtasks>'), 'Write tool description should mention subtasks when enabled');
 
         // Disable subtasks
@@ -103,7 +103,7 @@ suite('MCP Dynamic Subtasks Configuration', () => {
         });
 
         tools = await todoTools.getAvailableTools();
-        writeTool = tools.find(t => t.name === 'todo_write');
+        writeTool = tools.find((t: any) => t.name === 'todo_write');
         assert.ok(!writeTool?.description.includes('<subtasks>'), 'Write tool description should not mention subtasks when disabled');
     });
 
