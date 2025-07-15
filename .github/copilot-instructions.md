@@ -1,14 +1,3 @@
-<todos title="Debug MCP Settings Sync Issue" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
-- [x] test-settings-values: Create test to verify current VS Code settings are reaching MCP server tools ✅
-  _Identified the core issue: VS Code workspace configuration listener wasn't updating MCP server config_
-- [x] examine-tool-schemas: Check if tool schemas are updating based on settings changes ✅
-  _Found that direct VS Code settings changes bypassed MCP server configuration updates_
-- [x] verify-broadcast-mechanism: Ensure settings changes are properly broadcast to all MCP sessions ✅
-  _Fixed missing configuration broadcast in setupConfigurationHandling method_
-- [x] fix-settings-sync: Implement fixes for any identified settings sync issues ✅
-  _Updated mcpProvider to read current VS Code settings and broadcast to MCP server on config changes_
-</todos>
-
 This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
 
 IMPORTANT:
@@ -641,12 +630,49 @@ When debugging MCP/tree view sync problems:
 
 ## Testing Strategy
 
+### Test Framework Requirements
+
+**IMPORTANT: VS Code Extension Testing Patterns**
+
+- **NEVER use `describe()` and `it()` functions** - VS Code extension tests use `suite()` and `test()` from the `@vscode/test-cli` framework
+- Use `suite()` for test grouping instead of `describe()`
+- Use `test()` for individual test cases instead of `it()`
+- Always import test framework functions from VS Code test runner, not Mocha directly
+
+```typescript
+// CORRECT: VS Code extension test pattern
+import * as assert from 'assert';
+
+suite('Extension Test Suite', () => {
+    test('should activate extension', () => {
+        // Test implementation
+        assert.ok(true);
+    });
+});
+
+// WRONG: Standard Mocha pattern (causes "describe is not defined" errors)
+describe('Extension Test Suite', () => {  // DO NOT USE
+    it('should activate extension', () => {  // DO NOT USE
+        // This will fail in VS Code extension tests
+    });
+});
+```
+
+### Test Coverage Areas
+
 - Test extension activation/deactivation lifecycle
 - Verify MCP server and tool operations
 - Test tree view data updates and refresh behavior
 - Validate todo state persistence across sessions
 - Storage implementation compliance with ITodoStorage
 - End-to-end MCP integration tests
+
+### Test File Organization
+
+- Use `suite()` for logical test grouping
+- Use `setup()` and `teardown()` for test lifecycle management
+- Initialize mock objects and clean up resources properly
+- Test both success and error scenarios
 
 See test files in [`src/test/`](../src/test/) for examples.
 
