@@ -349,7 +349,7 @@
     "mcp-server": "node dist/mcp/standalone.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.15.1",
     "eventsource": "^2.0.2",
     "express": "^5.1.0",
     "node-fetch": "^3.3.2"

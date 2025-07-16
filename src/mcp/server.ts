@@ -15,6 +15,7 @@ let McpServer: any;
 let ResourceTemplate: any;
 let StreamableHTTPServerTransport: any;
 let isInitializeRequest: any;
+let z: any;
 
 export class TodoMCPServer {
   private app: Express;
@@ -68,15 +69,17 @@ export class TodoMCPServer {
   }
 
   async initialize(): Promise<void> {
-    // Dynamic import for ESM modules - updated for SDK 1.13.0
+    // Dynamic import for ESM modules - updated for SDK 1.15.0+
     const mcpModule = await import('@modelcontextprotocol/sdk/server/mcp.js');
     const httpModule = await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
     const typesModule = await import('@modelcontextprotocol/sdk/types.js');
+    const zodModule = await import('zod');
 
     McpServer = mcpModule.McpServer;
     ResourceTemplate = mcpModule.ResourceTemplate;
     StreamableHTTPServerTransport = httpModule.StreamableHTTPServerTransport;
     isInitializeRequest = typesModule.isInitializeRequest;
+    z = zodModule.z;
 
     // Setup routes after initialization
     this.setupRoutes();
@@ -238,14 +241,10 @@ export class TodoMCPServer {
 
     // Handle todo_read tool
     if (shouldShowTodoRead && !sessionTools.todoReadTool) {
-      // Add todo_read tool
-      sessionTools.todoReadTool = server.registerTool(
+      // Add todo_read tool using modern API
+      sessionTools.todoReadTool = server.tool(
         "todo_read",
-        {
-          title: "Check Todos",
-          description: this.buildReadDescription(subtasksEnabled),
-          inputSchema: {}
-        },
+        {}, // Empty schema for no parameters
         async () => await this.handleRead()
       );
       console.log(`[TodoMCPServer] Added todo_read tool for session ${sessionId}`);
@@ -258,20 +257,15 @@ export class TodoMCPServer {
 
     // Handle todo_write tool (always present but schema may change)
     if (!sessionTools.todoWriteTool) {
-      sessionTools.todoWriteTool = server.registerTool(
+      sessionTools.todoWriteTool = server.tool(
         "todo_write",
-        {
-          title: "Update Todos",
-          description: this.buildWriteDescription(subtasksEnabled),
-          inputSchema: this.getTodoWriteSchema(subtasksEnabled)
-        },
+        this.getTodoWriteZodSchema(subtasksEnabled),
         async (args: any, context: any) => await this.handleWrite(args, context)
       );
     } else {
       // Update existing tool schema
       sessionTools.todoWriteTool.update({
-        description: this.buildWriteDescription(subtasksEnabled),
-        inputSchema: this.getTodoWriteSchema(subtasksEnabled)
+        paramSchema: this.getTodoWriteZodSchema(subtasksEnabled)
       });
     }
   }
@@ -496,6 +490,38 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     }
 
     return schema;
+  }
+
+  private getTodoWriteZodSchema(subtasksEnabled: boolean): any {
+    // Base todo schema
+    const todoSchema = z.object({
+      id: z.string().describe('Unique kebab-case identifier for the task (e.g., "implement-user-auth")'),
+      content: z.string().min(1).describe('Clear, specific description of what needs to be done'),
+      status: z.enum(['pending', 'in_progress', 'completed']).describe('Current state: pending (not started), in_progress (actively working), completed (finished). Only ONE task can be in_progress.'),
+      priority: z.enum(['low', 'medium', 'high']).describe('Importance level: high (urgent/critical), medium (important), low (nice-to-have)'),
+      adr: z.string().optional().describe('Architecture Decision Record: technical context, rationale, implementation notes, or decisions made')
+    });
+
+    // Conditionally add subtasks if enabled
+    if (subtasksEnabled) {
+      const subtaskSchema = z.object({
+        id: z.string().describe('Unique kebab-case identifier for this subtask'),
+        content: z.string().min(1).describe('Specific action or step to complete'),
+        status: z.enum(['pending', 'completed']).describe('Completion state: pending (not done) or completed (finished)')
+      });
+
+      return {
+        todos: z.array(todoSchema.extend({
+          subtasks: z.array(subtaskSchema).optional().describe('Break complex tasks into smaller, manageable steps. Use for any task with 3+ actions.')
+        })).describe('Complete array of all todos (this replaces the entire existing list)'),
+        title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
+      };
+    }
+
+    return {
+      todos: z.array(todoSchema).describe('Complete array of all todos (this replaces the entire existing list)'),
+      title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
+    };
   }
 
   private async handleRead(): Promise<any> {
@@ -797,7 +823,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         tools.push({
           name: 'todo_write',
           description: this.buildWriteDescription(subtasksEnabled),
-          inputSchema: this.getTodoWriteSchema(subtasksEnabled)
+          inputSchema: this.getTodoWriteSchema(subtasksEnabled) // Keep JSON schema for tests
         });
 
         return tools;
