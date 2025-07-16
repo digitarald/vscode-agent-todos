@@ -60,7 +60,7 @@ suite('Copilot Instructions Integration Tests', () => {
             const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
             const markdown = formatMethod(todos);
 
-            assert.ok(markdown.includes('- [ ] todo-1: Main task �'));
+            assert.ok(markdown.includes('- [ ] todo-1: Main task 🔴'));
             assert.ok(markdown.includes('  - [ ] sub-1: Subtask 1'));
             assert.ok(markdown.includes('  - [x] sub-2: Subtask 2'));
         });
@@ -79,7 +79,7 @@ suite('Copilot Instructions Integration Tests', () => {
             const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
             const markdown = formatMethod(todos);
 
-            assert.ok(markdown.includes('- [x] todo-1: Main task �'));
+            assert.ok(markdown.includes('- [x] todo-1: Main task 🟡'));
             assert.ok(markdown.includes('  _Used async/await pattern for better error handling_'));
         });
 

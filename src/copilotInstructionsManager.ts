@@ -80,7 +80,7 @@ export class CopilotInstructionsManager {
         }
     }
 
-    private formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
+    public formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
         if (todos.length === 0) {
             return '- No current todos';
         }
