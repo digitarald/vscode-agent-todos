@@ -9,79 +9,6 @@ IMPORTANT:
 - NEVER make changes backwards compatible unless explicitly requested by the User.
 - NEVER create one-off scripts to test changes.
 
-## New Features (2025-06-25)
-
-### Save/Load Todo Lists
-- **Save Command** (`agentTodos.saveTodos`): Export current todos to a markdown file
-- **Load Command** (`agentTodos.loadTodos`): Import todos from a markdown file
-- Uses consistent markdown format with checkboxes, priorities (🔴🟡🟢), subtasks, and ADR notes
-- Available in the tree view menu when todos exist
-
-### MCP Resource Support
-- Todos are now exposed as an MCP resource at `todos://todos`
-- Returns current todo list in markdown format
-- Supports subscriptions for real-time updates
-- Clients receive notifications when todos change
-
-## Tool Prompt Optimization Strategy
-
-The MCP todo tools use **advanced prompt engineering** combining best practices from Claude 4 and GPT-4.1 guides:
-
-### Key Optimization Principles:
-
-1. **XML Tag Structure**: Semantic tags like `<role>`, `<objective>`, `<instructions>` for clear parsing
-2. **Persistence Reminders**: Multiple reinforcement points throughout prompts
-3. **Explicit Thresholds**: Clear "3+ steps" rule for todo usage
-4. **Thinking Examples**: Show AI reasoning process within examples
-5. **Comprehensive Task Types**: Beyond coding - research, documentation, planning, learning
-6. **Workflow Enforcement**: Strong rules about status transitions and timing
-
-### Combined Best Practices Applied:
-
-**From Claude 4:**
-- **XML Tags for Structure**: `<tool-description>`, `<persistence-reminder>`, `<examples>`
-- **Rich Examples**: Multiple scenarios with thinking process shown
-- **Explicit Instructions**: Clear, specific directives
-- **Positive Framing**: "Do this" rather than "don't do that"
-
-**From GPT-4.1:**
-- **Role and Objective First**: Clear agent identity and purpose
-- **Persistence Philosophy**: "Keep going until done" messaging
-- **Planning-First Approach**: Extensive planning before execution
-- **Agentic Workflow**: Step-by-step reasoning framework
-
-### Current Enhanced Features:
-
-**todo_read Prompt:**
-- `<purpose>` and `<when-to-use>` mirroring Claude's own tool patterns
-- `<persistence-reminder>` for continuous usage
-- Simplified structure without verbose examples
-- Clear `<usage-notes>` for practical guidance
-- Expanded to cover all work types, not just coding
-
-**todo_write Prompt:**
-- `<when-to-use>` with numbered scenarios from Claude's patterns
-- `<threshold-rule>` with explicit 3+ steps criteria
-- `<task-categories>` covering all work types concisely
-- `<parameter-guidance>` in streamlined format
-- `<success-pattern>` with 6-step workflow
-- Removed large example sections for brevity
-
-### Key Improvements:
-
-1. **Claude's Tool Patterns**: Incorporated `<purpose>` and `<when-to-use>` sections from Claude's own tools
-2. **Streamlined Structure**: Removed verbose examples and output-format sections
-3. **Proactive Usage**: Numbered scenarios encouraging frequent tool use
-4. **Explicit Thresholds**: Clear 3+ steps or multiple contexts rule
-5. **Concise Parameter Guidance**: Simplified format with inline descriptions
-6. **Persistent Reminders**: Multiple touchpoints reinforcing continuous usage
-
-These enhancements create more effective prompts by:
-- Mirroring successful patterns from Claude's built-in tools
-- Reducing cognitive load with concise, actionable instructions
-- Maintaining clarity while removing unnecessary verbosity
-- Focusing on practical usage over theoretical examples
-
 ## Project Overview
 
 This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
@@ -90,7 +17,7 @@ For more details:
 
 - [Main README](../README.md) - Feature overview and usage
 - [MCP Server Documentation](../src/mcp/README.md) - Server architecture and protocol details
-- [VS Code Extension API](https://code.visualstudio.com/api/extension-guides/tools) - Language model tools guide
+- [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/)
 
 ## Architecture
 
@@ -191,9 +118,7 @@ graph TB
     TM --> SM
     TM --> TV
     TM -.-> PM
-    STM --> SM
     STM --> TV
-    CIM -.-> PM
 ```
 
 ## Performance Optimizations
