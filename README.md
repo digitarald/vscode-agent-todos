@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/digitarald-vscode-agent-todos-badge.png)](https://mseep.ai/app/digitarald-vscode-agent-todos)
+
 # Agent TODOs
 
 [![CI](https://github.com/digitarald/vscode-agent-todos/actions/workflows/auto-release.yml/badge.svg)](https://github.com/digitarald/vscode-agent-todos/actions/workflows/auto-release.yml)
