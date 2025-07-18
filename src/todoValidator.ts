@@ -1,5 +1,4 @@
 import { TodoItem } from './types';
-import { SubtaskManager } from './subtaskManager';
 
 export class TodoValidator {
     /**
@@ -26,20 +25,6 @@ export class TodoValidator {
         // Validate optional fields
         if (todo.adr !== undefined && typeof todo.adr !== 'string') {
             return { valid: false, error: 'Todo adr must be a string' };
-        }
-
-        // Validate subtasks if present
-        if (todo.subtasks !== undefined) {
-            if (!Array.isArray(todo.subtasks)) {
-                return { valid: false, error: 'Subtasks must be an array' };
-            }
-
-            for (const subtask of todo.subtasks) {
-                const subtaskValidation = SubtaskManager.validateSubtask(subtask);
-                if (!subtaskValidation.valid) {
-                    return { valid: false, error: `Subtask validation failed: ${subtaskValidation.error}` };
-                }
-            }
         }
 
         return { valid: true };
@@ -115,22 +100,6 @@ export class TodoValidator {
         // Compare adr
         if (todo1.adr !== todo2.adr) {
             return false;
-        }
-
-        // Compare subtasks
-        const subtasks1 = todo1.subtasks || [];
-        const subtasks2 = todo2.subtasks || [];
-
-        if (subtasks1.length !== subtasks2.length) {
-            return false;
-        }
-
-        for (let i = 0; i < subtasks1.length; i++) {
-            const s1 = subtasks1[i];
-            const s2 = subtasks2[i];
-            if (s1.id !== s2.id || s1.content !== s2.content || s1.status !== s2.status) {
-                return false;
-            }
         }
 
         return true;

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { TodoItem, Subtask } from './types';
+import { TodoItem } from './types';
 import { CopilotInstructionsManager } from './copilotInstructionsManager';
-import { SubtaskManager } from './subtaskManager';
 import { TodoValidator } from './todoValidator';
 import { PerformanceMonitor } from './utils/performance';
 
@@ -15,7 +14,7 @@ export class TodoManager {
     private readonly onShouldOpenViewEmitter = new vscode.EventEmitter<void>();
     public readonly onShouldOpenView = this.onShouldOpenViewEmitter.event;
     // Add configuration change event emitter
-    private readonly onDidChangeConfigurationEmitter = new vscode.EventEmitter<{ autoInject: boolean; enableSubtasks: boolean; autoInjectFilePath: string }>();
+    private readonly onDidChangeConfigurationEmitter = new vscode.EventEmitter<{ autoInject: boolean; autoInjectFilePath: string }>();
     public readonly onDidChangeConfiguration = this.onDidChangeConfigurationEmitter.event;
     private copilotInstructionsManager: CopilotInstructionsManager;
     private configurationDisposable: vscode.Disposable | undefined;
@@ -38,7 +37,6 @@ export class TodoManager {
                 if (event.affectsConfiguration('agentTodos')) {
                     this.onDidChangeConfigurationEmitter.fire({
                         autoInject: this.isAutoInjectEnabled(),
-                        enableSubtasks: this.isSubtasksEnabled(),
                         autoInjectFilePath: this.getAutoInjectFilePath()
                     });
                 }
@@ -86,14 +84,6 @@ export class TodoManager {
         }
     }
 
-    private isSubtasksEnabled(): boolean {
-        try {
-            return vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
-        } catch (error) {
-            return true; // Default to true when vscode is not available
-        }
-    }
-
     private getAutoInjectFilePath(): string {
         try {
             return vscode.workspace.getConfiguration('agentTodos').get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
@@ -116,7 +106,6 @@ export class TodoManager {
         // Broadcast configuration change event
         this.onDidChangeConfigurationEmitter.fire({
             autoInject: this.isAutoInjectEnabled(),
-            enableSubtasks: this.isSubtasksEnabled(),
             autoInjectFilePath: this.getAutoInjectFilePath()
         });
     }
@@ -305,60 +294,6 @@ export class TodoManager {
                     todo.status = 'pending';
                     break;
             }
-            this.fireConsolidatedChange();
-            await this.updateInstructionsIfNeeded();
-            this.saveToStorage();
-        }
-    }
-
-    // Subtask management methods
-    public async addSubtask(todoId: string, subtask: Subtask): Promise<void> {
-        if (!this.isSubtasksEnabled()) {
-            return;
-        }
-
-        const todo = this.todos.find(t => t.id === todoId);
-        if (todo) {
-            SubtaskManager.addSubtask(todo, subtask);
-            this.fireConsolidatedChange();
-            await this.updateInstructionsIfNeeded();
-            this.saveToStorage();
-        }
-    }
-
-    public async updateSubtask(todoId: string, subtaskId: string, updates: Partial<Subtask>): Promise<void> {
-        if (!this.isSubtasksEnabled()) {
-            return;
-        }
-
-        const todo = this.todos.find(t => t.id === todoId);
-        if (todo && SubtaskManager.updateSubtask(todo, subtaskId, updates)) {
-            this.fireConsolidatedChange();
-            await this.updateInstructionsIfNeeded();
-            this.saveToStorage();
-        }
-    }
-
-    public async deleteSubtask(todoId: string, subtaskId: string): Promise<void> {
-        if (!this.isSubtasksEnabled()) {
-            return;
-        }
-
-        const todo = this.todos.find(t => t.id === todoId);
-        if (todo && SubtaskManager.deleteSubtask(todo, subtaskId)) {
-            this.fireConsolidatedChange();
-            await this.updateInstructionsIfNeeded();
-            this.saveToStorage();
-        }
-    }
-
-    public async toggleSubtaskStatus(todoId: string, subtaskId: string): Promise<void> {
-        if (!this.isSubtasksEnabled()) {
-            return;
-        }
-
-        const todo = this.todos.find(t => t.id === todoId);
-        if (todo && SubtaskManager.toggleSubtaskStatus(todo, subtaskId)) {
             this.fireConsolidatedChange();
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();

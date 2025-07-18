@@ -1,6 +1,5 @@
 import { TodoItem } from '../../types';
 import { TodoValidator } from '../../todoValidator';
-import { SubtaskManager } from '../../subtaskManager';
 import { ToolResult } from '../types';
 
 interface TodoWriteParams {
@@ -46,62 +45,13 @@ export class TodoTools {
 
     // Check if we're in standalone mode or if auto-inject is disabled
     const autoInject = this.isAutoInjectEnabled();
-    const subtasksEnabled = this.isSubtasksEnabled();
     const hasTodos = this.todoManager.getTodos().length > 0;
 
     // Only add todo_read if:
     // - In standalone mode (always show), OR
     // - Auto-inject is disabled AND there are todos to read
     if (this.server.isStandalone() || (!autoInject && hasTodos)) {
-      const readDescription = subtasksEnabled
-        ? `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
-
-<when-to-use>
-You should make use of this tool as often as possible, especially in the following situations:
-• At the beginning of conversations to see what's pending
-• Before starting new tasks to prioritize work
-• When the user asks about previous tasks or plans
-• Whenever you're uncertain about what to do next
-• After completing tasks to update your understanding of remaining work
-• After every few messages to ensure you're on track
-• When working on tasks that would benefit from a todo list
-</when-to-use>
-
-<persistence-reminder>
-CRITICAL: Keep checking todos throughout the conversation. Do not assume you remember - always verify current state. You CANNOT maintain context between conversations without reading todos.
-</persistence-reminder>
-
-<instructions>
-  <comprehensive-coverage>
-  This tool tracks ALL work types:
-  • Development (features, bugs, refactoring, optimization)
-  • Research (analysis, exploration, investigation, learning)
-  • Documentation (guides, API docs, specifications, tutorials)
-  • Planning (architecture, roadmaps, strategies, workflows)
-  • Reviews (code review, security audit, performance analysis)
-  </comprehensive-coverage>
-
-  <skip-conditions>
-  Only skip when:
-  • User explicitly says "start fresh" or "ignore previous todos"
-  • You JUST updated todos (< 30 seconds ago)
-  • Pure factual questions with zero task implications
-  • Auto-inject is enabled (todos already in context)
-  </skip-conditions>
-</instructions>
-
-<usage-notes>
-• This tool takes no parameters - leave the input blank
-• Returns a list of todo items with their status, priority, and content
-• Use this information to track progress and plan next steps
-• If no todos exist yet, an empty list will be returned
-• When empty: Immediately use todo_write to plan the requested work
-</usage-notes>
-
-<response>
-Returns JSON with title and todos array. Each todo includes id, content, status, priority, adr, and subtasks (if enabled).
-</response>`
-        : `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
+      const readDescription = `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
 
 <when-to-use>
 You should make use of this tool as often as possible, especially in the following situations:
@@ -165,12 +115,12 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
     }
 
     // Always add todo_write
-    const writeDescription = this.buildWriteDescription(subtasksEnabled);
+    const writeDescription = this.buildWriteDescription();
 
     tools.push({
       name: 'todo_write',
       description: writeDescription,
-      inputSchema: this.getTodoWriteSchema(subtasksEnabled),
+      inputSchema: this.getTodoWriteSchema(),
       annotations: {
         title: 'Update Todos'
       }
@@ -179,7 +129,7 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
     return tools;
   }
 
-  private buildWriteDescription(subtasksEnabled: boolean): string {
+  private buildWriteDescription(): string {
     const basePrompt = `Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
 
 <when-to-use>
@@ -239,9 +189,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   <priority>high (urgent/blocking), medium (important), low (nice-to-have)</priority>
   <adr>Architecture decisions, trade-offs, blockers, implementation notes</adr>`;
 
-    const subtasksSection = subtasksEnabled ? `
-  <subtasks>Break complex tasks into smaller steps - use for tasks with 3+ phases</subtasks>` : '';
-
     const footer = `
 </parameter-guidance>
 
@@ -263,12 +210,11 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 <best-practices>
 • Front-load research and investigation tasks
 • Make each task independently verifiable
-• Use subtasks for multi-day efforts
 • Document assumptions and decisions in ADR
 • Keep task descriptions specific and measurable
 </best-practices>`;
 
-    return basePrompt + subtasksSection + footer;
+    return basePrompt + footer;
   }
 
   async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
@@ -371,9 +317,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       };
     }
 
-    // Check if subtasks are enabled
-    const subtasksEnabled = this.isSubtasksEnabled();
-
     // Validate each todo
     for (const todo of todos) {
       const validation = TodoValidator.validateTodo(todo);
@@ -382,17 +325,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           content: [{
             type: 'text',
             text: `Error: ${validation.error}`
-          }],
-          isError: true
-        };
-      }
-
-      // Check if subtasks are disabled but todo has subtasks
-      if (todo.subtasks && !subtasksEnabled && !this.server.isStandalone()) {
-        return {
-          content: [{
-            type: 'text',
-            text: 'Error: Subtasks are disabled in settings. Enable agentTodos.enableSubtasks to use subtasks.'
           }],
           isError: true
         };
@@ -575,12 +507,12 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     return {
       content: [{
         type: 'text',
-        text: `Successfully updated ${todos.length} todo items ${statusSummary}${titleMsg}${subtaskInfo}${adrInfo}${reminder}${autoInjectNote}`
+        text: `Successfully updated ${todos.length} todo items ${statusSummary}${titleMsg}${adrInfo}${reminder}${autoInjectNote}`
       }]
     };
   }
 
-  private getTodoWriteSchema(subtasksEnabled: boolean): any {
+  private getTodoWriteSchema(): any {
     const schema: any = {
       type: 'object',
       properties: {
@@ -625,34 +557,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       required: ['todos']
     };
 
-    // Add subtasks if enabled
-    if (subtasksEnabled) {
-      schema.properties.todos.items.properties.subtasks = {
-        type: 'array',
-        description: 'Break complex tasks into smaller, manageable steps. Use for any task with 3+ actions.',
-        items: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              description: 'Unique kebab-case identifier for this subtask'
-            },
-            content: {
-              type: 'string',
-              minLength: 1,
-              description: 'Specific action or step to complete'
-            },
-            status: {
-              type: 'string',
-              enum: ['pending', 'completed'],
-              description: 'Completion state: pending (not done) or completed (finished)'
-            }
-          },
-          required: ['id', 'content', 'status']
-        }
-      };
-    }
-
     return schema;
   }
 
@@ -666,22 +570,8 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     return config.autoInject || false;
   }
 
-  private isSubtasksEnabled(): boolean {
-    if (this.server.isStandalone()) {
-      return true; // Always enable subtasks in standalone mode
-    }
-
-    // Get enableSubtasks from server configuration
-    const config = this.server.getConfig();
-    return config.enableSubtasks !== undefined ? config.enableSubtasks : true;
-  }
-
   // Public methods for testing
   public getAutoInjectEnabled(): boolean {
     return this.isAutoInjectEnabled();
-  }
-
-  public getSubtasksEnabled(): boolean {
-    return this.isSubtasksEnabled();
   }
 }

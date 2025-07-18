@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
-import { TodoItem, Subtask } from './types';
+import { TodoItem } from './types';
 import { TodoManager } from './todoManager';
-import { SubtaskManager } from './subtaskManager';
 
 export class TodoTreeItem extends vscode.TreeItem {
     private static recentlyChangedItems = new Set<string>();
@@ -13,13 +12,7 @@ export class TodoTreeItem extends vscode.TreeItem {
         // Clean up content for display - replace newlines with spaces
         const displayContent = todo.content.replace(/\s+/g, ' ').trim();
 
-        // Check if subtasks are enabled and todo has subtasks
-        const subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
-        const hasSubtasks = subtasksEnabled && todo.subtasks && todo.subtasks.length > 0;
-        const finalCollapsibleState = collapsibleState !== undefined ? collapsibleState :
-            (hasSubtasks ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.None);
-
-        super(displayContent, finalCollapsibleState);
+        super(displayContent, collapsibleState || vscode.TreeItemCollapsibleState.None);
 
         // Enhanced tooltip with status and priority
         const statusLabel = todo.status === 'pending' ? 'Pending' :
@@ -34,12 +27,6 @@ export class TodoTreeItem extends vscode.TreeItem {
         // Add adr to tooltip if present
         if (todo.adr) {
             tooltipText += `\n\nADR: ${todo.adr}`;
-        }
-
-        // Add subtask count if present
-        if (hasSubtasks) {
-            const completedSubtasks = todo.subtasks!.filter(s => s.status === 'completed').length;
-            tooltipText += `\n\nSubtasks: ${completedSubtasks}/${todo.subtasks!.length} completed`;
         }
 
         this.tooltip = tooltipText;
@@ -71,20 +58,9 @@ export class TodoTreeItem extends vscode.TreeItem {
         const hasAdr = todo.adr ? ' has-adr' : '';
         this.contextValue = `todoItem todo-${todo.status} todo-${todo.priority}${hasAdr}`;
 
-        // Add description to show subtask count and/or details indicator
-        const descriptions: string[] = [];
-
-        if (hasSubtasks) {
-            const { completed, total } = SubtaskManager.countCompletedSubtasks(todo);
-            descriptions.push(`${completed}/${total}`);
-        }
-
+        // Add description to show details indicator
         if (todo.adr) {
-            descriptions.push('•');
-        }
-
-        if (descriptions.length > 0) {
-            this.description = descriptions.join(' ');
+            this.description = '•';
         }
 
         // No click command - use inline action instead
@@ -105,35 +81,8 @@ export class TodoTreeItem extends vscode.TreeItem {
     }
 }
 
-export class SubtaskTreeItem extends vscode.TreeItem {
-    constructor(
-        public readonly subtask: Subtask,
-        public readonly parentTodoId: string
-    ) {
-        const displayContent = subtask.content.replace(/\s+/g, ' ').trim();
-        super(displayContent, vscode.TreeItemCollapsibleState.None);
-
-        // Set tooltip
-        const statusLabel = subtask.status === 'pending' ? 'Pending' : 'Completed';
-        this.tooltip = `${statusLabel}: ${subtask.content}`;
-
-        // Set resourceUri for FileDecorationProvider
-        this.resourceUri = vscode.Uri.parse(`todo-subtask://${subtask.status}/${parentTodoId}/${subtask.id}`);
-
-        // Set icon based on status
-        if (subtask.status === 'pending') {
-            this.iconPath = new vscode.ThemeIcon('circle-outline');
-        } else {
-            this.iconPath = new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('testing.iconPassed'));
-        }
-
-        // Set contextValue for commands
-        this.contextValue = `subtaskItem subtask-${subtask.status}`;
-    }
-}
-
-export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeItem | SubtaskTreeItem> {
-    private readonly _onDidChangeTreeData = new vscode.EventEmitter<TodoTreeItem | SubtaskTreeItem | undefined | null | void>();
+export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeItem> {
+    private readonly _onDidChangeTreeData = new vscode.EventEmitter<TodoTreeItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     private todoManager: TodoManager;
@@ -171,11 +120,11 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
         this.previousTodos = [...currentTodos];
     }
 
-    getTreeItem(element: TodoTreeItem | SubtaskTreeItem): vscode.TreeItem {
+    getTreeItem(element: TodoTreeItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: TodoTreeItem | SubtaskTreeItem): Thenable<(TodoTreeItem | SubtaskTreeItem)[]> {
+    getChildren(element?: TodoTreeItem): Thenable<TodoTreeItem[]> {
         if (!element) {
             // Root level - return all todos
             const todos = this.todoManager.getTodos();
@@ -183,14 +132,6 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
             return Promise.resolve(
                 todos.map(todo => new TodoTreeItem(todo))
             );
-        } else if (element instanceof TodoTreeItem) {
-            // Return subtasks if enabled and present
-            const subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
-            if (subtasksEnabled && element.todo.subtasks && element.todo.subtasks.length > 0) {
-                return Promise.resolve(
-                    element.todo.subtasks.map(subtask => new SubtaskTreeItem(subtask, element.todo.id))
-                );
-            }
         }
         return Promise.resolve([]);
     }
