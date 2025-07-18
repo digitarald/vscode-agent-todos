@@ -53,7 +53,7 @@ suite('Extension Lifecycle Tests', () => {
 		assert.ok(definition.uri);
 		assert.ok(definition.uri.toString().includes('localhost'));
 		assert.ok(definition.uri.toString().includes('/mcp'));
-		assert.strictEqual(definition.label, 'AgentTODOs');
+		assert.strictEqual(definition.label, 'Todos');
 
 		await provider.dispose();
 	});

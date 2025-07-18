@@ -360,6 +360,39 @@ export class TodoMCPServerProvider
 }
 ```
 
+### MCP Tool Schema Requirements
+
+**CRITICAL**: The MCP SDK `registerTool()` API requires proper Zod schemas, not plain JavaScript objects:
+
+```typescript
+// ❌ WRONG - Causes "keyValidator._parse is not a function" error
+sessionTools.todoReadTool = server.registerTool(
+  "todo_read",
+  {
+    title: "Check Todos",
+    description: this.buildReadDescription(subtasksEnabled),
+    inputSchema: {} // Plain object - WRONG!
+  },
+  async () => await this.handleRead()
+);
+
+// ✅ CORRECT - Use proper Zod schemas
+sessionTools.todoReadTool = server.registerTool(
+  "todo_read",
+  {
+    title: "Check Todos", 
+    description: this.buildReadDescription(subtasksEnabled),
+    inputSchema: this.getEmptyZodSchema() // Returns z.object({})
+  },
+  async () => await this.handleRead()
+);
+```
+
+**Key Requirements:**
+- Always use `z.object({})` for empty schemas, never plain `{}`
+- Use proper Zod schemas from `getTodoWriteZodSchema()` for complex inputs
+- Ensure Zod is initialized before tool registration via `initialize()`
+
 ### Dynamic Configuration Updates
 
 The MCP server supports dynamic configuration updates without requiring server restart:

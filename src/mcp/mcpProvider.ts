@@ -24,7 +24,7 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
 
     return [
       new vscode.McpHttpServerDefinition(
-        'AgentTODOs',
+        'Todos',
         vscode.Uri.parse(`http://localhost:${this.serverPort}/mcp`)
       )
     ];

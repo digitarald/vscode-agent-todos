@@ -241,10 +241,14 @@ export class TodoMCPServer {
 
     // Handle todo_read tool
     if (shouldShowTodoRead && !sessionTools.todoReadTool) {
-      // Add todo_read tool using modern API
-      sessionTools.todoReadTool = server.tool(
+      // Add todo_read tool using modern registerTool API with proper descriptions
+      sessionTools.todoReadTool = server.registerTool(
         "todo_read",
-        {}, // Empty schema for no parameters
+        {
+          title: "Check Todos",
+          description: this.buildReadDescription(subtasksEnabled),
+          inputSchema: this.getEmptyZodSchema() // Proper Zod schema for no parameters
+        },
         async () => await this.handleRead()
       );
       console.log(`[TodoMCPServer] Added todo_read tool for session ${sessionId}`);
@@ -257,15 +261,21 @@ export class TodoMCPServer {
 
     // Handle todo_write tool (always present but schema may change)
     if (!sessionTools.todoWriteTool) {
-      sessionTools.todoWriteTool = server.tool(
+      sessionTools.todoWriteTool = server.registerTool(
         "todo_write",
-        this.getTodoWriteZodSchema(subtasksEnabled),
+        {
+          title: "Update Todos",
+          description: this.buildWriteDescription(subtasksEnabled),
+          inputSchema: this.getTodoWriteZodSchema(subtasksEnabled)
+        },
         async (args: any, context: any) => await this.handleWrite(args, context)
       );
     } else {
       // Update existing tool schema
       sessionTools.todoWriteTool.update({
-        paramSchema: this.getTodoWriteZodSchema(subtasksEnabled)
+        title: "Update Todos",
+        description: this.buildWriteDescription(subtasksEnabled),
+        inputSchema: this.getTodoWriteZodSchema(subtasksEnabled)
       });
     }
   }
@@ -492,7 +502,26 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     return schema;
   }
 
+  private getEmptyZodSchema(): any {
+    if (!z) {
+      throw new Error('Zod not initialized. Call initialize() first.');
+    }
+    return z.object({});
+  }
+
+  private getEmptyJsonSchema(): any {
+    return {
+      type: 'object',
+      properties: {},
+      required: []
+    };
+  }
+
   private getTodoWriteZodSchema(subtasksEnabled: boolean): any {
+    if (!z) {
+      throw new Error('Zod not initialized. Call initialize() first.');
+    }
+
     // Base todo schema
     const todoSchema = z.object({
       id: z.string().describe('Unique kebab-case identifier for the task (e.g., "implement-user-auth")'),
@@ -510,18 +539,20 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         status: z.enum(['pending', 'completed']).describe('Completion state: pending (not done) or completed (finished)')
       });
 
-      return {
+      // Return a single Zod schema object with subtasks support
+      return z.object({
         todos: z.array(todoSchema.extend({
           subtasks: z.array(subtaskSchema).optional().describe('Break complex tasks into smaller, manageable steps. Use for any task with 3+ actions.')
         })).describe('Complete array of all todos (this replaces the entire existing list)'),
         title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
-      };
+      });
     }
 
-    return {
+    // Return a single Zod schema object without subtasks
+    return z.object({
       todos: z.array(todoSchema).describe('Complete array of all todos (this replaces the entire existing list)'),
       title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
-    };
+    });
   }
 
   private async handleRead(): Promise<any> {
@@ -816,7 +847,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           tools.push({
             name: 'todo_read',
             description: this.buildReadDescription(subtasksEnabled),
-            inputSchema: {}
+            inputSchema: this.getEmptyJsonSchema() // Proper JSON schema for test compatibility
           });
         }
 
