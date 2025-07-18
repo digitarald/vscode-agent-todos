@@ -363,24 +363,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     let statusSummary = `(${pendingCount} pending, ${inProgressTaskCount} in progress, ${completedCount} completed)`;
 
-    // Count subtasks if enabled
-    let subtaskInfo = '';
-    if (subtasksEnabled) {
-      const todosWithSubtasks = todos.filter(t => t.subtasks && t.subtasks.length > 0);
-      if (todosWithSubtasks.length > 0) {
-        let totalSubtasks = 0;
-        let completedSubtasks = 0;
-
-        for (const todo of todosWithSubtasks) {
-          const counts = SubtaskManager.countCompletedSubtasks(todo);
-          totalSubtasks += counts.total;
-          completedSubtasks += counts.completed;
-        }
-
-        subtaskInfo = `\nSubtasks: ${completedSubtasks}/${totalSubtasks} completed across ${todosWithSubtasks.length} tasks`;
-      }
-    }
-
     // Count todos with adr
     const todosWithAdr = todos.filter(t => t.adr);
     const adrInfo = todosWithAdr.length > 0 ? `\nADR added to ${todosWithAdr.length} task(s)` : '';

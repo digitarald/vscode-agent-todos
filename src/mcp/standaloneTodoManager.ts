@@ -1,5 +1,5 @@
 // Standalone todo manager without VS Code dependencies
-import { TodoItem, TodoStatus, TodoPriority, SubtaskStatus } from '../types';
+import { TodoItem, TodoStatus, TodoPriority } from '../types';
 import { TodoValidator } from '../todoValidator';
 import { EventEmitter } from 'events';
 import { ITodoStorage } from '../storage/ITodoStorage';
@@ -162,37 +162,6 @@ export class StandaloneTodoManager extends EventEmitter {
     const todo = this.todos.find(t => t.id === todoId);
     if (todo) {
       todo.adr = adr;
-      this.saveTodos();
-      this.fireChangeEvent();
-    }
-  }
-  
-  async addSubtask(todoId: string, subtask: { id: string; content: string; status: SubtaskStatus }): Promise<void> {
-    const todo = this.todos.find(t => t.id === todoId);
-    if (todo) {
-      if (!todo.subtasks) {
-        todo.subtasks = [];
-      }
-      todo.subtasks.push(subtask);
-      this.saveTodos();
-      this.fireChangeEvent();
-    }
-  }
-  
-  async toggleSubtaskStatus(todoId: string, subtaskId: string): Promise<void> {
-    const todo = this.todos.find(t => t.id === todoId);
-    const subtask = todo?.subtasks?.find(s => s.id === subtaskId);
-    if (subtask) {
-      subtask.status = subtask.status === 'completed' ? 'pending' : 'completed';
-      this.saveTodos();
-      this.fireChangeEvent();
-    }
-  }
-  
-  async deleteSubtask(todoId: string, subtaskId: string): Promise<void> {
-    const todo = this.todos.find(t => t.id === todoId);
-    if (todo && todo.subtasks) {
-      todo.subtasks = todo.subtasks.filter(s => s.id !== subtaskId);
       this.saveTodos();
       this.fireChangeEvent();
     }

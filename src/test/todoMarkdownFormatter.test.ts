@@ -10,14 +10,10 @@ suite('TodoMarkdownFormatter Tests', () => {
                 content: 'Main task',
                 status: 'pending',
                 priority: 'high',
-                subtasks: [
-                    { id: 'sub-1', content: 'Subtask 1', status: 'pending' },
-                    { id: 'sub-2', content: 'Subtask 2', status: 'completed' }
-                ]
             }
         ];
 
-        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined, true);
+        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined);
         
         assert.ok(markdown.includes('- [ ] todo-1: Main task 🔴'));
         assert.ok(markdown.includes('  - [ ] sub-1: Subtask 1'));
@@ -35,7 +31,7 @@ suite('TodoMarkdownFormatter Tests', () => {
             }
         ];
 
-        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined, true);
+        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined);
         
         assert.ok(markdown.includes('- [x] todo-1: Main task 🟡'));
         assert.ok(markdown.includes('  _Used async/await pattern for better error handling_'));

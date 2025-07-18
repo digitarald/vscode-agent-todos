@@ -104,13 +104,11 @@ suite('MCP Integration Tests', () => {
                 type: 'configuration-changed',
                 config: {
                     autoInject: true,
-                    enableSubtasks: false
                 }
             });
 
             const updatedConfig = server.getConfig();
             assert.strictEqual(updatedConfig.autoInject, true);
-            assert.strictEqual(updatedConfig.enableSubtasks, false);
         });
     });
 
@@ -253,10 +251,6 @@ suite('MCP Integration Tests', () => {
                     content: 'Main task',
                     status: 'pending',
                     priority: 'high',
-                    subtasks: [
-                        { id: 's1', content: 'Subtask 1', status: 'completed' },
-                        { id: 's2', content: 'Subtask 2', status: 'pending' }
-                    ]
                 }]
             };
 

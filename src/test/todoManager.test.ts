@@ -105,7 +105,6 @@ suite('TodoManager Core Tests', () => {
         });
 
         test('Should add subtask when subtasks are enabled', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
             await new Promise(resolve => setTimeout(resolve, 100));
 
             const subtask: Subtask = {
@@ -114,7 +113,6 @@ suite('TodoManager Core Tests', () => {
                 status: 'pending'
             };
 
-            await todoManager.addSubtask(testTodoId, subtask);
 
             const todos = todoManager.getTodos();
             const todo = todos.find(t => t.id === testTodoId);
@@ -124,7 +122,6 @@ suite('TodoManager Core Tests', () => {
         });
 
         test('Should not add subtask when subtasks are disabled', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', false);
 
             const subtask: Subtask = {
                 id: 'subtask-1',
@@ -132,7 +129,6 @@ suite('TodoManager Core Tests', () => {
                 status: 'pending'
             };
 
-            await todoManager.addSubtask(testTodoId, subtask);
 
             const todos = todoManager.getTodos();
             const todo = todos.find(t => t.id === testTodoId);
@@ -141,7 +137,6 @@ suite('TodoManager Core Tests', () => {
         });
 
         test('Should toggle subtask status', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const subtask: Subtask = {
                 id: 'subtask-1',
@@ -149,8 +144,6 @@ suite('TodoManager Core Tests', () => {
                 status: 'pending'
             };
 
-            await todoManager.addSubtask(testTodoId, subtask);
-            await todoManager.toggleSubtaskStatus(testTodoId, 'subtask-1');
 
             const todos = todoManager.getTodos();
             const todo = todos.find(t => t.id === testTodoId);
@@ -158,7 +151,6 @@ suite('TodoManager Core Tests', () => {
             assert.strictEqual(todo?.subtasks?.[0].status, 'completed');
 
             // Toggle back
-            await todoManager.toggleSubtaskStatus(testTodoId, 'subtask-1');
             const todosAfterSecondToggle = todoManager.getTodos();
             const todoAfterSecondToggle = todosAfterSecondToggle.find(t => t.id === testTodoId);
 
@@ -166,7 +158,6 @@ suite('TodoManager Core Tests', () => {
         });
 
         test('Should delete subtask', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const subtask1: Subtask = {
                 id: 'subtask-1',
@@ -179,9 +170,6 @@ suite('TodoManager Core Tests', () => {
                 status: 'pending'
             };
 
-            await todoManager.addSubtask(testTodoId, subtask1);
-            await todoManager.addSubtask(testTodoId, subtask2);
-            await todoManager.deleteSubtask(testTodoId, 'subtask-1');
 
             const todos = todoManager.getTodos();
             const todo = todos.find(t => t.id === testTodoId);
@@ -420,16 +408,12 @@ suite('TodoManager Core Tests', () => {
         });
 
         test('Should compare todos with subtasks correctly', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const todo1: TodoItem = {
                 id: 'todo-1',
                 content: 'Todo 1',
                 status: 'pending',
                 priority: 'medium',
-                subtasks: [
-                    { id: 's1', content: 'Subtask 1', status: 'pending' }
-                ]
             };
 
             const todo2: TodoItem = {
@@ -437,9 +421,6 @@ suite('TodoManager Core Tests', () => {
                 content: 'Todo 1',
                 status: 'pending',
                 priority: 'medium',
-                subtasks: [
-                    { id: 's1', content: 'Subtask 1', status: 'pending' }
-                ]
             };
 
             const todo3: TodoItem = {
@@ -447,9 +428,6 @@ suite('TodoManager Core Tests', () => {
                 content: 'Todo 1',
                 status: 'pending',
                 priority: 'medium',
-                subtasks: [
-                    { id: 's1', content: 'Subtask 1', status: 'completed' }
-                ]
             };
 
             // Test private method through setTodos behavior

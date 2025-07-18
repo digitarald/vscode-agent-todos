@@ -42,7 +42,6 @@ suite('Copilot Instructions Integration Tests', () => {
         });
 
         test('Should format todos with subtasks when enabled', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const todos: TodoItem[] = [
                 {
@@ -50,10 +49,6 @@ suite('Copilot Instructions Integration Tests', () => {
                     content: 'Main task',
                     status: 'pending',
                     priority: 'high',
-                    subtasks: [
-                        { id: 'sub-1', content: 'Subtask 1', status: 'pending' },
-                        { id: 'sub-2', content: 'Subtask 2', status: 'completed' }
-                    ]
                 }
             ];
 
@@ -84,7 +79,6 @@ suite('Copilot Instructions Integration Tests', () => {
         });
 
         test('Should handle todos with both subtasks and ADR', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const todos: TodoItem[] = [
                 {
@@ -92,10 +86,6 @@ suite('Copilot Instructions Integration Tests', () => {
                     content: 'Complex task',
                     status: 'in_progress',
                     priority: 'high',
-                    subtasks: [
-                        { id: 'sub-1', content: 'Research', status: 'completed' },
-                        { id: 'sub-2', content: 'Implementation', status: 'pending' }
-                    ],
                     adr: 'Using new API approach'
                 }
             ];
@@ -110,7 +100,6 @@ suite('Copilot Instructions Integration Tests', () => {
         });
 
         test('Should not include subtasks when disabled', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', false);
 
             const todos: TodoItem[] = [
                 {
@@ -118,9 +107,6 @@ suite('Copilot Instructions Integration Tests', () => {
                     content: 'Main task',
                     status: 'pending',
                     priority: 'low',
-                    subtasks: [
-                        { id: 'sub-1', content: 'Subtask 1', status: 'pending' }
-                    ]
                 }
             ];
 
@@ -132,7 +118,6 @@ suite('Copilot Instructions Integration Tests', () => {
         });
 
         test('Should handle empty subtasks array', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const todos: TodoItem[] = [
                 {
@@ -140,9 +125,6 @@ suite('Copilot Instructions Integration Tests', () => {
                     content: 'Task without subtasks',
                     status: 'pending',
                     priority: 'medium',
-                    subtasks: []
-                }
-            ];
 
             const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
             const markdown = formatMethod(todos);
@@ -153,7 +135,6 @@ suite('Copilot Instructions Integration Tests', () => {
         });
 
         test('Should preserve IDs and maintain correct order', async () => {
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
 
             const originalTodos: TodoItem[] = [
                 {
@@ -162,10 +143,6 @@ suite('Copilot Instructions Integration Tests', () => {
                     status: 'in_progress',
                     priority: 'high',
                     adr: 'Important architecture decision',
-                    subtasks: [
-                        { id: 'custom-sub-456', content: 'First step', status: 'completed' },
-                        { id: 'custom-sub-789', content: 'Second step', status: 'pending' }
-                    ]
                 },
                 {
                     id: 'another-id-999',
@@ -229,28 +206,22 @@ suite('Copilot Instructions Integration Tests', () => {
     });
 
     suite('Configuration Integration', () => {
-        test('Should respect enableSubtasks configuration', async () => {
             const todos: TodoItem[] = [
                 {
                     id: 'test-1',
                     content: 'Test task',
                     status: 'pending',
                     priority: 'medium',
-                    subtasks: [
-                        { id: 'sub-1', content: 'Test subtask', status: 'pending' }
-                    ]
                 }
             ];
 
             const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
 
             // With subtasks enabled
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', true);
             let markdown = formatMethod(todos);
             assert.ok(markdown.includes('Test subtask'));
 
             // With subtasks disabled
-            await vscode.workspace.getConfiguration('agentTodos').update('enableSubtasks', false);
             markdown = formatMethod(todos);
             assert.ok(!markdown.includes('Test subtask'));
         });

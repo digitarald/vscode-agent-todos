@@ -8,7 +8,6 @@ import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
-import { SubtaskManager } from '../subtaskManager';
 
 // Dynamic imports for ESM modules
 let McpServer: any;
@@ -38,7 +37,6 @@ export class TodoMCPServer {
       workspaceRoot: config.workspaceRoot || process.cwd(),
       standalone: config.standalone === true,
       autoInject: config.autoInject || false,
-      enableSubtasks: config.enableSubtasks !== undefined ? config.enableSubtasks : true,
       autoInjectFilePath: config.autoInjectFilePath || '.github/copilot-instructions.md'
     };
 
@@ -214,7 +212,7 @@ export class TodoMCPServer {
         const title = this.todoManager.getBaseTitle();
 
         // Format as markdown
-        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title, true);
+        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title);
 
         return {
           contents: [{
@@ -235,7 +233,6 @@ export class TodoMCPServer {
 
     // Check if we should show todo_read tool
     const autoInject = this.isAutoInjectEnabled();
-    const subtasksEnabled = this.isSubtasksEnabled();
     const hasTodos = this.todoManager.getTodos().length > 0;
     const shouldShowTodoRead = this.config.standalone || (!autoInject && hasTodos);
 
@@ -246,7 +243,7 @@ export class TodoMCPServer {
         "todo_read",
         {
           title: "Check Todos",
-          description: this.buildReadDescription(subtasksEnabled),
+          description: this.buildReadDescription(),
           inputSchema: this.getEmptyZodSchema() // Proper Zod schema for no parameters
         },
         async () => await this.handleRead()
@@ -265,8 +262,8 @@ export class TodoMCPServer {
         "todo_write",
         {
           title: "Update Todos",
-          description: this.buildWriteDescription(subtasksEnabled),
-          inputSchema: this.getTodoWriteZodSchema(subtasksEnabled)
+          description: this.buildWriteDescription(),
+          inputSchema: this.getTodoWriteZodSchema()
         },
         async (args: any, context: any) => await this.handleWrite(args, context)
       );
@@ -274,14 +271,14 @@ export class TodoMCPServer {
       // Update existing tool schema
       sessionTools.todoWriteTool.update({
         title: "Update Todos",
-        description: this.buildWriteDescription(subtasksEnabled),
-        inputSchema: this.getTodoWriteZodSchema(subtasksEnabled)
+        description: this.buildWriteDescription(),
+        inputSchema: this.getTodoWriteZodSchema()
       });
     }
   }
 
-  private buildReadDescription(subtasksEnabled: boolean): string {
-    const baseDescription = `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
+  private buildReadDescription(): string {
+    return `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
 
 <when-to-use>
 You should make use of this tool as often as possible, especially in the following situations:
@@ -326,15 +323,11 @@ CRITICAL: Keep checking todos throughout the conversation. Do not assume you rem
 </usage-notes>
 
 <response>
-Returns JSON with title and todos array. Each todo includes id, content, status, priority, adr`;
-
-    if (subtasksEnabled) {
-      return baseDescription + ', and subtasks (if enabled).';
-    }
-    return baseDescription + '.';
+Returns JSON with title and todos array. Each todo includes id, content, status, priority, adr.
+</response>`;
   }
 
-  private buildWriteDescription(subtasksEnabled: boolean): string {
+  private buildWriteDescription(): string {
     const basePrompt = `Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
 
 <when-to-use>
@@ -394,9 +387,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   <priority>high (urgent/blocking), medium (important), low (nice-to-have)</priority>
   <adr>Architecture decisions, trade-offs, blockers, implementation notes</adr>`;
 
-    const subtasksSection = subtasksEnabled ? `
-  <subtasks>Break complex tasks into smaller steps - use for tasks with 3+ phases</subtasks>` : '';
-
     const footer = `
 </parameter-guidance>
 
@@ -423,10 +413,10 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 • Keep task descriptions specific and measurable
 </best-practices>`;
 
-    return basePrompt + subtasksSection + footer;
+    return basePrompt + footer;
   }
 
-  private getTodoWriteSchema(subtasksEnabled: boolean): any {
+  private getTodoWriteSchema(): any {
     const schema: any = {
       type: 'object',
       properties: {
@@ -471,34 +461,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       required: ['todos']
     };
 
-    // Add subtasks if enabled
-    if (subtasksEnabled) {
-      schema.properties.todos.items.properties.subtasks = {
-        type: 'array',
-        description: 'Break complex tasks into smaller, manageable steps. Use for any task with 3+ actions.',
-        items: {
-          type: 'object',
-          properties: {
-            id: {
-              type: 'string',
-              description: 'Unique kebab-case identifier for this subtask'
-            },
-            content: {
-              type: 'string',
-              minLength: 1,
-              description: 'Specific action or step to complete'
-            },
-            status: {
-              type: 'string',
-              enum: ['pending', 'completed'],
-              description: 'Completion state: pending (not done) or completed (finished)'
-            }
-          },
-          required: ['id', 'content', 'status']
-        }
-      };
-    }
-
     return schema;
   }
 
@@ -517,7 +479,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     };
   }
 
-  private getTodoWriteZodSchema(subtasksEnabled: boolean): any {
+  private getTodoWriteZodSchema(): any {
     if (!z) {
       throw new Error('Zod not initialized. Call initialize() first.');
     }
@@ -530,23 +492,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       priority: z.enum(['low', 'medium', 'high']).describe('Importance level: high (urgent/critical), medium (important), low (nice-to-have)'),
       adr: z.string().optional().describe('Architecture Decision Record: technical context, rationale, implementation notes, or decisions made')
     });
-
-    // Conditionally add subtasks if enabled
-    if (subtasksEnabled) {
-      const subtaskSchema = z.object({
-        id: z.string().describe('Unique kebab-case identifier for this subtask'),
-        content: z.string().min(1).describe('Specific action or step to complete'),
-        status: z.enum(['pending', 'completed']).describe('Completion state: pending (not done) or completed (finished)')
-      });
-
-      // Return a single Zod schema object with subtasks support
-      return z.object({
-        todos: z.array(todoSchema.extend({
-          subtasks: z.array(subtaskSchema).optional().describe('Break complex tasks into smaller, manageable steps. Use for any task with 3+ actions.')
-        })).describe('Complete array of all todos (this replaces the entire existing list)'),
-        title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
-      });
-    }
 
     // Return a single Zod schema object without subtasks
     return z.object({
@@ -632,9 +577,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       };
     }
 
-    // Check if subtasks are enabled
-    const subtasksEnabled = this.isSubtasksEnabled();
-
     // Validate each todo
     for (const todo of todos) {
       const validation = TodoValidator.validateTodo(todo);
@@ -643,17 +585,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           content: [{
             type: 'text',
             text: `Error: ${validation.error}`
-          }],
-          isError: true
-        };
-      }
-
-      // Check if subtasks are disabled but todo has subtasks
-      if (todo.subtasks && !subtasksEnabled && !this.config.standalone) {
-        return {
-          content: [{
-            type: 'text',
-            text: 'Error: Subtasks are disabled in settings. Enable agentTodos.enableSubtasks to use subtasks.'
           }],
           isError: true
         };
@@ -692,24 +623,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     let statusSummary = `(${pendingCount} pending, ${inProgressTaskCount} in progress, ${completedCount} completed)`;
 
-    // Count subtasks if enabled
-    let subtaskInfo = '';
-    if (subtasksEnabled) {
-      const todosWithSubtasks = todos.filter((t: any) => t.subtasks && t.subtasks.length > 0);
-      if (todosWithSubtasks.length > 0) {
-        let totalSubtasks = 0;
-        let completedSubtasks = 0;
-
-        for (const todo of todosWithSubtasks) {
-          const counts = SubtaskManager.countCompletedSubtasks(todo);
-          totalSubtasks += counts.total;
-          completedSubtasks += counts.completed;
-        }
-
-        subtaskInfo = `\nSubtasks: ${completedSubtasks}/${totalSubtasks} completed across ${todosWithSubtasks.length} tasks`;
-      }
-    }
-
     // Count todos with adr
     const todosWithAdr = todos.filter((t: any) => t.adr);
     const adrInfo = todosWithAdr.length > 0 ? `\nADR added to ${todosWithAdr.length} task(s)` : '';
@@ -734,7 +647,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     return {
       content: [{
         type: 'text',
-        text: `Successfully updated ${todos.length} todo items ${statusSummary}${titleMsg}${subtaskInfo}${adrInfo}${reminder}${autoInjectNote}`
+        text: `Successfully updated ${todos.length} todo items ${statusSummary}${titleMsg}${adrInfo}${reminder}${autoInjectNote}`
       }]
     };
   }
@@ -783,9 +696,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     if (event.type === 'configuration-changed' && event.config) {
       if (event.config.autoInject !== undefined) {
         this.config.autoInject = event.config.autoInject;
-      }
-      if (event.config.enableSubtasks !== undefined) {
-        this.config.enableSubtasks = event.config.enableSubtasks;
       }
       if (event.config.autoInjectFilePath !== undefined) {
         this.config.autoInjectFilePath = event.config.autoInjectFilePath;
@@ -839,22 +749,21 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
         // Check if we should show todo_read tool
         const autoInject = this.isAutoInjectEnabled();
-        const subtasksEnabled = this.isSubtasksEnabled();
         const hasTodos = this.todoManager.getTodos().length > 0;
         const shouldShowTodoRead = this.config.standalone || (!autoInject && hasTodos);
 
         if (shouldShowTodoRead) {
           tools.push({
             name: 'todo_read',
-            description: this.buildReadDescription(subtasksEnabled),
+            description: this.buildReadDescription(),
             inputSchema: this.getEmptyJsonSchema() // Proper JSON schema for test compatibility
           });
         }
 
         tools.push({
           name: 'todo_write',
-          description: this.buildWriteDescription(subtasksEnabled),
-          inputSchema: this.getTodoWriteSchema(subtasksEnabled) // Keep JSON schema for tests
+          description: this.buildWriteDescription(),
+          inputSchema: this.getTodoWriteSchema() // Keep JSON schema for tests
         });
 
         return tools;
@@ -876,8 +785,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         }
       },
       // Public methods for testing
-      getAutoInjectEnabled: () => this.isAutoInjectEnabled(),
-      getSubtasksEnabled: () => this.isSubtasksEnabled()
+      getAutoInjectEnabled: () => this.isAutoInjectEnabled()
     };
   }
 
@@ -902,7 +810,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         console.log(`[TodoMCPServer] Server configuration:`, {
           standalone: this.config.standalone,
           autoInject: this.config.autoInject,
-          enableSubtasks: this.config.enableSubtasks,
           workspaceRoot: this.config.workspaceRoot
         });
         this.setupEventHandlers();
@@ -988,14 +895,5 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     // Get autoInject from server configuration
     return this.config.autoInject || false;
-  }
-
-  private isSubtasksEnabled(): boolean {
-    if (this.config.standalone) {
-      return true; // Always enable subtasks in standalone mode
-    }
-
-    // Get enableSubtasks from server configuration
-    return this.config.enableSubtasks !== undefined ? this.config.enableSubtasks : true;
   }
 }

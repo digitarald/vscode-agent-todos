@@ -25,7 +25,7 @@ export class StandaloneCopilotWriter {
         }
 
         // Use the shared formatter
-        return TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined, true);
+        return TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined);
     }
 
     public async updateInstructionsWithTodos(todos: TodoItem[], title?: string): Promise<void> {

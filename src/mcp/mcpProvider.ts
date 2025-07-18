@@ -52,7 +52,6 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
 
       // Get current configuration
       const config = vscode.workspace.getConfiguration('agentTodos');
-      const enableSubtasks = config.get<boolean>('enableSubtasks', true);
       const autoInject = config.get<boolean>('autoInject', false);
       const autoInjectFilePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
 
@@ -61,7 +60,6 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
         port: this.serverPort,
         workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
         standalone: false,
-        enableSubtasks,
         autoInject,
         autoInjectFilePath
       });
@@ -165,7 +163,6 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
           type: 'configuration-changed',
           config: {
             autoInject: config.autoInject,
-            enableSubtasks: config.enableSubtasks,
             autoInjectFilePath: config.autoInjectFilePath
           },
           timestamp: Date.now()

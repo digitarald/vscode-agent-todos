@@ -85,16 +85,8 @@ export class CopilotInstructionsManager {
             return '- No current todos';
         }
 
-        // Check if subtasks are enabled
-        let subtasksEnabled = true;
-        try {
-            subtasksEnabled = vscode.workspace.getConfiguration('agentTodos').get<boolean>('enableSubtasks', true);
-        } catch (error) {
-            // Default to true when vscode is not available
-        }
-
         // Use the shared formatter, but without title since we handle that differently
-        return TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined, subtasksEnabled);
+        return TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined);
     }
 
     public async updateInstructionsWithTodos(todos: TodoItem[], title?: string): Promise<void> {
