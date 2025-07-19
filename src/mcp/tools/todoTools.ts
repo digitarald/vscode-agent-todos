@@ -389,13 +389,22 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         const completedTodos = todos.filter(t => t.status === 'completed');
         const completedCount = completedTodos.length;
 
-        // Check if this is initialization (no previous todos)
-        if (previousTodos.length === 0 && todos.length > 0) {
-          notificationLabel = `Started "${title || 'Todos'}" (${todos.length})`;
+        // Check if this is initialization (no previous todos) or a complete list replacement
+        const isNewList = previousTodos.length === 0 && todos.length > 0;
+        const isTitleChange = title && title !== previousTitle;
+        const isCompleteReplacement = todos.length > 0 && (
+          isNewList ||
+          isTitleChange ||
+          // Check if this is a completely different set of todos (different IDs)
+          (previousTodos.length > 0 && !todos.some(todo => previousTodos.some(prev => prev.id === todo.id)))
+        );
+
+        if (isCompleteReplacement) {
+          notificationLabel = `Starting "${title || 'Todos'}" (${todos.length})`;
         }
         // Check if all todos are completed
         else if (completedCount === totalTodos && totalTodos > 0) {
-          notificationLabel = `Completed ${title || 'untitled'}`;
+          notificationLabel = `Completed "${title || 'untitled'}" (${todos.length})`;
         }
         // Find newly completed tasks by comparing with previous state
         else {
