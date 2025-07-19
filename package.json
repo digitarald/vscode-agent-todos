@@ -312,6 +312,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.16.0",
+    "@vscode/extension-telemetry": "^1.0.0",
     "@types/vscode": "^1.101.0",
     "eventsource": "^4.0.0",
     "express": "^5.1.0",

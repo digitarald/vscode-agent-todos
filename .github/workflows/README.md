@@ -56,6 +56,12 @@ The following secrets need to be configured in your repository:
    - Create at: https://marketplace.visualstudio.com/manage/createpublisher
    - Required scopes: `Marketplace (Manage)`
 
+2. **`APPLICATIONINSIGHTS_CONNECTION_STRING`** (Optional for telemetry)
+   - Application Insights connection string for telemetry collection
+   - Used to enable privacy-preserving usage analytics in distributed builds
+   - If not provided, extension will function normally without telemetry
+   - Should be obtained from Azure Application Insights resource
+
 ### Publishing to VS Code Marketplace
 
 1. Create a publisher account at https://marketplace.visualstudio.com/manage

@@ -8,6 +8,7 @@ import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
+import { TelemetryManager } from '../telemetryManager';
 import { TodoTools } from './tools/todoTools';
 
 // Dynamic imports for ESM modules
@@ -808,6 +809,19 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     if (autoInject && !this.config.standalone) {
       console.log('[TodoMCPServer] Read blocked - auto-inject is enabled');
+      
+      // Send telemetry for blocked read
+      try {
+        const telemetryManager = TelemetryManager.getInstance();
+        if (telemetryManager.isEnabled()) {
+          telemetryManager.sendEvent('mcp.read.blocked', {
+            reason: 'auto-inject-enabled'
+          });
+        }
+      } catch (telemetryError) {
+        console.error('[TodoMCPServer] Failed to send telemetry:', telemetryError);
+      }
+      
       return {
         content: [{
           type: 'text',
@@ -819,6 +833,20 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     const todos = this.todoManager.getTodos();
     const title = this.todoManager.getBaseTitle();
     console.log(`[TodoMCPServer] Reading todos: ${todos.length} items, title: "${title}"`);
+
+    // Send telemetry for successful read
+    try {
+      const telemetryManager = TelemetryManager.getInstance();
+      if (telemetryManager.isEnabled()) {
+        telemetryManager.sendEvent('mcp.read.success', {
+          standalone: String(this.config.standalone)
+        }, {
+          todoCount: todos.length
+        });
+      }
+    } catch (telemetryError) {
+      console.error('[TodoMCPServer] Failed to send telemetry:', telemetryError);
+    }
 
     const result = {
       title,
@@ -977,6 +1005,24 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       title,
       timestamp: Date.now()
     });
+
+    // Send telemetry for successful write
+    try {
+      const telemetryManager = TelemetryManager.getInstance();
+      if (telemetryManager.isEnabled()) {
+        telemetryManager.sendEvent('mcp.write.success', {
+          standalone: String(this.config.standalone),
+          hasTitle: String(!!title)
+        }, {
+          todoCount: todos.length,
+          inProgressCount: inProgressTaskCount,
+          pendingCount: pendingCount,
+          completedCount: completedCount
+        });
+      }
+    } catch (telemetryError) {
+      console.error('[TodoMCPServer] Failed to send telemetry:', telemetryError);
+    }
 
     return {
       content: [{

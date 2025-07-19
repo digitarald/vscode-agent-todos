@@ -91,6 +91,8 @@ jobs:
 
       - name: Build extension
         run: npm run compile
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
       - name: Run unit tests (Linux)
         if: runner.os == 'Linux'
@@ -106,6 +108,8 @@ jobs:
 
       - name: Package extension
         run: npm run package
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
       - name: Upload test results
         if: always()

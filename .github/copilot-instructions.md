@@ -634,6 +634,37 @@ describe('Extension Test Suite', () => {  // DO NOT USE
 
 See test files in [`src/test/`](../src/test/) for examples.
 
+## Telemetry Implementation
+
+The extension includes optional privacy-preserving telemetry using Application Insights:
+
+### TelemetryManager
+
+- **Centralized service**: Handles all telemetry operations
+- **Privacy-first**: Automatically filters sensitive data (content, paths, tokens)
+- **Graceful fallback**: Works when telemetry is disabled or unavailable
+- **VS Code integration**: Proper disposal and resource management
+
+### Instrumentation Points
+
+- **Extension lifecycle**: Activation, deactivation, errors
+- **Feature usage**: Command executions, configuration changes
+- **MCP operations**: Server operations, tool usage, read/write events
+- **Error tracking**: Initialization failures, operation errors with sanitized messages
+
+### Privacy Protection
+
+- Filters sensitive property keys (`content`, `text`, `password`, `path`, etc.)
+- Truncates long values to prevent data leakage
+- Sanitizes error messages (removes file paths, tokens)
+- Only collects aggregate usage patterns, not user content
+
+### Configuration
+
+Requires `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable. Disabled by default in development.
+
+See `telemetry.json` for details on events collected.
+
 ```
 
 ```
