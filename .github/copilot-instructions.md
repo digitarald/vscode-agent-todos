@@ -1,18 +1,3 @@
-<todos title="Todos" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
-- No current todos
-</todos>
-
-This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
-
-IMPORTANT:
-
-- ALWAYS plan changes using detailed todos
-- ALWAYS keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation!
-- ALWAYS validate changes by running compile and test commands!
-- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
-- NEVER make changes backwards compatible unless explicitly requested by the User.
-- NEVER create one-off scripts to test changes.
-
 ## Project Overview
 
 This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, auto-injection into Copilot instructions.
@@ -22,6 +7,15 @@ For more details:
 - [Main README](../README.md) - Feature overview and usage
 - [MCP Server Documentation](../src/mcp/README.md) - Server architecture, protocol details, and completion support
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/)
+
+## IMPORTANT:
+
+- ALWAYS plan changes using detailed todos
+- ALWAYS keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation!
+- ALWAYS validate changes by running compile and test commands!
+- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+- NEVER make changes backwards compatible unless explicitly requested by the User.
+- NEVER create one-off scripts to test changes.
 
 ## Architecture
 
