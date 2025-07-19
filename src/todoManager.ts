@@ -3,6 +3,7 @@ import { TodoItem } from './types';
 import { CopilotInstructionsManager } from './copilotInstructionsManager';
 import { TodoValidator } from './todoValidator';
 import { PerformanceMonitor } from './utils/performance';
+import { TelemetryManager } from './telemetryManager';
 
 export class TodoManager {
     private static instance: TodoManager;
@@ -226,15 +227,45 @@ export class TodoManager {
 
             await this.updateInstructionsIfNeeded();
             this.saveToStorage();
+
+            // Send telemetry for todo updates
+            try {
+                const telemetryManager = TelemetryManager.getInstance();
+                if (telemetryManager.isEnabled()) {
+                    telemetryManager.sendEvent('todos.updated', {
+                        autoOpenEnabled: String(autoOpenEnabled)
+                    }, {
+                        previousCount: previousTodoCount,
+                        newCount: this.todos.length,
+                        todosChanged: todosChanged ? 1 : 0
+                    });
+                }
+            } catch (telemetryError) {
+                console.error('[TodoManager] Failed to send telemetry:', telemetryError);
+            }
         });
     }
 
     public async clearTodos(): Promise<void> {
+        const previousCount = this.todos.length;
+        
         this.todos = [];
         this.title = 'Todos'; // Reset title to default
         this.fireConsolidatedChange();
         await this.updateInstructionsIfNeeded();
         this.saveToStorage();
+
+        // Send telemetry
+        try {
+            const telemetryManager = TelemetryManager.getInstance();
+            if (telemetryManager.isEnabled()) {
+                telemetryManager.sendEvent('todos.cleared', {}, {
+                    clearedCount: previousCount
+                });
+            }
+        } catch (telemetryError) {
+            console.error('[TodoManager] Failed to send telemetry:', telemetryError);
+        }
     }
 
     public async deleteTodo(id: string): Promise<void> {

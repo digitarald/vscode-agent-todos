@@ -3,11 +3,19 @@ import { TodoManager } from './todoManager';
 import { TodoTreeDataProvider, TodoDecorationProvider } from './todoTreeProvider';
 import { TodoMCPServerProvider } from './mcp/mcpProvider';
 import { TodoMarkdownFormatter } from './utils/todoMarkdownFormatter';
+import { TelemetryManager } from './telemetryManager';
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('Todos extension is now active!');
 
 	try {
+		// Initialize telemetry
+		const telemetryManager = TelemetryManager.getInstance();
+		telemetryManager.initialize(context);
+		telemetryManager.sendEvent('extension.activate', {
+			extensionVersion: context.extension.packageJSON.version || 'unknown'
+		});
+
 		// Initialize todo manager
 		const todoManager = TodoManager.getInstance();
 		todoManager.initialize(context);
@@ -84,13 +92,20 @@ export async function activate(context: vscode.ExtensionContext) {
 						mcpProvider
 					);
 					context.subscriptions.push(mcpDisposable);
+					telemetryManager.sendEvent('mcp.provider.registered');
 				} else {
 					console.log('MCP API not available in this VS Code version');
+					telemetryManager.sendEvent('mcp.api.unavailable');
 				}
 
 				// Start server asynchronously
-				mcpProvider.ensureServerStarted().catch(error => {
+				mcpProvider.ensureServerStarted().then(() => {
+					telemetryManager.sendEvent('mcp.server.started');
+				}).catch(error => {
 					console.error('Failed to start MCP server:', error);
+					telemetryManager.sendError(error instanceof Error ? error : new Error(String(error)), {
+						phase: 'mcp.server.start'
+					});
 				});
 
 				if (mcpProvider) {
@@ -98,14 +113,29 @@ export async function activate(context: vscode.ExtensionContext) {
 				}
 			} catch (mcpError) {
 				console.error('Failed to initialize MCP server:', mcpError);
+				telemetryManager.sendError(mcpError instanceof Error ? mcpError : new Error(String(mcpError)), {
+					phase: 'mcp.initialization'
+				});
 				// Continue without MCP - the extension can still work with just the UI
 			}
 		});
 
 		// Register commands
 		const clearTodosCommand = vscode.commands.registerCommand('agentTodos.clearTodos', async () => {
-			await todoManager.clearTodos();
-			vscode.window.showInformationMessage('All todos cleared!');
+			try {
+				const todoCount = todoManager.getTodos().length;
+				await todoManager.clearTodos();
+				vscode.window.showInformationMessage('All todos cleared!');
+				
+				telemetryManager.sendEvent('command.clearTodos', {}, {
+					todoCount: todoCount
+				});
+			} catch (error) {
+				telemetryManager.sendError(error instanceof Error ? error : new Error(String(error)), {
+					command: 'clearTodos'
+				});
+				throw error;
+			}
 		});
 
 		// Manual refresh command - rarely needed due to automatic refresh mechanism
@@ -137,12 +167,23 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		const toggleAutoInjectCommand = vscode.commands.registerCommand('agentTodos.toggleAutoInject', async () => {
-			const config = vscode.workspace.getConfiguration('agentTodos');
-			const currentValue = config.get<boolean>('autoInject', false);
-			await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
+			try {
+				const config = vscode.workspace.getConfiguration('agentTodos');
+				const currentValue = config.get<boolean>('autoInject', false);
+				await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
 
-			const status = !currentValue ? 'enabled' : 'disabled';
-			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
+				const status = !currentValue ? 'enabled' : 'disabled';
+				vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
+				
+				telemetryManager.sendEvent('command.toggleAutoInject', {
+					newValue: String(!currentValue)
+				});
+			} catch (error) {
+				telemetryManager.sendError(error instanceof Error ? error : new Error(String(error)), {
+					command: 'toggleAutoInject'
+				});
+				throw error;
+			}
 		});
 
 		const toggleAutoInjectEnabledCommand = vscode.commands.registerCommand('agentTodos.toggleAutoInjectEnabled', async () => {
@@ -247,18 +288,30 @@ export async function activate(context: vscode.ExtensionContext) {
 		});
 
 		const runTodoCommand = vscode.commands.registerCommand('agentTodos.runTodo', async (item: any) => {
-			const todo = item?.todo;
-			if (todo) {
-				// Set the todo status to in-progress
-				await todoManager.setTodoStatus(todo.id, 'in_progress');
+			try {
+				const todo = item?.todo;
+				if (todo) {
+					// Set the todo status to in-progress
+					await todoManager.setTodoStatus(todo.id, 'in_progress');
 
-				let query = `Continue todos with step _${todo.content}_`;
+					let query = `Continue todos with step _${todo.content}_`;
 
-				// Execute the chat command with agent mode
-				await vscode.commands.executeCommand('workbench.action.chat.open', {
-					mode: 'agent',
-					query: query
+					// Execute the chat command with agent mode
+					await vscode.commands.executeCommand('workbench.action.chat.open', {
+						mode: 'agent',
+						query: query
+					});
+					
+					telemetryManager.sendEvent('command.runTodo', {
+						todoStatus: todo.status,
+						todoPriority: todo.priority || 'none'
+					});
+				}
+			} catch (error) {
+				telemetryManager.sendError(error instanceof Error ? error : new Error(String(error)), {
+					command: 'runTodo'
 				});
+				throw error;
 			}
 		});
 
@@ -393,12 +446,31 @@ export async function activate(context: vscode.ExtensionContext) {
 		// The TodoManager will automatically sync from instructions file if auto-inject is enabled
 	} catch (error) {
 		console.error('Failed to activate Todos extension:', error);
+		
+		// Send error telemetry
+		const telemetryManager = TelemetryManager.getInstance();
+		if (error instanceof Error) {
+			telemetryManager.sendError(error, { 
+				phase: 'activation'
+			});
+		}
+		
 		vscode.window.showErrorMessage(`Failed to activate Todos extension: ${error instanceof Error ? error.message : String(error)}`);
 		throw error; // Re-throw to let VS Code know activation failed
 	}
 }
 
 export function deactivate() {
-	const todoManager = TodoManager.getInstance();
-	todoManager.dispose();
+	try {
+		const telemetryManager = TelemetryManager.getInstance();
+		telemetryManager.sendEvent('extension.deactivate');
+		
+		const todoManager = TodoManager.getInstance();
+		todoManager.dispose();
+		
+		// Dispose telemetry last
+		telemetryManager.dispose();
+	} catch (error) {
+		console.error('Error during extension deactivation:', error);
+	}
 }
