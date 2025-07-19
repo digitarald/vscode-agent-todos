@@ -719,5 +719,102 @@ suite('MCP Integration Tests', () => {
                 disposable.dispose();
             }
         });
+
+        test('Should send progress notification when new todo list is created', async () => {
+            const server = provider.getServer();
+            assert.ok(server);
+            await server.initialize();
+
+            // Mock the sendNotification to capture progress notifications
+            let capturedNotification: any = null;
+            const mockContext = {
+                _meta: { progressToken: 'test-token' },
+                sendNotification: async (notification: any) => {
+                    capturedNotification = notification;
+                }
+            };
+
+            // Test creating a new todo list from empty state
+            const result = await server.getTodoTools().handleToolCall('todo_write', {
+                todos: [{
+                    id: 'test-1',
+                    content: 'First todo',
+                    status: 'pending',
+                    priority: 'high'
+                }],
+                title: 'My Project Tasks'
+            }, mockContext);
+
+            // Check the standard success response
+            assert.ok(result.content);
+            assert.ok(result.content[0]);
+            assert.ok(result.content[0].text);
+
+            const responseText = result.content[0].text;
+            assert.ok(responseText.includes('Successfully updated 1 todo items'),
+                `Expected success message in response: ${responseText}`);
+
+            // Check that progress notification was sent via sendNotification
+            assert.ok(capturedNotification, 'Expected progress notification to be sent');
+            assert.strictEqual(capturedNotification.method, 'notifications/progress');
+            assert.ok(capturedNotification.params);
+            assert.strictEqual(capturedNotification.params.progressToken, 'test-token');
+            assert.strictEqual(capturedNotification.params.message, 'Started "My Project Tasks" (1)');
+        });
+
+        test('Should not send progress notification when updating existing list', async () => {
+            const server = provider.getServer();
+            assert.ok(server);
+            await server.initialize();
+
+            // First create a list
+            await server.getTodoTools().handleToolCall('todo_write', {
+                todos: [{
+                    id: 'test-1',
+                    content: 'First todo',
+                    status: 'pending',
+                    priority: 'medium'
+                }],
+                title: 'Existing List'
+            });
+
+            // Mock sendNotification to capture any notifications
+            let capturedNotification: any = null;
+            const mockContext = {
+                _meta: { progressToken: 'test-token' },
+                sendNotification: async (notification: any) => {
+                    capturedNotification = notification;
+                }
+            };
+
+            // Then update it (should not send progress notification)
+            const result = await server.getTodoTools().handleToolCall('todo_write', {
+                todos: [{
+                    id: 'test-1',
+                    content: 'Updated todo',
+                    status: 'in_progress',
+                    priority: 'high'
+                }, {
+                    id: 'test-2',
+                    content: 'Second todo',
+                    status: 'pending',
+                    priority: 'low'
+                }],
+                title: 'Updated List'
+            }, mockContext);
+
+            // Check that standard success response is returned
+            assert.ok(result.content);
+            assert.ok(result.content[0]);
+            assert.ok(result.content[0].text);
+
+            const responseText = result.content[0].text;
+            assert.ok(responseText.includes('Successfully updated 2 todo items'),
+                `Expected success message in response: ${responseText}`);
+
+            // Check that no progress notification was sent (since not starting from empty)
+            assert.strictEqual(capturedNotification, null, 
+                'Should not send progress notification when updating existing list');
+        });
     });
 });

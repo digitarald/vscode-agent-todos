@@ -42,25 +42,16 @@ export class TodoTools {
 
   async getAvailableTools(): Promise<any[]> {
     try {
-      console.log('[TodoTools] Starting getAvailableTools...');
-
       const tools = [];
 
       // Check if we're in standalone mode or if auto-inject is disabled
       const autoInject = this.isAutoInjectEnabled();
       const hasTodos = this.todoManager.getTodos().length > 0;
 
-      console.log('[TodoTools] Tool visibility logic:', {
-        autoInject,
-        hasTodos,
-        isStandalone: this.server.isStandalone()
-      });
-
       // Only add todo_read if:
       // - In standalone mode (always show), OR
       // - Auto-inject is disabled AND there are todos to read
       if (this.server.isStandalone() || (!autoInject && hasTodos)) {
-        console.log('[TodoTools] Adding todo_read tool');
         const readDescription = `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
 
 <when-to-use>
@@ -122,13 +113,11 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
             readOnlyHint: true
           }
         });
-        console.log('[TodoTools] todo_read tool added');
       } else {
-        console.log('[TodoTools] Skipping todo_read tool (auto-inject enabled or no todos)');
+        console.log('[TodoTools] Skipping todo_read tool - auto-inject enabled or no todos');
       }
 
       // Always add todo_write
-      console.log('[TodoTools] Adding todo_write tool');
       const writeDescription = this.buildWriteDescription();
 
       tools.push({
@@ -141,7 +130,6 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
       });
       console.log('[TodoTools] todo_write tool added');
 
-      console.log(`[TodoTools] getAvailableTools completed with ${tools.length} tools`);
       return tools;
     } catch (error) {
       console.error('[TodoTools] Error in getAvailableTools:', {
@@ -242,19 +230,10 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
   async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
     try {
-      console.log(`[TodoTools] Handling tool call: ${name}`, {
-        hasArgs: !!args,
-        argsType: typeof args,
-        hasContext: !!context,
-        contextKeys: context ? Object.keys(context) : []
-      });
-
       switch (name) {
         case 'todo_read':
-          console.log('[TodoTools] Routing to handleRead');
           return await this.handleRead();
         case 'todo_write':
-          console.log('[TodoTools] Routing to handleWrite');
           return await this.handleWrite(args, context);
         default:
           console.warn(`[TodoTools] Unknown tool: ${name}`);
@@ -300,7 +279,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     const todos = this.todoManager.getTodos();
     const title = this.todoManager.getBaseTitle();
-    console.log(`[TodoTools] Reading todos: ${todos.length} items, title: "${title}"`);
 
     const result = {
       title,
@@ -318,31 +296,9 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   private async handleWrite(params: TodoWriteParams, context?: ToolContext): Promise<ToolResult> {
     const { todos, title } = params;
 
-    // Debug logging for context
-    console.log('[TodoTools.handleWrite] Context received:', {
-      hasContext: !!context,
-      hasSendNotification: !!context?.sendNotification,
-      sendNotificationType: typeof context?.sendNotification,
-      hasMeta: !!context?._meta,
-      hasProgressToken: !!context?._meta?.progressToken,
-      progressToken: context?._meta?.progressToken,
-      contextKeys: context ? Object.keys(context) : [],
-      metaKeys: context?._meta ? Object.keys(context._meta) : [],
-      fullContext: JSON.stringify(context, null, 2)
-    });
-
     // Get current state before update for comparison
     const previousTodos = this.todoManager.getTodos();
     const previousTitle = this.todoManager.getTitle();
-
-    console.log('[TodoTools.handleWrite] State before update:', {
-      previousTodoCount: previousTodos.length,
-      previousTitle: previousTitle,
-      newTodoCount: todos.length,
-      newTitle: title || 'no change',
-      todoSync: !!this.todoSync,
-      server: this.server.isStandalone() ? 'standalone' : 'vscode'
-    });
 
     // Validate input
     if (!Array.isArray(todos)) {
@@ -382,11 +338,10 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     }
 
     // Log the update operation
-    console.log(`[TodoTools] Updating todos via MCP: ${todos.length} items, title: ${title || 'no change'}`);
+    console.log(`[TodoTools] Updating ${todos.length} todos: ${title || 'no title change'}`);
 
     // Mark this as an external change if we have a todoSync instance
     if (this.todoSync) {
-      console.log('[TodoTools] Marking change as external (MCP-initiated)');
       this.todoSync.markExternalChange();
     }
 
@@ -396,15 +351,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     // Get state after update
     const finalTodos = this.todoManager.getTodos();
     const finalTitle = this.todoManager.getTitle();
-
-    console.log('[TodoTools.handleWrite] State after update:', {
-      finalTodoCount: finalTodos.length,
-      finalTitle: finalTitle,
-      todosSaved: finalTodos.length === todos.length,
-      titleSaved: title === undefined || finalTitle === title
-    });
-
-    console.log('[TodoTools] Update completed, todos should sync to VS Code');
 
     // Generate success message
     const pendingCount = todos.filter(t => t.status === 'pending').length;
@@ -426,7 +372,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     const titleMsg = title ? ` and title to "${title}"` : '';
 
     // Broadcast update via SSE
-    console.log('[TodoTools] Broadcasting update event');
     this.server.broadcastUpdate({
       type: 'todos-updated',
       todos,
@@ -435,16 +380,8 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     });
 
     // Send smart completion notification
-    console.log('[TodoTools.handleWrite] Checking notification conditions:', {
-      hasSendNotification: !!context?.sendNotification,
-      hasProgressToken: !!context?._meta?.progressToken,
-      willSendNotification: !!(context?.sendNotification && context._meta?.progressToken)
-    });
-
     try {
       if (context?.sendNotification && context._meta?.progressToken) {
-        console.log('[TodoTools.handleWrite] Preparing to send notification');
-        console.log('[TodoTools.handleWrite] previousTodos:', previousTodos);
         let notificationLabel = "";
 
         // Determine what changed
@@ -452,87 +389,53 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         const completedTodos = todos.filter(t => t.status === 'completed');
         const completedCount = completedTodos.length;
 
-        console.log('[TodoTools.handleWrite] Change detection:', {
-          previousTodosLength: previousTodos.length,
-          newTodosLength: todos.length,
-          completedCount,
-          totalTodos,
-          title
-        });
-
         // Check if this is initialization (no previous todos)
         if (previousTodos.length === 0 && todos.length > 0) {
-          notificationLabel = `Todos: ${title || 'untitled'}`;
-          console.log('[TodoTools.handleWrite] Initialization case detected:', notificationLabel);
+          notificationLabel = `Started "${title || 'Todos'}" (${todos.length})`;
         }
         // Check if all todos are completed
         else if (completedCount === totalTodos && totalTodos > 0) {
           notificationLabel = `Completed ${title || 'untitled'}`;
-          console.log('[TodoTools.handleWrite] All completed case detected:', notificationLabel);
         }
         // Find newly completed tasks by comparing with previous state
         else {
-          console.log('[TodoTools.handleWrite] Checking for newly completed tasks');
           // Create a map of previous todos by ID for quick lookup
           const previousTodoMap = new Map(previousTodos.map(t => [t.id, t]));
 
           // Find tasks that were just completed (not completed before, completed now)
           const newlyCompleted = todos.filter(todo => {
             const prevTodo = previousTodoMap.get(todo.id);
-            return todo.status === 'completed' &&
-              prevTodo &&
-              prevTodo.status !== 'completed';
+            const wasCompleted = prevTodo && prevTodo.status === 'completed';
+            const isNowCompleted = todo.status === 'completed';
+            return isNowCompleted && !wasCompleted;
           });
-
-          console.log('[TodoTools.handleWrite] Newly completed tasks:', newlyCompleted.length);
 
           if (newlyCompleted.length > 0) {
             // Get the most recently completed task
             const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
             notificationLabel = `✅ (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
-            console.log('[TodoTools.handleWrite] Newly completed case detected:', notificationLabel);
-          } else {
-            console.log('[TodoTools.handleWrite] No newly completed tasks found');
           }
         }
 
         // Only send notification if we have a meaningful message
         if (notificationLabel) {
-          console.log('[TodoTools.handleWrite] Sending notification:', {
-            notificationLabel,
-            progressToken: context._meta.progressToken
-          });
+          const notificationPayload = {
+            method: "notifications/progress",
+            params: {
+              progressToken: context._meta.progressToken,
+              progress: 1,
+              total: 1,
+              message: notificationLabel
+            }
+          };
 
-          try {
-            const notificationPayload = {
-              method: "notifications/progress",
-              params: {
-                progress: 1,
-                progressToken: context._meta.progressToken,
-                message: notificationLabel
-              }
-            };
-
-            console.log('[TodoTools.handleWrite] Notification payload:', JSON.stringify(notificationPayload, null, 2));
-
-            await context.sendNotification(notificationPayload);
-
-            console.log('[TodoTools.handleWrite] Notification sent successfully');
-          } catch (error) {
-            // Log error but don't throw - notifications are optional
-            console.error('[TodoTools.handleWrite] Failed to send notification:', {
-              error: error instanceof Error ? error.message : String(error),
-              stack: error instanceof Error ? error.stack : undefined
-            });
-          }
-        } else {
-          console.log('[TodoTools.handleWrite] No notification label generated, skipping notification');
+          await context.sendNotification(notificationPayload);
+          console.log(`[TodoTools] Sent notification: ${notificationLabel}`);
         }
       }
     } catch (notificationError) {
-      console.error('[TodoTools.handleWrite] Error in notification handling:', {
-        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
-        stack: notificationError instanceof Error ? notificationError.stack : undefined
+      console.error('[TodoTools] Notification error:', {
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError)
       });
     }
 

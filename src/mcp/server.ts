@@ -9,6 +9,7 @@ import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
 import { TelemetryManager } from '../telemetryManager';
+import { TodoTools } from './tools/todoTools';
 
 // Dynamic imports for ESM modules
 let McpServer: any;
@@ -28,11 +29,15 @@ export class TodoMCPServer {
   private todoSync: any = null;
   private resourceSubscriptions: Map<string, Set<string>> = new Map(); // sessionId -> resource URIs
   private readonly loggerName = 'TodoMCPServer';
+  private todoTools: TodoTools | null = null;
 
   // Dynamic tool management - track tools by ID for each session
   private sessionTools: Map<string, { todoReadTool: any; todoWriteTool: any }> = new Map();
 
   constructor(config: MCPServerConfig = {}) {
+    console.log(`📅 Build timestamp: ${new Date().toISOString()}`);
+    console.log(`🔧 Starting TodoMCPServer with config:`, config);
+
     this.config = {
       port: config.port || 3000,
       workspaceRoot: config.workspaceRoot || process.cwd(),
@@ -40,6 +45,9 @@ export class TodoMCPServer {
       autoInject: config.autoInject || false,
       autoInjectFilePath: config.autoInjectFilePath || '.github/copilot-instructions.md'
     };
+
+    console.log(`📋 Final config:`, this.config);
+    console.log(`🚀 ==================== TodoMCPServer READY ====================\n`);
 
     // Initialize todo manager based on mode
     if (this.config.standalone) {
@@ -50,6 +58,9 @@ export class TodoMCPServer {
         filePath: this.config.autoInjectFilePath
       } : undefined;
       this.todoManager = StandaloneTodoManager.getInstance(storage, autoInjectConfig);
+
+      // Initialize TodoTools for standalone mode
+      this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
     } else {
       // In VS Code mode, the manager will be set via setTodoManager
       this.todoManager = null;
@@ -439,11 +450,43 @@ export class TodoMCPServer {
               description: this.buildWriteDescription(),
               inputSchema: writeSchema
             },
-            async (args: any, context: any) => {
+            async (args: any, { sendNotification, _meta }: any) => {
               try {
-                return await this.handleWrite(args, context);
+                console.log(`\n🔔 ==================== NOTIFICATION DEBUG START ====================`);
+                console.log(`[TodoMCPServer] 🔔 TOOL HANDLER: todo_write called with context parameters`);
+                console.log(`[TodoMCPServer] Context analysis:`, {
+                  hasSendNotification: !!sendNotification,
+                  sendNotificationType: typeof sendNotification,
+                  sendNotificationName: sendNotification?.name || 'anonymous',
+                  hasMetaObject: !!_meta,
+                  metaType: typeof _meta,
+                  metaKeys: _meta ? Object.keys(_meta) : 'no _meta',
+                  hasProgressToken: !!_meta?.progressToken,
+                  progressTokenType: typeof _meta?.progressToken,
+                  progressTokenValue: _meta?.progressToken,
+                  argsKeys: args ? Object.keys(args) : 'no args'
+                });
+
+                // Reconstruct context object with proper destructured parameters
+                const context = {
+                  sendNotification,
+                  _meta
+                };
+
+                console.log(`[TodoMCPServer] 📦 Reconstructed context:`, {
+                  contextKeys: Object.keys(context),
+                  contextSendNotification: !!context.sendNotification,
+                  contextMeta: !!context._meta,
+                  contextProgressToken: context._meta?.progressToken
+                });
+                console.log(`🔔 ==================== CALLING handleWrite ====================\n`);
+
+                const result = await this.handleWrite(args, context);
+
+                console.log(`\n🔔 ==================== NOTIFICATION DEBUG END ====================\n`);
+                return result;
               } catch (error) {
-                console.error(`[TodoMCPServer] Error in todo_write handler:`, {
+                console.error(`[TodoMCPServer] ❌ Error in todo_write handler:`, {
                   error: error instanceof Error ? error.message : String(error),
                   stack: error instanceof Error ? error.stack : undefined,
                   args: JSON.stringify(args, null, 2)
@@ -822,6 +865,15 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     const { todos, title } = params;
 
     // Debug logging for context
+    console.log('[TodoMCPServer.handleWrite] 🎯 ENTRY POINT DEBUG:', {
+      methodCalled: 'handleWrite',
+      timestamp: new Date().toISOString(),
+      hasParams: !!params,
+      paramsKeys: params ? Object.keys(params) : [],
+      todosLength: Array.isArray(todos) ? todos.length : 'not array',
+      title: title || 'undefined'
+    });
+    
     console.log('[TodoMCPServer.handleWrite] Context received:', {
       hasContext: !!context,
       contextKeys: context ? Object.keys(context) : [],
@@ -887,8 +939,25 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       this.todoSync.markExternalChange();
     }
 
-    // Update todos
-    await this.todoManager.updateTodos(todos, title);
+    // Use TodoTools.handleWrite for proper notification support
+    let result;
+    console.log('[TodoMCPServer.handleWrite] 🔍 DEBUGGING: Checking TodoTools state:', {
+      hasTodoTools: !!this.todoTools,
+      todoToolsType: this.todoTools ? typeof this.todoTools : 'null',
+      hasContext: !!context,
+      contextType: context ? typeof context : 'null',
+      contextKeys: context ? Object.keys(context) : []
+    });
+    
+    if (this.todoTools) {
+      console.log('[TodoMCPServer] Using TodoTools.handleToolCall(todo_write) with context for notifications');
+      result = await this.todoTools.handleToolCall('todo_write', { todos, title }, context);
+    } else {
+      console.log('[TodoMCPServer] Warning: TodoTools not initialized, falling back to direct manager call');
+      // Fallback to direct update if TodoTools not available
+      await this.todoManager.updateTodos(todos, title);
+      result = null;
+    }
 
     // Get state after update
     const finalTodos = this.todoManager.getTodos();
@@ -903,7 +972,13 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     console.log('[TodoMCPServer] Update completed, todos should sync to VS Code');
 
-    // Generate success message
+    // If TodoTools handled the request, return its result directly (includes notifications)
+    if (result) {
+      console.log('[TodoMCPServer] Returning result from TodoTools (includes notification handling)');
+      return result;
+    }
+
+    // Fallback: Generate success message for direct manager calls
     const pendingCount = todos.filter((t: any) => t.status === 'pending').length;
     const inProgressTaskCount = todos.filter((t: any) => t.status === 'in_progress').length;
     const completedCount = todos.filter((t: any) => t.status === 'completed').length;
@@ -1161,7 +1236,24 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   }
 
   public setTodoManager(manager: any): void {
+    console.log('[TodoMCPServer.setTodoManager] 🔧 Setting todo manager:', {
+      hasManager: !!manager,
+      managerType: manager ? typeof manager : 'null'
+    });
+    
     this.todoManager = manager;
+
+    // Initialize TodoTools with the manager for notification support
+    if (this.todoManager) {
+      console.log('[TodoMCPServer.setTodoManager] 🛠️ Creating TodoTools instance');
+      this.todoTools = new TodoTools(this.todoManager, this, this.todoSync);
+      console.log('[TodoMCPServer.setTodoManager] ✅ TodoTools created successfully:', {
+        hasTodoTools: !!this.todoTools,
+        todoToolsConstructor: this.todoTools.constructor.name
+      });
+    } else {
+      console.log('[TodoMCPServer.setTodoManager] ⚠️ No manager provided, TodoTools not created');
+    }
 
     // Listen for todo changes to broadcast updates
     if (this.todoManager && this.todoManager.onDidChange) {
