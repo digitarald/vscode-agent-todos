@@ -44,19 +44,41 @@ suite('MCP Integration Tests', () => {
         };
 
         // Replace vscode.workspace with our mock
-        Object.defineProperty(vscode, 'workspace', {
-            value: mockWorkspace,
-            configurable: true
-        });
+        try {
+            const descriptor = Object.getOwnPropertyDescriptor(vscode, 'workspace');
+            if (descriptor && descriptor.configurable === false) {
+                // Property is not configurable, try deleting and redefining
+                delete (vscode as any).workspace;
+            }
+            Object.defineProperty(vscode, 'workspace', {
+                value: mockWorkspace,
+                configurable: true,
+                writable: true
+            });
+        } catch (error) {
+            // Fallback: direct assignment if defineProperty fails
+            (vscode as any).workspace = mockWorkspace;
+        }
     });
 
     teardown(() => {
         // Restore original workspace
         if (originalWorkspace) {
-            Object.defineProperty(vscode, 'workspace', {
-                value: originalWorkspace,
-                configurable: true
-            });
+            try {
+                const descriptor = Object.getOwnPropertyDescriptor(vscode, 'workspace');
+                if (descriptor && descriptor.configurable === false) {
+                    // Property is not configurable, try deleting and redefining
+                    delete (vscode as any).workspace;
+                }
+                Object.defineProperty(vscode, 'workspace', {
+                    value: originalWorkspace,
+                    configurable: true,
+                    writable: true
+                });
+            } catch (error) {
+                // Fallback: direct assignment if defineProperty fails
+                (vscode as any).workspace = originalWorkspace;
+            }
         }
     });
 

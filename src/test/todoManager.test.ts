@@ -389,20 +389,39 @@ suite('TodoManager Core Tests', () => {
             };
 
             // Temporarily replace vscode workspace
-            Object.defineProperty(require('vscode'), 'workspace', {
-                value: mockWorkspace,
-                configurable: true
-            });
+            const vscodeModule = require('vscode');
+            try {
+                const descriptor = Object.getOwnPropertyDescriptor(vscodeModule, 'workspace');
+                if (descriptor && descriptor.configurable === false) {
+                    delete vscodeModule.workspace;
+                }
+                Object.defineProperty(vscodeModule, 'workspace', {
+                    value: mockWorkspace,
+                    configurable: true,
+                    writable: true
+                });
+            } catch (error) {
+                vscodeModule.workspace = mockWorkspace;
+            }
 
             try {
                 const fallbackPath = (todoManager as any).getAutoInjectFilePath();
                 assert.strictEqual(fallbackPath, '.github/instructions/todos.instructions.md');
             } finally {
                 // Restore original vscode
-                Object.defineProperty(require('vscode'), 'workspace', {
-                    value: originalVscode.workspace,
-                    configurable: true
-                });
+                try {
+                    const descriptor = Object.getOwnPropertyDescriptor(vscodeModule, 'workspace');
+                    if (descriptor && descriptor.configurable === false) {
+                        delete vscodeModule.workspace;
+                    }
+                    Object.defineProperty(vscodeModule, 'workspace', {
+                        value: originalVscode.workspace,
+                        configurable: true,
+                        writable: true
+                    });
+                } catch (error) {
+                    vscodeModule.workspace = originalVscode.workspace;
+                }
             }
         });
 
@@ -422,20 +441,39 @@ suite('TodoManager Core Tests', () => {
             };
 
             const originalVscode = require('vscode');
-            Object.defineProperty(require('vscode'), 'workspace', {
-                value: mockWorkspace,
-                configurable: true
-            });
+            const vscodeModule = require('vscode');
+            try {
+                const descriptor = Object.getOwnPropertyDescriptor(vscodeModule, 'workspace');
+                if (descriptor && descriptor.configurable === false) {
+                    delete vscodeModule.workspace;
+                }
+                Object.defineProperty(vscodeModule, 'workspace', {
+                    value: mockWorkspace,
+                    configurable: true,
+                    writable: true
+                });
+            } catch (error) {
+                vscodeModule.workspace = mockWorkspace;
+            }
 
             try {
                 const customPath = (todoManager as any).getAutoInjectFilePath();
                 assert.strictEqual(customPath, '/custom/path/todos.md');
             } finally {
                 // Restore original vscode
-                Object.defineProperty(require('vscode'), 'workspace', {
-                    value: originalVscode.workspace,
-                    configurable: true
-                });
+                try {
+                    const descriptor = Object.getOwnPropertyDescriptor(vscodeModule, 'workspace');
+                    if (descriptor && descriptor.configurable === false) {
+                        delete vscodeModule.workspace;
+                    }
+                    Object.defineProperty(vscodeModule, 'workspace', {
+                        value: originalVscode.workspace,
+                        configurable: true,
+                        writable: true
+                    });
+                } catch (error) {
+                    vscodeModule.workspace = originalVscode.workspace;
+                }
             }
         });
     });
