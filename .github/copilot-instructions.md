@@ -11,12 +11,12 @@ IMPORTANT:
 
 ## Project Overview
 
-This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
+This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, auto-injection into Copilot instructions.
 
 For more details:
 
 - [Main README](../README.md) - Feature overview and usage
-- [MCP Server Documentation](../src/mcp/README.md) - Server architecture and protocol details
+- [MCP Server Documentation](../src/mcp/README.md) - Server architecture, protocol details, and completion support
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/)
 
 ## Architecture
@@ -393,6 +393,38 @@ sessionTools.todoReadTool = server.registerTool(
 - Use proper Zod schemas from `getTodoWriteZodSchema()` for complex inputs
 - Ensure Zod is initialized before tool registration via `initialize()`
 
+### MCP Resource Completion Pattern
+
+**Resource completions** provide auto-suggestion capabilities for parameterized URIs like `todos://archive/{slug}`:
+
+```typescript
+// ✅ CORRECT: Resource with completion callback
+server.setResourceRequestHandlers({
+  [ResourceTemplates.archive.uriTemplate]: {
+    read: async (request) => {
+      // Resource read handler
+    },
+    complete: {
+      slug: async (input) => {
+        // Auto-completion for {slug} parameter
+        const query = input.argument?.value?.toString().toLowerCase() || '';
+        const slugs = TodoManager.getArchivedListSlugs();
+        return slugs
+          .filter(slug => slug.toLowerCase().startsWith(query))
+          .map(value => ({ value }));
+      }
+    }
+  }
+});
+```
+
+**Key Features:**
+- Completion callbacks are defined per URI parameter (e.g., `{slug}`)
+- Use case-insensitive filtering with `startsWith()` for better UX
+- Return array of `{ value: string }` objects for completion options
+- SDK automatically registers completion capability when ResourceTemplates with complete callbacks are present
+- No manual capability registration needed - handled by `setResourceRequestHandlers()`
+
 ### Dynamic Configuration Updates
 
 The MCP server supports dynamic configuration updates without requiring server restart:
@@ -523,6 +555,43 @@ See [`src/types.ts`](../src/types.ts) for complete type definitions:
 - `TodoItem` - Main todo structure with status, priority, subtasks, and details
 - `Subtask` - Nested task structure
 - `TodoWriteInput` - Input schema for todo_write tool
+- `ArchivedTodoList` - Archive structure with id, title, todos, archivedAt timestamp, and slug
+
+## Archive Management Patterns
+
+### Archive Creation Timing
+
+**CRITICAL**: Archives are only created when title changes to a different non-empty value:
+
+```typescript
+// Archive is created when title changes from one value to another
+manager.setTodos(todos, "Project Alpha");  // No archive (initial set)
+manager.setTodos(todos, "Project Beta");   // Archives "Project Alpha"
+manager.setTodos(todos, "Project Beta");   // No archive (same title)
+```
+
+**Key Rules:**
+- Archives are **NEVER** created on initial title setting
+- Archives are **ONLY** created when title changes to a different value
+- Empty todo lists are **NOT** archived regardless of title changes
+- Archive creation includes all current todos at the time of title change
+
+### Slug Generation
+
+Archives use URL-safe slugs generated from titles:
+
+```typescript
+// Examples of slug generation
+"Project Alpha" → "project-alpha"
+"User Authentication System" → "user-authentication-system"
+"API v2.0 Migration" → "api-v20-migration"
+```
+
+**Slug Rules:**
+- Lowercase conversion
+- Special characters removed or converted to hyphens
+- Unique slugs generated for duplicate titles (e.g., "project-alpha-2")
+- Used in `todos://archive/{slug}` URI pattern for MCP resources
 
 ## Error Handling
 

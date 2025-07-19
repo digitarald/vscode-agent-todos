@@ -336,7 +336,7 @@ export class TodoMCPServer {
         }
       );
 
-      // Register archive resources with dynamic template
+      // Register archive resources with dynamic template and completion support
       server.registerResource(
         "archive-list",
         new ResourceTemplate("todos://archive/{slug}", { 
@@ -355,6 +355,28 @@ export class TodoMCPServer {
             } catch (error) {
               console.error('[TodoMCPServer] Error listing archive resources:', error);
               return { resources: [] };
+            }
+          },
+          complete: {
+            slug: (partialSlug: string, context?: { arguments?: Record<string, string> }) => {
+              try {
+                console.log(`[TodoMCPServer] Completing archive slug for input: "${partialSlug}"`);
+
+                // Get all available archive slugs
+                const availableSlugs = this.todoManager.getArchivedListSlugs();
+                console.log(`[TodoMCPServer] Available archive slugs:`, availableSlugs);
+
+                // Filter slugs that start with the partial input (case-insensitive)
+                const matches = availableSlugs.filter((slug: string) =>
+                  slug.toLowerCase().startsWith(partialSlug.toLowerCase())
+                );
+
+                console.log(`[TodoMCPServer] Filtered matches for "${partialSlug}":`, matches);
+                return matches;
+              } catch (error) {
+                console.error('[TodoMCPServer] Error in archive slug completion:', error);
+                return [];
+              }
             }
           }
         }),

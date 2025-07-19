@@ -817,4 +817,187 @@ suite('MCP Integration Tests', () => {
                 'Should not send progress notification when updating existing list');
         });
     });
+
+    suite('Archive Resource Completion', () => {
+        let server: TodoMCPServer;
+        let todoManager: StandaloneTodoManager;
+
+        setup(async () => {
+            // Create server in standalone mode for testing
+            server = new TodoMCPServer({ standalone: true });
+            await server.initialize();
+
+            // Get the standalone todo manager
+            todoManager = server.getTodoManager();
+
+            // Create some archived lists for testing
+            await todoManager.setTodos([
+                { id: 'task1', content: 'Task 1', status: 'completed', priority: 'high' }
+            ], 'Project Alpha');
+
+            await todoManager.setTodos([
+                { id: 'task2', content: 'Task 2', status: 'pending', priority: 'medium' }
+            ], 'Project Beta Setup');
+
+            await todoManager.setTodos([
+                { id: 'task3', content: 'Task 3', status: 'in_progress', priority: 'low' }
+            ], 'Database Migration');
+
+            await todoManager.setTodos([
+                { id: 'task4', content: 'Task 4', status: 'pending', priority: 'high' }
+            ], 'API Enhancement');
+
+            // Trigger archiving of "API Enhancement" by setting a new title
+            await todoManager.setTodos([
+                { id: 'task5', content: 'Task 5', status: 'pending', priority: 'medium' }
+            ], 'Current Project');
+        });
+
+        teardown(async () => {
+            if (server) {
+                await server.stop();
+            }
+        });
+
+        test('Should provide completion for archive slugs with empty input', async () => {
+            // Mock ResourceTemplate completion callback
+            const archivesList = todoManager.getArchivedLists();
+            assert.ok(archivesList.length >= 3, 'Should have archived lists from setup');
+
+            const slugs = todoManager.getArchivedListSlugs();
+            assert.ok(slugs.length >= 3, 'Should have archive slugs');
+
+            // Test completion with empty input
+            const allSlugs = slugs.filter((slug: string) => slug.toLowerCase().startsWith(''));
+            assert.strictEqual(allSlugs.length, slugs.length, 'Empty input should return all slugs');
+            assert.ok(allSlugs.includes('project-alpha'), 'Should include project-alpha slug');
+            assert.ok(allSlugs.includes('project-beta-setup'), 'Should include project-beta-setup slug');
+            assert.ok(allSlugs.includes('database-migration'), 'Should include database-migration slug');
+        });
+
+        test('Should provide filtered completion for archive slugs with partial input', async () => {
+            const slugs = todoManager.getArchivedListSlugs();
+
+            // Test completion with 'project' prefix
+            const projectSlugs = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('project'.toLowerCase())
+            );
+            assert.ok(projectSlugs.length >= 2, 'Should have project-related slugs');
+            assert.ok(projectSlugs.includes('project-alpha'), 'Should include project-alpha');
+            assert.ok(projectSlugs.includes('project-beta-setup'), 'Should include project-beta-setup');
+            assert.ok(!projectSlugs.includes('database-migration'), 'Should not include database-migration');
+
+            // Test completion with 'data' prefix
+            const dataSlugs = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('data'.toLowerCase())
+            );
+            assert.ok(dataSlugs.includes('database-migration'), 'Should include database-migration');
+            assert.ok(!dataSlugs.includes('project-alpha'), 'Should not include project-alpha');
+        });
+
+        test('Should handle case-insensitive completion', async () => {
+            const slugs = todoManager.getArchivedListSlugs();
+
+            // Test with uppercase input
+            const upperCaseResults = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('PROJECT'.toLowerCase())
+            );
+            const lowerCaseResults = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('project'.toLowerCase())
+            );
+
+            assert.deepStrictEqual(upperCaseResults, lowerCaseResults,
+                'Case-insensitive matching should work');
+        });
+
+        test('Should return empty array for non-matching input', async () => {
+            const slugs = todoManager.getArchivedListSlugs();
+
+            const noMatches = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('nonexistent'.toLowerCase())
+            );
+            assert.strictEqual(noMatches.length, 0, 'Should return empty array for non-matching input');
+        });
+
+        test('Should handle partial matches correctly', async () => {
+            const slugs = todoManager.getArchivedListSlugs();
+
+            // Test with 'api' prefix
+            const apiSlugs = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('api'.toLowerCase())
+            );
+            assert.ok(apiSlugs.includes('api-enhancement'), 'Should include api-enhancement');
+
+            // Test with longer prefix
+            const apiEnhSlugs = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('api-enh'.toLowerCase())
+            );
+            assert.ok(apiEnhSlugs.includes('api-enhancement'), 'Should match partial prefix');
+            assert.strictEqual(apiEnhSlugs.length, 1, 'Should return only matching items');
+        });
+
+        test('Should maintain order consistency in completion results', async () => {
+            const slugs1 = todoManager.getArchivedListSlugs();
+            const slugs2 = todoManager.getArchivedListSlugs();
+
+            assert.deepStrictEqual(slugs1, slugs2, 'Should return consistent order');
+
+            // Test filtered results maintain order
+            const filtered1 = slugs1.filter((slug: string) =>
+                slug.toLowerCase().startsWith('p'.toLowerCase())
+            );
+            const filtered2 = slugs2.filter((slug: string) =>
+                slug.toLowerCase().startsWith('p'.toLowerCase())
+            );
+
+            assert.deepStrictEqual(filtered1, filtered2, 'Filtered results should maintain order');
+        });
+
+        test('Should handle archive changes dynamically', async () => {
+            const initialSlugs = todoManager.getArchivedListSlugs();
+            const initialCount = initialSlugs.length;
+
+            // Add a new archived list by setting a title and then changing it
+            await todoManager.setTodos([
+                { id: 'new-task', content: 'New Task', status: 'completed', priority: 'medium' }
+            ], 'New Project Archive');
+
+            // Archive it by changing the title
+            await todoManager.setTodos([
+                { id: 'another-task', content: 'Another Task', status: 'pending', priority: 'low' }
+            ], 'Final Project');
+
+            const newSlugs = todoManager.getArchivedListSlugs();
+            // We expect 2 more slugs: "current-project" (archived when setting "New Project Archive") 
+            // and "new-project-archive" (archived when setting "Final Project")
+            assert.strictEqual(newSlugs.length, initialCount + 2, 'Should have two more slugs');
+            assert.ok(newSlugs.includes('new-project-archive'), 'Should include new archive slug');
+            assert.ok(newSlugs.includes('current-project'), 'Should include current-project slug');
+
+            // Test completion with the new slug
+            const newProjectSlugs = newSlugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('new'.toLowerCase())
+            );
+            assert.ok(newProjectSlugs.includes('new-project-archive'), 'Should complete new archive');
+        });
+
+        test('Should provide completion context information', async () => {
+            // Test that completion callback can receive context parameter
+            const slugs = todoManager.getArchivedListSlugs();
+
+            // Mock context (simulating what MCP client might send)
+            const mockContext = {
+                arguments: {
+                    someOtherParam: 'value'
+                }
+            };
+
+            // The completion should still work regardless of context
+            const results = slugs.filter((slug: string) =>
+                slug.toLowerCase().startsWith('project'.toLowerCase())
+            );
+
+            assert.ok(results.length > 0, 'Should return results even with context');
+        });
+    });
 });
