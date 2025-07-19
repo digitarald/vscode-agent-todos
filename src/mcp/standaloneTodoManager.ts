@@ -1,15 +1,18 @@
 // Standalone todo manager without VS Code dependencies
-import { TodoItem, TodoStatus, TodoPriority } from '../types';
+import { TodoItem, TodoStatus, TodoPriority, ArchivedTodoList } from '../types';
 import { TodoValidator } from '../todoValidator';
 import { EventEmitter } from 'events';
 import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { StandaloneCopilotWriter } from './standaloneCopilotWriter';
+import { generateUniqueSlug } from '../utils/slugUtils';
 
 export class StandaloneTodoManager extends EventEmitter {
   private static instance: StandaloneTodoManager | null = null;
   private todos: TodoItem[] = [];
   private title: string = 'Todos';
+  // Archive storage for previous todo lists
+  private archivedLists: Map<string, ArchivedTodoList> = new Map();
   private storage: ITodoStorage;
   private storageDisposable: { dispose: () => void } | undefined;
   private lastUpdateHash: string = '';
@@ -93,6 +96,11 @@ export class StandaloneTodoManager extends EventEmitter {
     const validationResult = TodoValidator.validateTodos(todos);
     if (!validationResult.valid) {
       throw new Error(validationResult.errors.join(', '));
+    }
+
+    // Archive current list if title is changing and we have a meaningful list to archive
+    if (title !== undefined && title !== this.title && this.todos.length > 0 && this.title !== 'Todos') {
+      this.archiveCurrentList(`title change from "${this.title}" to "${title}"`);
     }
     
     this.todos = todos;
@@ -214,6 +222,52 @@ export class StandaloneTodoManager extends EventEmitter {
   onShouldOpenView(callback: () => void): { dispose: () => void } {
     // Not applicable in standalone mode
     return { dispose: () => {} };
+  }
+
+  // Archive management methods
+  getArchivedLists(): ArchivedTodoList[] {
+    return Array.from(this.archivedLists.values()).sort((a, b) => 
+      b.archivedAt.getTime() - a.archivedAt.getTime()
+    );
+  }
+
+  getArchivedListBySlug(slug: string): ArchivedTodoList | undefined {
+    return this.archivedLists.get(slug);
+  }
+
+  getArchivedListSlugs(): string[] {
+    return Array.from(this.archivedLists.keys());
+  }
+
+  onArchiveChange(callback: () => void): { dispose: () => void } {
+    this.on('archiveChange', callback);
+    return {
+      dispose: () => {
+        this.off('archiveChange', callback);
+      }
+    };
+  }
+
+  private archiveCurrentList(reason: string = 'title change'): void {
+    // Only archive if we have todos and a non-default title
+    if (this.todos.length > 0 && this.title !== 'Todos') {
+      const existingSlugs = new Set(this.archivedLists.keys());
+      const slug = generateUniqueSlug(this.title, existingSlugs);
+      
+      const archived: ArchivedTodoList = {
+        id: `archive-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        title: this.title,
+        todos: [...this.todos],
+        archivedAt: new Date(),
+        slug: slug
+      };
+
+      this.archivedLists.set(slug, archived);
+      console.log(`[StandaloneTodoManager] Archived todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
+      
+      // Notify archive change listeners
+      this.emit('archiveChange');
+    }
   }
   
   setAutoInject(config: { workspaceRoot: string; filePath?: string } | null): void {

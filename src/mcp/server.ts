@@ -10,6 +10,7 @@ import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
 import { TelemetryManager } from '../telemetryManager';
 import { TodoTools } from './tools/todoTools';
+import { ArchivedTodoList } from '../types';
 
 // Dynamic imports for ESM modules
 let McpServer: any;
@@ -329,6 +330,67 @@ export class TodoMCPServer {
             console.error('[TodoMCPServer] Error in resource handler:', {
               error: error instanceof Error ? error.message : String(error),
               stack: error instanceof Error ? error.stack : undefined
+            });
+            throw error;
+          }
+        }
+      );
+
+      // Register archive resources with dynamic template
+      server.registerResource(
+        "archive-list",
+        new ResourceTemplate("todos://archive/{slug}", { 
+          list: async () => {
+            try {
+              // List all archived todo lists
+              const archivedLists = this.todoManager.getArchivedLists();
+              return {
+                resources: archivedLists.map((archive: ArchivedTodoList) => ({
+                  uri: `todos://archive/${archive.slug}`,
+                  name: `Archive: ${archive.title}`,
+                  description: `Archived todo list from ${archive.archivedAt.toISOString()} with ${archive.todos.length} items`,
+                  mimeType: "text/markdown"
+                }))
+              };
+            } catch (error) {
+              console.error('[TodoMCPServer] Error listing archive resources:', error);
+              return { resources: [] };
+            }
+          }
+        }),
+        {
+          title: "Archived Todo Lists",
+          description: "Access to previously archived todo lists",
+          mimeType: "text/markdown"
+        },
+        async (uri: any, variables: any) => {
+          try {
+            const slug = variables.slug;
+            console.log(`[TodoMCPServer] Reading archive resource for slug: ${slug}`);
+            
+            const archived = this.todoManager.getArchivedListBySlug(slug);
+            if (!archived) {
+              throw new Error(`Archive not found for slug: ${slug}`);
+            }
+
+            // Format archived todos as markdown
+            const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(
+              archived.todos, 
+              `${archived.title} (Archived ${archived.archivedAt.toLocaleDateString()})`
+            );
+
+            return {
+              contents: [{
+                uri: uri.href,
+                mimeType: "text/markdown",
+                text: markdown
+              }]
+            };
+          } catch (error) {
+            console.error('[TodoMCPServer] Error in archive resource handler:', {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+              slug: variables?.slug
             });
             throw error;
           }
@@ -1100,6 +1162,20 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     }
   }
 
+  public async broadcastResourceListChanged(): Promise<void> {
+    console.log('[TodoMCPServer] Broadcasting resource list changed notification');
+    
+    // Send resource list changed notification to all active sessions
+    for (const [sessionId, server] of this.mcpServers) {
+      try {
+        server.sendResourceListChanged();
+        console.log(`[TodoMCPServer] Sent resource list changed notification to session: ${sessionId}`);
+      } catch (error) {
+        console.error(`[TodoMCPServer] Failed to send resource list changed notification to session ${sessionId}:`, error);
+      }
+    }
+  }
+
   private async notifyResourceSubscribers(resourceUri: string): Promise<void> {
     // Notify all sessions that are subscribed to this resource
     for (const [sessionId, subscriptions] of this.resourceSubscriptions) {
@@ -1264,6 +1340,14 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           title: change.title,
           timestamp: Date.now()
         });
+      });
+    }
+
+    // Listen for archive changes to notify resource list updates
+    if (this.todoManager && this.todoManager.onArchiveChange) {
+      this.todoManager.onArchiveChange(() => {
+        console.log('[TodoMCPServer] Archive changed, sending resource list changed notification');
+        this.broadcastResourceListChanged();
       });
     }
   }
