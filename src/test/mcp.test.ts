@@ -243,23 +243,6 @@ suite('MCP Integration Tests', () => {
             assert.ok(result.content[0].text.includes('Only ONE task can be in_progress at a time'));
         });
 
-        test('Should handle subtasks when enabled', async () => {
-            await mockServer.initialize();
-            const params = {
-                todos: [{
-                    id: '1',
-                    content: 'Main task',
-                    status: 'pending',
-                    priority: 'high',
-                }]
-            };
-
-            const result = await mockServer.getTodoTools().handleToolCall('todo_write', params);
-
-            assert.strictEqual(result.isError, undefined);
-            assert.ok(result.content[0].text.includes('Subtasks: 1/2 completed'));
-        });
-
         test('Should handle todos with ADR', async () => {
             await mockServer.initialize();
             const params = {

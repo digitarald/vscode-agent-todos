@@ -41,7 +41,7 @@ suite('Copilot Instructions Integration Tests', () => {
             assert.ok(markdown.includes('- [-] todo-3: In progress task 🟢'));
         });
 
-        test('Should format todos with subtasks when enabled', async () => {
+        test('Should format basic todos', async () => {
 
             const todos: TodoItem[] = [
                 {
@@ -56,8 +56,6 @@ suite('Copilot Instructions Integration Tests', () => {
             const markdown = formatMethod(todos);
 
             assert.ok(markdown.includes('- [ ] todo-1: Main task 🔴'));
-            assert.ok(markdown.includes('  - [ ] sub-1: Subtask 1'));
-            assert.ok(markdown.includes('  - [x] sub-2: Subtask 2'));
         });
 
         test('Should format todos with ADR in markdown', async () => {
@@ -78,7 +76,7 @@ suite('Copilot Instructions Integration Tests', () => {
             assert.ok(markdown.includes('  _Used async/await pattern for better error handling_'));
         });
 
-        test('Should handle todos with both subtasks and ADR', async () => {
+        test('Should handle todos with ADR and no subtasks', async () => {
 
             const todos: TodoItem[] = [
                 {
@@ -95,8 +93,6 @@ suite('Copilot Instructions Integration Tests', () => {
 
             assert.ok(markdown.includes('- [-] todo-1: Complex task 🔴'));
             assert.ok(markdown.includes('  _Using new API approach_'));
-            assert.ok(markdown.includes('  - [x] sub-1: Research'));
-            assert.ok(markdown.includes('  - [ ] sub-2: Implementation'));
         });
 
         test('Should not include subtasks when disabled', async () => {
@@ -124,7 +120,9 @@ suite('Copilot Instructions Integration Tests', () => {
                     id: 'todo-1',
                     content: 'Task without subtasks',
                     status: 'pending',
-                    priority: 'medium',
+                    priority: 'medium'
+                }
+            ];
 
             const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
             const markdown = formatMethod(todos);
@@ -158,18 +156,14 @@ suite('Copilot Instructions Integration Tests', () => {
 
             // Verify formatted output contains IDs
             assert.ok(markdown.includes('custom-todo-123:'));
-            assert.ok(markdown.includes('custom-sub-456:'));
-            assert.ok(markdown.includes('custom-sub-789:'));
             assert.ok(markdown.includes('another-id-999:'));
 
-            // Verify order: adr before subtasks
+            // Verify order: adr should be included
             const lines = markdown.split('\n');
             const taskIndex = lines.findIndex((l: string) => l.includes('Task with custom ID'));
             const adrIndex = lines.findIndex((l: string) => l.includes('Important architecture decision'));
-            const subtask1Index = lines.findIndex((l: string) => l.includes('First step'));
 
             assert.ok(taskIndex < adrIndex, 'Task should come before adr');
-            assert.ok(adrIndex < subtask1Index, 'ADR should come before subtasks');
         });
     });
 
@@ -206,24 +200,22 @@ suite('Copilot Instructions Integration Tests', () => {
     });
 
     suite('Configuration Integration', () => {
+        test('Should handle configuration changes properly', async () => {
             const todos: TodoItem[] = [
                 {
                     id: 'test-1',
                     content: 'Test task',
                     status: 'pending',
-                    priority: 'medium',
+                    priority: 'medium'
                 }
             ];
 
             const formatMethod = (instructionsManager as any).formatTodosAsMarkdown.bind(instructionsManager);
 
-            // With subtasks enabled
-            let markdown = formatMethod(todos);
-            assert.ok(markdown.includes('Test subtask'));
-
-            // With subtasks disabled
-            markdown = formatMethod(todos);
-            assert.ok(!markdown.includes('Test subtask'));
+            // Test basic formatting functionality
+            const markdown = formatMethod(todos);
+            assert.ok(markdown.includes('Test task'));
+            assert.ok(markdown.includes('🟡')); // medium priority icon
         });
     });
 

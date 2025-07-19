@@ -67,20 +67,61 @@ export class TodoMCPServer {
   }
 
   async initialize(): Promise<void> {
-    // Dynamic import for ESM modules - updated for SDK 1.15.0+
-    const mcpModule = await import('@modelcontextprotocol/sdk/server/mcp.js');
-    const httpModule = await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
-    const typesModule = await import('@modelcontextprotocol/sdk/types.js');
-    const zodModule = await import('zod');
+    try {
+      console.log('[TodoMCPServer] Starting initialization...');
 
-    McpServer = mcpModule.McpServer;
-    ResourceTemplate = mcpModule.ResourceTemplate;
-    StreamableHTTPServerTransport = httpModule.StreamableHTTPServerTransport;
-    isInitializeRequest = typesModule.isInitializeRequest;
-    z = zodModule.z;
+      // Dynamic import for ESM modules - updated for SDK 1.15.0+
+      const mcpModule = await import('@modelcontextprotocol/sdk/server/mcp.js');
+      const httpModule = await import('@modelcontextprotocol/sdk/server/streamableHttp.js');
+      const typesModule = await import('@modelcontextprotocol/sdk/types.js');
+      const zodModule = await import('zod');
 
-    // Setup routes after initialization
-    this.setupRoutes();
+      console.log('[TodoMCPServer] Modules imported successfully:', {
+        mcpModule: !!mcpModule,
+        httpModule: !!httpModule,
+        typesModule: !!typesModule,
+        zodModule: !!zodModule
+      });
+
+      McpServer = mcpModule.McpServer;
+      ResourceTemplate = mcpModule.ResourceTemplate;
+      StreamableHTTPServerTransport = httpModule.StreamableHTTPServerTransport;
+      isInitializeRequest = typesModule.isInitializeRequest;
+      z = zodModule.z;
+
+      console.log('[TodoMCPServer] Global variables assigned:', {
+        McpServer: !!McpServer,
+        ResourceTemplate: !!ResourceTemplate,
+        StreamableHTTPServerTransport: !!StreamableHTTPServerTransport,
+        isInitializeRequest: !!isInitializeRequest,
+        z: !!z,
+        zType: typeof z
+      });
+
+      // Test Zod functionality
+      try {
+        const testSchema = z.object({ test: z.string() });
+        const testResult = testSchema.parse({ test: "hello" });
+        console.log('[TodoMCPServer] Zod test successful:', testResult);
+      } catch (zodError) {
+        console.error('[TodoMCPServer] Zod test failed:', {
+          error: zodError instanceof Error ? zodError.message : String(zodError),
+          stack: zodError instanceof Error ? zodError.stack : undefined
+        });
+        throw zodError;
+      }
+
+      // Setup routes after initialization
+      this.setupRoutes();
+
+      console.log('[TodoMCPServer] Initialization completed successfully');
+    } catch (error) {
+      console.error('[TodoMCPServer] Initialization failed:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
+    }
   }
 
   private setupBasicRoutes(): void {
@@ -100,50 +141,82 @@ export class TodoMCPServer {
     // Handle POST requests for client-to-server communication
     this.app.post('/mcp', async (req: Request, res: Response) => {
       try {
+        console.log('[TodoMCPServer] POST /mcp request received:', {
+          hasBody: !!req.body,
+          bodyType: typeof req.body,
+          headers: req.headers,
+          bodyPreview: req.body ? JSON.stringify(req.body).substring(0, 200) + '...' : 'no body'
+        });
+
         const sessionId = req.headers['mcp-session-id'] as string | undefined;
         let transport = sessionId ? this.transports.get(sessionId) : undefined;
         let server = sessionId ? this.mcpServers.get(sessionId) : undefined;
 
+        console.log('[TodoMCPServer] Session lookup:', {
+          sessionId,
+          hasTransport: !!transport,
+          hasServer: !!server,
+          activeSessions: this.transports.size
+        });
+
         // If no existing session and this is an initialize request, create new session
         if (!transport && isInitializeRequest(req.body)) {
-          const newSessionId = randomUUID();
+          try {
+            console.log('[TodoMCPServer] Creating new session for initialize request');
 
-          // Create transport with session
-          transport = new StreamableHTTPServerTransport({
-            sessionIdGenerator: () => newSessionId,
-            onsessioninitialized: async (sessionId: string) => {
-              // Send initialization complete log message
-              console.log(`[TodoMCPServer] Session initialized: ${sessionId}`);
-              this.transports.set(sessionId, transport);
-            }
-          });
+            const newSessionId = randomUUID();
+            console.log('[TodoMCPServer] Generated new session ID:', newSessionId);
 
-          // Clean up transport when closed
-          transport.onclose = () => {
-            if (transport.sessionId) {
-              this.cleanupSession(transport.sessionId);
-            }
-          };
+            // Create transport with session
+            transport = new StreamableHTTPServerTransport({
+              sessionIdGenerator: () => newSessionId,
+              onsessioninitialized: async (sessionId: string) => {
+                // Send initialization complete log message
+                console.log(`[TodoMCPServer] Session initialized: ${sessionId}`);
+                this.transports.set(sessionId, transport);
+              }
+            });
 
-          // Create MCP server with high-level API
-          server = new McpServer({
-            name: 'todos-mcp-server',
-            version: '1.0.0'
-          });
+            console.log('[TodoMCPServer] Transport created successfully');
 
-          // Store server
-          this.mcpServers.set(newSessionId, server);
+            // Clean up transport when closed
+            transport.onclose = () => {
+              if (transport.sessionId) {
+                this.cleanupSession(transport.sessionId);
+              }
+            };
 
-          // Register initial tools and resources BEFORE connecting
-          await this.registerToolsAndResources(server, newSessionId);
+            // Create MCP server with high-level API
+            server = new McpServer({
+              name: 'todos-mcp-server',
+              version: '1.0.0'
+            });
 
-          // Connect server to transport
-          await server.connect(transport);
+            console.log('[TodoMCPServer] MCP server instance created');
 
-          console.log(`[TodoMCPServer] Created new MCP session: ${newSessionId}`);
+            // Store server
+            this.mcpServers.set(newSessionId, server);
+
+            // Register initial tools and resources BEFORE connecting
+            console.log('[TodoMCPServer] Registering tools and resources...');
+            await this.registerToolsAndResources(server, newSessionId);
+
+            // Connect server to transport
+            console.log('[TodoMCPServer] Connecting server to transport...');
+            await server.connect(transport);
+
+            console.log(`[TodoMCPServer] Created new MCP session: ${newSessionId}`);
+          } catch (sessionError) {
+            console.error('[TodoMCPServer] Error creating new session:', {
+              error: sessionError instanceof Error ? sessionError.message : String(sessionError),
+              stack: sessionError instanceof Error ? sessionError.stack : undefined
+            });
+            throw sessionError;
+          }
         }
 
         if (!transport) {
+          console.error('[TodoMCPServer] No transport available for request');
           res.status(400).json({
             error: 'No session found. Send initialize request first.'
           });
@@ -151,9 +224,17 @@ export class TodoMCPServer {
         }
 
         // Handle the request
+        console.log('[TodoMCPServer] Handling request with transport...');
         await transport.handleRequest(req, res, req.body);
+        console.log('[TodoMCPServer] Request handled successfully');
       } catch (error) {
-        console.error('[TodoMCPServer] Error handling MCP request:', error);
+        console.error('[TodoMCPServer] Error handling MCP request:', {
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          url: req.url,
+          method: req.method,
+          headers: req.headers
+        });
         res.status(500).json({
           jsonrpc: '2.0',
           error: {
@@ -185,95 +266,236 @@ export class TodoMCPServer {
   }
 
   private async registerToolsAndResources(server: any, sessionId: string): Promise<void> {
-    if (!this.todoManager) {
-      console.warn('[TodoMCPServer] No todo manager available during tool registration');
-      return;
-    }
+    try {
+      console.log(`[TodoMCPServer] Starting tool and resource registration for session ${sessionId}`);
 
-    // Create session tool tracking
-    const sessionTools = { todoReadTool: null, todoWriteTool: null };
-    this.sessionTools.set(sessionId, sessionTools);
-
-    // Check current state for initial tool registration
-    this.updateToolsForSession(server, sessionId);
-
-    // Register resources
-    server.registerResource(
-      "todos-markdown",
-      new ResourceTemplate("todos://todos", { list: undefined }),
-      {
-        title: "Todo List",
-        description: "Current todo list in markdown format",
-        mimeType: "text/markdown"
-      },
-      async (uri: any) => {
-        // Get current todos
-        const todos = this.todoManager.getTodos();
-        const title = this.todoManager.getBaseTitle();
-
-        // Format as markdown
-        const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title);
-
-        return {
-          contents: [{
-            uri: uri.href,
-            mimeType: "text/markdown",
-            text: markdown
-          }]
-        };
+      if (!this.todoManager) {
+        console.warn('[TodoMCPServer] No todo manager available during tool registration');
+        return;
       }
-    );
+
+      if (!z) {
+        console.error('[TodoMCPServer] Zod not initialized during tool registration');
+        throw new Error('Zod not initialized. Call initialize() first.');
+      }
+
+      // Create session tool tracking
+      const sessionTools = { todoReadTool: null, todoWriteTool: null };
+      this.sessionTools.set(sessionId, sessionTools);
+
+      // Check current state for initial tool registration
+      this.updateToolsForSession(server, sessionId);
+
+      console.log(`[TodoMCPServer] Starting resource registration for session ${sessionId}`);
+
+      // Register resources
+      server.registerResource(
+        "todos-markdown",
+        new ResourceTemplate("todos://todos", { list: undefined }),
+        {
+          title: "Todo List",
+          description: "Current todo list in markdown format",
+          mimeType: "text/markdown"
+        },
+        async (uri: any) => {
+          try {
+            // Get current todos
+            const todos = this.todoManager.getTodos();
+            const title = this.todoManager.getBaseTitle();
+
+            // Format as markdown
+            const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title);
+
+            return {
+              contents: [{
+                uri: uri.href,
+                mimeType: "text/markdown",
+                text: markdown
+              }]
+            };
+          } catch (error) {
+            console.error('[TodoMCPServer] Error in resource handler:', {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined
+            });
+            throw error;
+          }
+        }
+      );
+
+      console.log(`[TodoMCPServer] Successfully registered tools and resources for session ${sessionId}`);
+    } catch (error) {
+      console.error(`[TodoMCPServer] Error registering tools and resources for session ${sessionId}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        sessionId,
+        todoManagerAvailable: !!this.todoManager,
+        zodAvailable: !!z
+      });
+      throw error;
+    }
   }
 
   private updateToolsForSession(server: any, sessionId: string): void {
-    const sessionTools = this.sessionTools.get(sessionId);
-    if (!sessionTools) {
-      return;
-    }
+    try {
+      console.log(`[TodoMCPServer] Starting tool update for session ${sessionId}`);
 
-    // Check if we should show todo_read tool
-    const autoInject = this.isAutoInjectEnabled();
-    const hasTodos = this.todoManager.getTodos().length > 0;
-    const shouldShowTodoRead = this.config.standalone || (!autoInject && hasTodos);
+      const sessionTools = this.sessionTools.get(sessionId);
+      if (!sessionTools) {
+        console.warn(`[TodoMCPServer] No session tools found for session ${sessionId}`);
+        return;
+      }
 
-    // Handle todo_read tool
-    if (shouldShowTodoRead && !sessionTools.todoReadTool) {
-      // Add todo_read tool using modern registerTool API with proper descriptions
-      sessionTools.todoReadTool = server.registerTool(
-        "todo_read",
-        {
-          title: "Check Todos",
-          description: this.buildReadDescription(),
-          inputSchema: this.getEmptyZodSchema() // Proper Zod schema for no parameters
-        },
-        async () => await this.handleRead()
-      );
-      console.log(`[TodoMCPServer] Added todo_read tool for session ${sessionId}`);
-    } else if (!shouldShowTodoRead && sessionTools.todoReadTool) {
-      // Remove todo_read tool
-      sessionTools.todoReadTool.remove();
-      sessionTools.todoReadTool = null;
-      console.log(`[TodoMCPServer] Removed todo_read tool for session ${sessionId}`);
-    }
+      if (!z) {
+        console.error('[TodoMCPServer] Zod not available during tool update');
+        throw new Error('Zod not initialized');
+      }
 
-    // Handle todo_write tool (always present but schema may change)
-    if (!sessionTools.todoWriteTool) {
-      sessionTools.todoWriteTool = server.registerTool(
-        "todo_write",
-        {
-          title: "Update Todos",
-          description: this.buildWriteDescription(),
-          inputSchema: this.getTodoWriteZodSchema()
-        },
-        async (args: any, context: any) => await this.handleWrite(args, context)
-      );
-    } else {
-      // Update existing tool schema
-      sessionTools.todoWriteTool.update({
-        title: "Update Todos",
-        description: this.buildWriteDescription(),
-        inputSchema: this.getTodoWriteZodSchema()
+      // Check if we should show todo_read tool
+      const autoInject = this.isAutoInjectEnabled();
+      const hasTodos = this.todoManager.getTodos().length > 0;
+      const shouldShowTodoRead = this.config.standalone || (!autoInject && hasTodos);
+
+      console.log(`[TodoMCPServer] Tool visibility logic for session ${sessionId}:`, {
+        autoInject,
+        hasTodos,
+        standalone: this.config.standalone,
+        shouldShowTodoRead
       });
+
+      // Handle todo_read tool
+      if (shouldShowTodoRead && !sessionTools.todoReadTool) {
+        try {
+          console.log(`[TodoMCPServer] Adding todo_read tool for session ${sessionId}`);
+
+          // Test Zod schema creation first
+          const emptySchema = this.getEmptyZodSchema();
+          console.log(`[TodoMCPServer] Empty Zod schema created successfully:`, {
+            type: typeof emptySchema,
+            hasParseMethod: typeof emptySchema.parse === 'function',
+            constructor: emptySchema.constructor.name
+          });
+
+          // Add todo_read tool using modern registerTool API with proper descriptions
+          sessionTools.todoReadTool = server.registerTool(
+            "todo_read",
+            {
+              title: "Check Todos",
+              description: this.buildReadDescription(),
+              inputSchema: emptySchema // Proper Zod schema for no parameters
+            },
+            async () => {
+              try {
+                return await this.handleRead();
+              } catch (error) {
+                console.error(`[TodoMCPServer] Error in todo_read handler:`, {
+                  error: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined
+                });
+                throw error;
+              }
+            }
+          );
+          console.log(`[TodoMCPServer] Successfully added todo_read tool for session ${sessionId}`);
+        } catch (error) {
+          console.error(`[TodoMCPServer] Error adding todo_read tool for session ${sessionId}:`, {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          throw error;
+        }
+      } else if (!shouldShowTodoRead && sessionTools.todoReadTool) {
+        try {
+          // Remove todo_read tool
+          sessionTools.todoReadTool.remove();
+          sessionTools.todoReadTool = null;
+          console.log(`[TodoMCPServer] Removed todo_read tool for session ${sessionId}`);
+        } catch (error) {
+          console.error(`[TodoMCPServer] Error removing todo_read tool for session ${sessionId}:`, {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
+        }
+      }
+
+      // Handle todo_write tool (always present but schema may change)
+      if (!sessionTools.todoWriteTool) {
+        try {
+          console.log(`[TodoMCPServer] Adding todo_write tool for session ${sessionId}`);
+
+          // Test Zod schema creation first
+          const writeSchema = this.getTodoWriteZodSchema();
+          console.log(`[TodoMCPServer] Write Zod schema created successfully:`, {
+            type: typeof writeSchema,
+            hasParseMethod: typeof writeSchema.parse === 'function',
+            constructor: writeSchema.constructor.name
+          });
+
+          sessionTools.todoWriteTool = server.registerTool(
+            "todo_write",
+            {
+              title: "Update Todos",
+              description: this.buildWriteDescription(),
+              inputSchema: writeSchema
+            },
+            async (args: any, context: any) => {
+              try {
+                return await this.handleWrite(args, context);
+              } catch (error) {
+                console.error(`[TodoMCPServer] Error in todo_write handler:`, {
+                  error: error instanceof Error ? error.message : String(error),
+                  stack: error instanceof Error ? error.stack : undefined,
+                  args: JSON.stringify(args, null, 2)
+                });
+                throw error;
+              }
+            }
+          );
+          console.log(`[TodoMCPServer] Successfully added todo_write tool for session ${sessionId}`);
+        } catch (error) {
+          console.error(`[TodoMCPServer] Error adding todo_write tool for session ${sessionId}:`, {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          throw error;
+        }
+      } else {
+        try {
+          // Update existing tool schema
+          console.log(`[TodoMCPServer] Updating existing todo_write tool for session ${sessionId}`);
+
+          const writeSchema = this.getTodoWriteZodSchema();
+          console.log(`[TodoMCPServer] Updated write Zod schema created successfully:`, {
+            type: typeof writeSchema,
+            hasParseMethod: typeof writeSchema.parse === 'function',
+            constructor: writeSchema.constructor.name
+          });
+
+          sessionTools.todoWriteTool.update({
+            title: "Update Todos",
+            description: this.buildWriteDescription(),
+            inputSchema: writeSchema
+          });
+          console.log(`[TodoMCPServer] Successfully updated todo_write tool for session ${sessionId}`);
+        } catch (error) {
+          console.error(`[TodoMCPServer] Error updating todo_write tool for session ${sessionId}:`, {
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined
+          });
+          throw error;
+        }
+      }
+
+      console.log(`[TodoMCPServer] Tool update completed for session ${sessionId}`);
+    } catch (error) {
+      console.error(`[TodoMCPServer] Critical error in updateToolsForSession for session ${sessionId}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        sessionId,
+        zodAvailable: !!z,
+        todoManagerAvailable: !!this.todoManager
+      });
+      throw error;
     }
   }
 
@@ -465,13 +687,31 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   }
 
   private getEmptyZodSchema(): any {
-    if (!z) {
-      throw new Error('Zod not initialized. Call initialize() first.');
-    }
-    return z.object({});
-  }
+    try {
+      if (!z) {
+        console.error('[TodoMCPServer] getEmptyZodSchema: Zod not initialized');
+        throw new Error('Zod not initialized. Call initialize() first.');
+      }
 
-  private getEmptyJsonSchema(): any {
+      // Return empty ZodRawShape (plain object) for registerTool - it will be wrapped internally
+      const schema = {};
+      console.log('[TodoMCPServer] getEmptyZodSchema: Created empty ZodRawShape successfully:', {
+        type: typeof schema,
+        isPlainObject: typeof schema === 'object' && schema !== null,
+        zodAvailable: !!z
+      });
+
+      return schema;
+    } catch (error) {
+      console.error('[TodoMCPServer] getEmptyZodSchema: Error creating empty ZodRawShape:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        zodAvailable: !!z,
+        zodType: typeof z
+      });
+      throw error;
+    }
+  } private getEmptyJsonSchema(): any {
     return {
       type: 'object',
       properties: {},
@@ -480,24 +720,43 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   }
 
   private getTodoWriteZodSchema(): any {
-    if (!z) {
-      throw new Error('Zod not initialized. Call initialize() first.');
+    try {
+      if (!z) {
+        console.error('[TodoMCPServer] getTodoWriteZodSchema: Zod not initialized');
+        throw new Error('Zod not initialized. Call initialize() first.');
+      }
+
+      console.log('[TodoMCPServer] getTodoWriteZodSchema: Starting schema creation');
+
+      // Return ZodRawShape (plain object) for registerTool - it will be wrapped internally
+      const schema = {
+        todos: z.array(z.object({
+          id: z.string().describe('Unique kebab-case identifier for the task (e.g., "implement-user-auth")'),
+          content: z.string().min(1).describe('Clear, specific description of what needs to be done'),
+          status: z.enum(['pending', 'in_progress', 'completed']).describe('Current state: pending (not started), in_progress (actively working), completed (finished). Only ONE task can be in_progress.'),
+          priority: z.enum(['low', 'medium', 'high']).describe('Importance level: high (urgent/critical), medium (important), low (nice-to-have)'),
+          adr: z.string().optional().describe('Architecture Decision Record: technical context, rationale, implementation notes, or decisions made')
+        })).describe('Complete array of all todos (this replaces the entire existing list)'),
+        title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
+      };
+
+      console.log('[TodoMCPServer] getTodoWriteZodSchema: Schema created successfully:', {
+        type: typeof schema,
+        isPlainObject: typeof schema === 'object' && schema !== null,
+        hasProperties: Object.keys(schema).length > 0,
+        properties: Object.keys(schema)
+      });
+
+      return schema;
+    } catch (error) {
+      console.error('[TodoMCPServer] getTodoWriteZodSchema: Error creating ZodRawShape:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        zodAvailable: !!z,
+        zodType: typeof z
+      });
+      throw error;
     }
-
-    // Base todo schema
-    const todoSchema = z.object({
-      id: z.string().describe('Unique kebab-case identifier for the task (e.g., "implement-user-auth")'),
-      content: z.string().min(1).describe('Clear, specific description of what needs to be done'),
-      status: z.enum(['pending', 'in_progress', 'completed']).describe('Current state: pending (not started), in_progress (actively working), completed (finished). Only ONE task can be in_progress.'),
-      priority: z.enum(['low', 'medium', 'high']).describe('Importance level: high (urgent/critical), medium (important), low (nice-to-have)'),
-      adr: z.string().optional().describe('Architecture Decision Record: technical context, rationale, implementation notes, or decisions made')
-    });
-
-    // Return a single Zod schema object without subtasks
-    return z.object({
-      todos: z.array(todoSchema).describe('Complete array of all todos (this replaces the entire existing list)'),
-      title: z.string().optional().describe('Descriptive name for the entire todo list (e.g., project name, feature area, or sprint name)')
-    });
   }
 
   private async handleRead(): Promise<any> {

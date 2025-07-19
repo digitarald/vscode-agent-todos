@@ -3,7 +3,7 @@ import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoItem } from '../types';
 
 suite('TodoMarkdownFormatter Tests', () => {
-    test('Should format todos with subtasks', () => {
+    test('Should format basic todos', () => {
         const todos: TodoItem[] = [
             {
                 id: 'todo-1',
@@ -16,8 +16,6 @@ suite('TodoMarkdownFormatter Tests', () => {
         const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, undefined);
         
         assert.ok(markdown.includes('- [ ] todo-1: Main task 🔴'));
-        assert.ok(markdown.includes('  - [ ] sub-1: Subtask 1'));
-        assert.ok(markdown.includes('  - [x] sub-2: Subtask 2'));
     });
 
     test('Should format todos with ADR', () => {

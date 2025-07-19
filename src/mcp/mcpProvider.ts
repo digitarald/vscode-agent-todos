@@ -46,50 +46,91 @@ export class TodoMCPServerProvider implements vscode.McpServerDefinitionProvider
       return;
     }
 
-    await PerformanceMonitor.measure('MCP Server Startup', async () => {
-      // Find an available port
-      this.serverPort = await this.findAvailablePort();
+    try {
+      console.log('[TodoMCPProvider] Starting MCP server initialization');
 
-      // Get current configuration
-      const config = vscode.workspace.getConfiguration('agentTodos');
-      const autoInject = config.get<boolean>('autoInject', false);
-      const autoInjectFilePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+      await PerformanceMonitor.measure('MCP Server Startup', async () => {
+        // Find an available port
+        this.serverPort = await this.findAvailablePort();
+        console.log(`[TodoMCPProvider] Using port: ${this.serverPort}`);
 
-      // Create server instance
-      this.server = new TodoMCPServer({
-        port: this.serverPort,
-        workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
-        standalone: false,
-        autoInject,
-        autoInjectFilePath
+        // Get current configuration
+        const config = vscode.workspace.getConfiguration('agentTodos');
+        const autoInject = config.get<boolean>('autoInject', false);
+        const autoInjectFilePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+
+        console.log('[TodoMCPProvider] Configuration:', { autoInject, autoInjectFilePath });
+
+        // Create server instance
+        this.server = new TodoMCPServer({
+          port: this.serverPort,
+          workspaceRoot: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '',
+          standalone: false,
+          autoInject,
+          autoInjectFilePath
+        });
+
+        console.log('[TodoMCPProvider] TodoMCPServer instance created');
+
+        // Setup sync between VS Code TodoManager and standalone manager
+        const vscodeManager = TodoManager.getInstance();
+
+        // Always use WorkspaceStateStorage for MCP
+        console.log('[TodoMCPProvider] Using WorkspaceStateStorage');
+        const storage: ITodoStorage = new WorkspaceStateStorage(this.context);
+
+        const standaloneManager = StandaloneTodoManager.getInstance(storage);
+        console.log('[TodoMCPProvider] StandaloneTodoManager instance retrieved');
+
+        // Setup sync BEFORE starting the server to ensure we capture all events
+        this.todoSync = new TodoSync(vscodeManager, standaloneManager);
+        console.log('[TodoMCPProvider] TodoSync instance created');
+
+        this.server.setTodoManager(standaloneManager);
+        this.server.setTodoSync(this.todoSync);
+        console.log('[TodoMCPProvider] Server configured with managers');
+
+        // Start the server (this will call initialize internally)
+        console.log('[TodoMCPProvider] Starting server...');
+        await this.server.start();
+        console.log('[TodoMCPProvider] Server started successfully');
+
+        // Setup workspace roots handling
+        this.setupWorkspaceRoots();
+
+        // Setup configuration change handling
+        this.setupConfigurationHandling();
+
+        console.log(`[TodoMCPProvider] MCP Todo Server fully initialized on port ${this.serverPort}`);
+      });
+    } catch (error) {
+      console.error('[TodoMCPProvider] Failed to start MCP server:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        port: this.serverPort
       });
 
-      // Setup sync between VS Code TodoManager and standalone manager
-      const vscodeManager = TodoManager.getInstance();
+      // Clean up on failure
+      if (this.server !== null) {
+        try {
+          await (this.server as TodoMCPServer).stop();
+        } catch (stopError) {
+          console.error('[TodoMCPProvider] Error stopping server during cleanup:', stopError);
+        }
+        this.server = null;
+      }
 
-      // Always use WorkspaceStateStorage for MCP
-      console.log('[MCPProvider] Using WorkspaceStateStorage');
-      const storage: ITodoStorage = new WorkspaceStateStorage(this.context);
+      if (this.todoSync) {
+        try {
+          this.todoSync.dispose();
+        } catch (syncError) {
+          console.error('[TodoMCPProvider] Error disposing sync during cleanup:', syncError);
+        }
+        this.todoSync = null;
+      }
 
-      const standaloneManager = StandaloneTodoManager.getInstance(storage);
-
-      // Setup sync BEFORE starting the server to ensure we capture all events
-      this.todoSync = new TodoSync(vscodeManager, standaloneManager);
-
-      this.server.setTodoManager(standaloneManager);
-      this.server.setTodoSync(this.todoSync);
-
-      // Start the server (this will call initialize internally)
-      await this.server.start();
-
-      // Setup workspace roots handling
-      this.setupWorkspaceRoots();
-
-      // Setup configuration change handling
-      this.setupConfigurationHandling();
-
-      console.log(`MCP Todo Server started on port ${this.serverPort}`);
-    });
+      throw error;
+    }
   }
 
   private async findAvailablePort(): Promise<number> {

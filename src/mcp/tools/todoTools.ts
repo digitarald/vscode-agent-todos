@@ -41,17 +41,27 @@ export class TodoTools {
   }
 
   async getAvailableTools(): Promise<any[]> {
-    const tools = [];
+    try {
+      console.log('[TodoTools] Starting getAvailableTools...');
 
-    // Check if we're in standalone mode or if auto-inject is disabled
-    const autoInject = this.isAutoInjectEnabled();
-    const hasTodos = this.todoManager.getTodos().length > 0;
+      const tools = [];
 
-    // Only add todo_read if:
-    // - In standalone mode (always show), OR
-    // - Auto-inject is disabled AND there are todos to read
-    if (this.server.isStandalone() || (!autoInject && hasTodos)) {
-      const readDescription = `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
+      // Check if we're in standalone mode or if auto-inject is disabled
+      const autoInject = this.isAutoInjectEnabled();
+      const hasTodos = this.todoManager.getTodos().length > 0;
+
+      console.log('[TodoTools] Tool visibility logic:', {
+        autoInject,
+        hasTodos,
+        isStandalone: this.server.isStandalone()
+      });
+
+      // Only add todo_read if:
+      // - In standalone mode (always show), OR
+      // - Auto-inject is disabled AND there are todos to read
+      if (this.server.isStandalone() || (!autoInject && hasTodos)) {
+        console.log('[TodoTools] Adding todo_read tool');
+        const readDescription = `Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list.
 
 <when-to-use>
 You should make use of this tool as often as possible, especially in the following situations:
@@ -99,34 +109,47 @@ CRITICAL: Keep checking todos throughout the conversation. Do not assume you rem
 Returns JSON with title and todos array. Each todo includes id, content, status, priority, and adr.
 </response>`;
 
+        tools.push({
+          name: 'todo_read',
+          description: readDescription,
+          inputSchema: {
+            type: 'object',
+            properties: {},
+            required: []
+          },
+          annotations: {
+            title: 'Check Todos',
+            readOnlyHint: true
+          }
+        });
+        console.log('[TodoTools] todo_read tool added');
+      } else {
+        console.log('[TodoTools] Skipping todo_read tool (auto-inject enabled or no todos)');
+      }
+
+      // Always add todo_write
+      console.log('[TodoTools] Adding todo_write tool');
+      const writeDescription = this.buildWriteDescription();
+
       tools.push({
-        name: 'todo_read',
-        description: readDescription,
-        inputSchema: {
-          type: 'object',
-          properties: {},
-          required: []
-        },
+        name: 'todo_write',
+        description: writeDescription,
+        inputSchema: this.getTodoWriteSchema(),
         annotations: {
-          title: 'Check Todos',
-          readOnlyHint: true
+          title: 'Update Todos'
         }
       });
+      console.log('[TodoTools] todo_write tool added');
+
+      console.log(`[TodoTools] getAvailableTools completed with ${tools.length} tools`);
+      return tools;
+    } catch (error) {
+      console.error('[TodoTools] Error in getAvailableTools:', {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      throw error;
     }
-
-    // Always add todo_write
-    const writeDescription = this.buildWriteDescription();
-
-    tools.push({
-      name: 'todo_write',
-      description: writeDescription,
-      inputSchema: this.getTodoWriteSchema(),
-      annotations: {
-        title: 'Update Todos'
-      }
-    });
-
-    return tools;
   }
 
   private buildWriteDescription(): string {
@@ -218,19 +241,46 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   }
 
   async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
-    switch (name) {
-      case 'todo_read':
-        return await this.handleRead();
-      case 'todo_write':
-        return await this.handleWrite(args, context);
-      default:
-        return {
-          content: [{
-            type: 'text',
-            text: `Unknown tool: ${name}`
-          }],
-          isError: true
-        };
+    try {
+      console.log(`[TodoTools] Handling tool call: ${name}`, {
+        hasArgs: !!args,
+        argsType: typeof args,
+        hasContext: !!context,
+        contextKeys: context ? Object.keys(context) : []
+      });
+
+      switch (name) {
+        case 'todo_read':
+          console.log('[TodoTools] Routing to handleRead');
+          return await this.handleRead();
+        case 'todo_write':
+          console.log('[TodoTools] Routing to handleWrite');
+          return await this.handleWrite(args, context);
+        default:
+          console.warn(`[TodoTools] Unknown tool: ${name}`);
+          return {
+            content: [{
+              type: 'text',
+              text: `Unknown tool: ${name}`
+            }],
+            isError: true
+          };
+      }
+    } catch (error) {
+      console.error(`[TodoTools] Error in handleToolCall for ${name}:`, {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name,
+        args: JSON.stringify(args, null, 2)
+      });
+
+      return {
+        content: [{
+          type: 'text',
+          text: `Error in tool ${name}: ${error instanceof Error ? error.message : String(error)}`
+        }],
+        isError: true
+      };
     }
   }
 

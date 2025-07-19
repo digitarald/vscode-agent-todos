@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
 import { TodoManager } from '../todoManager';
-import { TodoItem, Subtask } from '../types';
+import { TodoItem } from '../types';
 
 suite('TodoManager Core Tests', () => {
     let todoManager: TodoManager;
@@ -104,79 +104,6 @@ suite('TodoManager Core Tests', () => {
             testTodoId = testTodo.id;
         });
 
-        test('Should add subtask when subtasks are enabled', async () => {
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            const subtask: Subtask = {
-                id: 'subtask-1',
-                content: 'Test subtask',
-                status: 'pending'
-            };
-
-
-            const todos = todoManager.getTodos();
-            const todo = todos.find(t => t.id === testTodoId);
-
-            assert.strictEqual(todo?.subtasks?.length, 1);
-            assert.strictEqual(todo?.subtasks?.[0].content, 'Test subtask');
-        });
-
-        test('Should not add subtask when subtasks are disabled', async () => {
-
-            const subtask: Subtask = {
-                id: 'subtask-1',
-                content: 'Test subtask',
-                status: 'pending'
-            };
-
-
-            const todos = todoManager.getTodos();
-            const todo = todos.find(t => t.id === testTodoId);
-
-            assert.strictEqual(todo?.subtasks, undefined);
-        });
-
-        test('Should toggle subtask status', async () => {
-
-            const subtask: Subtask = {
-                id: 'subtask-1',
-                content: 'Test subtask',
-                status: 'pending'
-            };
-
-
-            const todos = todoManager.getTodos();
-            const todo = todos.find(t => t.id === testTodoId);
-
-            assert.strictEqual(todo?.subtasks?.[0].status, 'completed');
-
-            // Toggle back
-            const todosAfterSecondToggle = todoManager.getTodos();
-            const todoAfterSecondToggle = todosAfterSecondToggle.find(t => t.id === testTodoId);
-
-            assert.strictEqual(todoAfterSecondToggle?.subtasks?.[0].status, 'pending');
-        });
-
-        test('Should delete subtask', async () => {
-
-            const subtask1: Subtask = {
-                id: 'subtask-1',
-                content: 'Test subtask 1',
-                status: 'pending'
-            };
-            const subtask2: Subtask = {
-                id: 'subtask-2',
-                content: 'Test subtask 2',
-                status: 'pending'
-            };
-
-
-            const todos = todoManager.getTodos();
-            const todo = todos.find(t => t.id === testTodoId);
-
-            assert.strictEqual(todo?.subtasks?.length, 1);
-            assert.strictEqual(todo?.subtasks?.[0].id, 'subtask-2');
-        });
     });
 
     suite('ADR (Architecture Decision Records)', () => {
@@ -407,27 +334,27 @@ suite('TodoManager Core Tests', () => {
             disposable.dispose();
         });
 
-        test('Should compare todos with subtasks correctly', async () => {
+        test('Should compare todos correctly', async () => {
 
             const todo1: TodoItem = {
                 id: 'todo-1',
                 content: 'Todo 1',
                 status: 'pending',
-                priority: 'medium',
+                priority: 'medium'
             };
 
             const todo2: TodoItem = {
                 id: 'todo-1',
                 content: 'Todo 1',
                 status: 'pending',
-                priority: 'medium',
+                priority: 'medium'
             };
 
             const todo3: TodoItem = {
                 id: 'todo-1',
                 content: 'Todo 1',
-                status: 'pending',
-                priority: 'medium',
+                status: 'in_progress', // Different status
+                priority: 'medium'
             };
 
             // Test private method through setTodos behavior
@@ -443,8 +370,8 @@ suite('TodoManager Core Tests', () => {
             await todoManager.setTodos([todo3]);
             const todos3 = todoManager.getTodos();
 
-            // Should be different due to subtask status change
-            assert.notDeepStrictEqual(todos1[0].subtasks?.[0].status, todos3[0].subtasks?.[0].status);
+            // Should be different due to status change
+            assert.notDeepStrictEqual(todos1[0].status, todos3[0].status);
         });
     });
 });
