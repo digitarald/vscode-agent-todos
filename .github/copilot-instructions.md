@@ -1,3 +1,7 @@
+<todos title="Todos" rule="Review steps frequently throughout the conversation and DO NOT stop between steps unless they explicitly require it.">
+- No current todos
+</todos>
+
 This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
 
 IMPORTANT:
@@ -60,7 +64,7 @@ graph TB
 
     subgraph ExternalInterfaces[External Interfaces]
         VSC[VS Code API]
-        CI[copilot-instructions.md]
+        CI[todos.instructions.md]
         MC[MCP Clients<br/>AI Assistants]
         MCPAPI[VS Code MCP API]
     end
@@ -319,7 +323,7 @@ Available implementations:
 
 ### Export Pattern
 
-The copilot-instructions.md file is treated as a write-only export destination, not a storage backend:
+The instructions file is treated as a write-only export destination, not a storage backend:
 
 ```typescript
 // VS Code mode: Uses CopilotInstructionsManager
@@ -450,7 +454,7 @@ const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
       config: {
         autoInject: config.get<boolean>('autoInject', false),
         enableSubtasks: config.get<boolean>('enableSubtasks', true),
-        autoInjectFilePath: config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md')
+        autoInjectFilePath: config.get<string>('autoInjectFilePath', '.github/instructions/todos.instructions.md')
       },
       timestamp: Date.now()
     });
@@ -542,7 +546,7 @@ See [`package.json`](../package.json) for full configuration:
   - Configuration commands (auto-inject, auto-open view)
 - **Configuration**: Settings under `agentTodos.*` namespace including:
   - `agentTodos.autoInject` - Enable write-only export to copilot instructions file
-  - `agentTodos.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/copilot-instructions.md`)
+  - `agentTodos.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/instructions/todos.instructions.md`)
   - `agentTodos.autoOpenView` - Automatically open todo view when list changes
   - `agentTodos.enableSubtasks` - Enable subtasks feature
 

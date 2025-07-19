@@ -7,7 +7,7 @@ async function startStandaloneServer() {
   const port = parseInt(process.env.MCP_PORT || '3000', 10);
   const workspaceRoot = process.env.WORKSPACE_ROOT || process.cwd();
   const autoInject = process.env.MCP_AUTO_INJECT === 'true' || process.argv.includes('--auto-inject');
-  const autoInjectFilePath = process.env.MCP_AUTO_INJECT_FILE_PATH || '.github/copilot-instructions.md';
+  const autoInjectFilePath = process.env.MCP_AUTO_INJECT_FILE_PATH || '.github/instructions/todos.instructions.md';
   
   console.log('Starting MCP Todo Server in standalone mode...');
   console.log(`Workspace root: ${workspaceRoot}`);

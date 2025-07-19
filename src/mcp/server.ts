@@ -45,7 +45,7 @@ export class TodoMCPServer {
       workspaceRoot: config.workspaceRoot || process.cwd(),
       standalone: config.standalone === true,
       autoInject: config.autoInject || false,
-      autoInjectFilePath: config.autoInjectFilePath || '.github/copilot-instructions.md'
+      autoInjectFilePath: config.autoInjectFilePath || '.github/instructions/todos.instructions.md'
     };
 
     console.log(`📋 Final config:`, this.config);
@@ -1081,7 +1081,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     const reminder = inProgressTaskCount === 0 && pendingCount > 0 ? '\nReminder: Mark a task as in_progress BEFORE starting work on it.' : '';
 
     const autoInjectNote = this.isAutoInjectEnabled() && !this.config.standalone
-      ? '\nNote: Todos are automatically synced to <todos> in .github/copilot-instructions.md'
+      ? '\nNote: Todos are automatically synced to <todos> in instructions file'
       : '';
 
     const titleMsg = title ? ` and title to "${title}"` : '';

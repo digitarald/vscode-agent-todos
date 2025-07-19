@@ -44,13 +44,13 @@
       },
       {
         "command": "agentTodos.toggleAutoInject",
-        "title": "Enable auto-inject into copilot-instructions.md",
+        "title": "Enable auto-inject into instructions file",
         "category": "Agent TODOs",
         "icon": "$(sync)"
       },
       {
         "command": "agentTodos.toggleAutoInjectEnabled",
-        "title": "Disable auto-inject into copilot-instructions.md",
+        "title": "Disable auto-inject into instructions file",
         "category": "Agent TODOs",
         "icon": "$(sync)"
       },
@@ -271,7 +271,7 @@
         },
         "agentTodos.autoInjectFilePath": {
           "type": "string",
-          "default": ".github/copilot-instructions.md",
+          "default": ".github/instructions/todos.instructions.md",
           "description": "File path for auto-inject feature. Can be relative to workspace root or absolute path."
         },
         "agentTodos.autoOpenView": {
