@@ -104,13 +104,11 @@ suite('MCP Integration Tests', () => {
                 type: 'configuration-changed',
                 config: {
                     autoInject: true,
-                    enableSubtasks: false
                 }
             });
 
             const updatedConfig = server.getConfig();
             assert.strictEqual(updatedConfig.autoInject, true);
-            assert.strictEqual(updatedConfig.enableSubtasks, false);
         });
     });
 
@@ -243,27 +241,6 @@ suite('MCP Integration Tests', () => {
 
             assert.strictEqual(result.isError, true);
             assert.ok(result.content[0].text.includes('Only ONE task can be in_progress at a time'));
-        });
-
-        test('Should handle subtasks when enabled', async () => {
-            await mockServer.initialize();
-            const params = {
-                todos: [{
-                    id: '1',
-                    content: 'Main task',
-                    status: 'pending',
-                    priority: 'high',
-                    subtasks: [
-                        { id: 's1', content: 'Subtask 1', status: 'completed' },
-                        { id: 's2', content: 'Subtask 2', status: 'pending' }
-                    ]
-                }]
-            };
-
-            const result = await mockServer.getTodoTools().handleToolCall('todo_write', params);
-
-            assert.strictEqual(result.isError, undefined);
-            assert.ok(result.content[0].text.includes('Subtasks: 1/2 completed'));
         });
 
         test('Should handle todos with ADR', async () => {

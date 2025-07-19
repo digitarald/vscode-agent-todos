@@ -155,10 +155,6 @@ suite('Storage Layer Tests', () => {
                             content: 'Task with everything',
                             status: 'in_progress',
                             priority: 'high',
-                            subtasks: [
-                                { id: 'sub-1', content: 'First step', status: 'completed' },
-                                { id: 'sub-2', content: 'Second step', status: 'pending' }
-                            ],
                             adr: 'Important architectural decision made here'
                         }
                     ];

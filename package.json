@@ -109,24 +109,6 @@
         "icon": "$(arrow-circle-down)"
       },
       {
-        "command": "agentTodos.addSubtask",
-        "title": "Add Subtask",
-        "category": "Agent TODOs",
-        "icon": "$(add)"
-      },
-      {
-        "command": "agentTodos.toggleSubtask",
-        "title": "Toggle Subtask",
-        "category": "Agent TODOs",
-        "icon": "$(check)"
-      },
-      {
-        "command": "agentTodos.deleteSubtask",
-        "title": "Delete Subtask",
-        "category": "Agent TODOs",
-        "icon": "$(trash)"
-      },
-      {
         "command": "agentTodos.addEditAdr",
         "title": "Add/Edit ADR",
         "category": "Agent TODOs",
@@ -268,11 +250,6 @@
           "group": "2_priority"
         },
         {
-          "command": "agentTodos.addSubtask",
-          "when": "view == agentTodos && viewItem =~ /^todoItem/ && config.agentTodos.enableSubtasks",
-          "group": "4_subtasks"
-        },
-        {
           "command": "agentTodos.addEditAdr",
           "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "5_adr"
@@ -281,16 +258,6 @@
           "command": "agentTodos.clearAdr",
           "when": "view == agentTodos && viewItem =~ /^todoItem/",
           "group": "5_adr"
-        },
-        {
-          "command": "agentTodos.toggleSubtask",
-          "when": "view == agentTodos && viewItem =~ /^subtaskItem/ && config.agentTodos.enableSubtasks",
-          "group": "inline"
-        },
-        {
-          "command": "agentTodos.deleteSubtask",
-          "when": "view == agentTodos && viewItem =~ /^subtaskItem/ && config.agentTodos.enableSubtasks",
-          "group": "inline"
         }
       ]
     },
@@ -311,11 +278,6 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically open the Todos view when the todo list changes"
-        },
-        "agentTodos.enableSubtasks": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable subtasks feature for breaking down complex tasks"
         }
       }
     },

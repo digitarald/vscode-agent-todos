@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import { TodoManager } from './todoManager';
 import { TodoTreeDataProvider, TodoDecorationProvider } from './todoTreeProvider';
-import { SubtaskManager } from './subtaskManager';
 import { TodoMCPServerProvider } from './mcp/mcpProvider';
 import { TodoMarkdownFormatter } from './utils/todoMarkdownFormatter';
 
@@ -217,37 +216,6 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
-		// Subtask commands
-		const addSubtaskCommand = vscode.commands.registerCommand('agentTodos.addSubtask', async (item: any) => {
-			const todoId = typeof item === 'string' ? item : item?.todo?.id;
-			if (todoId) {
-				const content = await vscode.window.showInputBox({
-					prompt: 'Enter subtask description',
-					placeHolder: 'Subtask description'
-				});
-				if (content) {
-					const subtaskId = SubtaskManager.generateSubtaskId(content);
-					await todoManager.addSubtask(todoId, {
-						id: subtaskId,
-						content,
-						status: 'pending'
-					});
-				}
-			}
-		});
-
-		const toggleSubtaskCommand = vscode.commands.registerCommand('agentTodos.toggleSubtask', async (item: any) => {
-			if (item?.subtask && item?.parentTodoId) {
-				await todoManager.toggleSubtaskStatus(item.parentTodoId, item.subtask.id);
-			}
-		});
-
-		const deleteSubtaskCommand = vscode.commands.registerCommand('agentTodos.deleteSubtask', async (item: any) => {
-			if (item?.subtask && item?.parentTodoId) {
-				await todoManager.deleteSubtask(item.parentTodoId, item.subtask.id);
-			}
-		});
-
 		// ADR commands
 		const addEditAdrCommand = vscode.commands.registerCommand('agentTodos.addEditAdr', async (item: any) => {
 			const todoId = typeof item === 'string' ? item : item?.todo?.id;
@@ -328,7 +296,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 			
 			try {
-				const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title, true);
+				const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(todos, title);
 				const content = Buffer.from(markdown, 'utf8');
 				await vscode.workspace.fs.writeFile(saveUri, content);
 				vscode.window.showInformationMessage(`Todos saved to ${saveUri.fsPath}`);
@@ -410,9 +378,6 @@ export async function activate(context: vscode.ExtensionContext) {
 			setPriorityHighCommand,
 			setPriorityMediumCommand,
 			setPriorityLowCommand,
-			addSubtaskCommand,
-			toggleSubtaskCommand,
-			deleteSubtaskCommand,
 			addEditAdrCommand,
 			clearAdrCommand,
 			runTodoCommand,

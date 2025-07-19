@@ -1,8 +1,7 @@
-import { TodoItem, Subtask, TodoStatus, TodoPriority } from '../types';
+import { TodoItem, TodoStatus, TodoPriority } from '../types';
 
 export class TodoMarkdownFormatter {
     private static readonly CHECKBOX_REGEX = /^(\s*)- \[([ x-])\] ([^:]+): (.+)$/;
-    private static readonly SUBTASK_REGEX = /^(\s{2,})- \[([ x])\] ([^:]+): (.+)$/;
     private static readonly ADR_REGEX = /^(\s*)_(.+)_$/;
     private static readonly TITLE_REGEX = /^# (.+)$/;
     
@@ -21,7 +20,7 @@ export class TodoMarkdownFormatter {
     /**
      * Format todos as markdown string
      */
-    public static formatTodosAsMarkdown(todos: TodoItem[], title?: string, includeSubtasks: boolean = true): string {
+    public static formatTodosAsMarkdown(todos: TodoItem[], title?: string): string {
         let markdown = '';
         
         // Add title if provided
@@ -31,7 +30,7 @@ export class TodoMarkdownFormatter {
         
         // Format each todo
         todos.forEach(todo => {
-            markdown += this.formatTodo(todo, includeSubtasks);
+            markdown += this.formatTodo(todo);
         });
         
         return markdown.trim();
@@ -40,7 +39,7 @@ export class TodoMarkdownFormatter {
     /**
      * Format a single todo item
      */
-    private static formatTodo(todo: TodoItem, includeSubtasks: boolean): string {
+    private static formatTodo(todo: TodoItem): string {
         // Determine checkbox based on status
         const checkbox = todo.status === 'completed' ? '[x]' :
             todo.status === 'in_progress' ? '[-]' :
@@ -52,14 +51,6 @@ export class TodoMarkdownFormatter {
         // Add ADR if present
         if (todo.adr) {
             result += `  _${todo.adr}_\n`;
-        }
-        
-        // Add subtasks if enabled and present
-        if (includeSubtasks && todo.subtasks && todo.subtasks.length > 0) {
-            todo.subtasks.forEach(subtask => {
-                const subtaskCheckbox = subtask.status === 'completed' ? '[x]' : '[ ]';
-                result += `  - ${subtaskCheckbox} ${subtask.id}: ${subtask.content}\n`;
-            });
         }
         
         return result;
@@ -113,8 +104,7 @@ export class TodoMarkdownFormatter {
                     id: id.trim(),
                     content: cleanContent,
                     status,
-                    priority,
-                    subtasks: []
+                    priority
                 };
                 continue;
             }
@@ -125,23 +115,6 @@ export class TodoMarkdownFormatter {
                 if (adrMatch) {
                     currentTodo.adr = adrMatch[2].trim();
                     continue;
-                }
-                
-                // Check for subtask
-                const subtaskMatch = line.match(this.SUBTASK_REGEX);
-                if (subtaskMatch) {
-                    const [, , checkboxState, id, content] = subtaskMatch;
-                    const status = checkboxState === 'x' ? 'completed' : 'pending';
-                    
-                    if (!currentTodo.subtasks) {
-                        currentTodo.subtasks = [];
-                    }
-                    
-                    currentTodo.subtasks.push({
-                        id: id.trim(),
-                        content: content.trim(),
-                        status
-                    });
                 }
             }
         }
@@ -189,34 +162,11 @@ export class TodoMarkdownFormatter {
             const validPriorities: TodoPriority[] = ['high', 'medium', 'low'];
             const priority = validPriorities.includes(todo.priority) ? todo.priority : 'medium';
             
-            // Sanitize subtasks
-            const subtasks: Subtask[] = [];
-            const seenSubtaskIds = new Set<string>();
-            
-            if (todo.subtasks) {
-                for (const subtask of todo.subtasks) {
-                    let subtaskId = subtask.id;
-                    if (!subtaskId || seenSubtaskIds.has(subtaskId)) {
-                        subtaskId = this.generateId('subtask');
-                    }
-                    seenSubtaskIds.add(subtaskId);
-                    
-                    if (subtask.content && subtask.content.trim().length > 0) {
-                        subtasks.push({
-                            id: subtaskId,
-                            content: subtask.content.trim(),
-                            status: subtask.status === 'completed' ? 'completed' : 'pending'
-                        });
-                    }
-                }
-            }
-            
             sanitizedTodos.push({
                 id,
                 content: todo.content.trim(),
                 status,
                 priority,
-                ...(subtasks.length > 0 && { subtasks }),
                 ...(todo.adr && { adr: todo.adr.trim() })
             });
         }

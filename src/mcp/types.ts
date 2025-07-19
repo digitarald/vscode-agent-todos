@@ -1,14 +1,13 @@
 import { TodoItem } from '../types';
 
 export interface TodoEvent {
-  type: 'todos-updated' | 'todo-status-changed' | 'configuration-changed' | 'subtask-updated';
+  type: 'todos-updated' | 'todo-status-changed' | 'configuration-changed';
   todos?: TodoItem[];
   title?: string;
   todoId?: string;
   status?: 'pending' | 'in_progress' | 'completed';
   config?: {
     autoInject?: boolean;
-    enableSubtasks?: boolean;
     autoInjectFilePath?: string;
   };
   timestamp: number;
@@ -28,7 +27,6 @@ export interface MCPServerConfig {
   standalone?: boolean;
   autoInject?: boolean;
   autoInjectFilePath?: string;
-  enableSubtasks?: boolean;
 }
 
 export interface ToolResult {
