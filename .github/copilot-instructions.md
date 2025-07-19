@@ -395,7 +395,7 @@ sessionTools.todoReadTool = server.registerTool(
 
 ### MCP Resource Completion Pattern
 
-**Resource completions** provide auto-suggestion capabilities for parameterized URIs like `todos://archive/{slug}`:
+**Resource completions** provide auto-suggestion capabilities for parameterized URIs like `todos://{slug}`:
 
 ```typescript
 // ✅ CORRECT: Resource with completion callback
@@ -591,7 +591,7 @@ Archives use URL-safe slugs generated from titles:
 - Lowercase conversion
 - Special characters removed or converted to hyphens
 - Unique slugs generated for duplicate titles (e.g., "project-alpha-2")
-- Used in `todos://archive/{slug}` URI pattern for MCP resources
+- Used in `todos://{slug}` URI pattern for MCP resources
 
 ## Error Handling
 

@@ -11,6 +11,7 @@ import { TodoValidator } from '../todoValidator';
 import { TelemetryManager } from '../telemetryManager';
 import { TodoTools } from './tools/todoTools';
 import { ArchivedTodoList } from '../types';
+import { formatTimeAgo, getCompletionStats } from '../utils/timeUtils';
 
 // Dynamic imports for ESM modules
 let McpServer: any;
@@ -301,13 +302,13 @@ export class TodoMCPServer {
 
       console.log(`[TodoMCPServer] Starting resource registration for session ${sessionId}`);
 
-      // Register resources
+      // Register current todo list resource
       server.registerResource(
-        "todos-markdown",
-        new ResourceTemplate("todos://todos", { list: undefined }),
+        "current-todos",
+        new ResourceTemplate("todos://current", { list: undefined }),
         {
-          title: "Todo List",
-          description: "Current todo list in markdown format",
+          title: "Current Todo List",
+          description: "Active todo list in markdown format",
           mimeType: "text/markdown"
         },
         async (uri: any) => {
@@ -327,7 +328,7 @@ export class TodoMCPServer {
               }]
             };
           } catch (error) {
-            console.error('[TodoMCPServer] Error in resource handler:', {
+            console.error('[TodoMCPServer] Error in current todos resource handler:', {
               error: error instanceof Error ? error.message : String(error),
               stack: error instanceof Error ? error.stack : undefined
             });
@@ -336,35 +337,39 @@ export class TodoMCPServer {
         }
       );
 
-      // Register archive resources with dynamic template and completion support
+      // Register historical todo list resources with dynamic template and completion support
       server.registerResource(
-        "archive-list",
-        new ResourceTemplate("todos://archive/{slug}", { 
+        "todo-lists",
+        new ResourceTemplate("todos://{slug}", { 
           list: async () => {
             try {
-              // List all archived todo lists
-              const archivedLists = this.todoManager.getArchivedLists();
+              // List all saved todo lists (previously called "archives")
+              const savedLists = this.todoManager.getArchivedLists();
               return {
-                resources: archivedLists.map((archive: ArchivedTodoList) => ({
-                  uri: `todos://archive/${archive.slug}`,
-                  name: `Archive: ${archive.title}`,
-                  description: `Archived todo list from ${archive.archivedAt.toISOString()} with ${archive.todos.length} items`,
-                  mimeType: "text/markdown"
-                }))
+                resources: savedLists.map((list: ArchivedTodoList) => {
+                  const stats = getCompletionStats(list.todos);
+                  const timeAgo = formatTimeAgo(list.archivedAt);
+                  return {
+                    uri: `todos://${list.slug}`,
+                    name: list.title,
+                    description: `${stats.completed}/${stats.total} completed, ${timeAgo}`,
+                    mimeType: "text/markdown"
+                  };
+                })
               };
             } catch (error) {
-              console.error('[TodoMCPServer] Error listing archive resources:', error);
+              console.error('[TodoMCPServer] Error listing todo list resources:', error);
               return { resources: [] };
             }
           },
           complete: {
             slug: (partialSlug: string, context?: { arguments?: Record<string, string> }) => {
               try {
-                console.log(`[TodoMCPServer] Completing archive slug for input: "${partialSlug}"`);
+                console.log(`[TodoMCPServer] Completing todo list slug for input: "${partialSlug}"`);
 
-                // Get all available archive slugs
+                // Get all available slugs
                 const availableSlugs = this.todoManager.getArchivedListSlugs();
-                console.log(`[TodoMCPServer] Available archive slugs:`, availableSlugs);
+                console.log(`[TodoMCPServer] Available todo list slugs:`, availableSlugs);
 
                 // Filter slugs that start with the partial input (case-insensitive)
                 const matches = availableSlugs.filter((slug: string) =>
@@ -374,31 +379,32 @@ export class TodoMCPServer {
                 console.log(`[TodoMCPServer] Filtered matches for "${partialSlug}":`, matches);
                 return matches;
               } catch (error) {
-                console.error('[TodoMCPServer] Error in archive slug completion:', error);
+                console.error('[TodoMCPServer] Error in todo list slug completion:', error);
                 return [];
               }
             }
           }
         }),
         {
-          title: "Archived Todo Lists",
-          description: "Access to previously archived todo lists",
+          title: "Todo Lists",
+          description: "Access to saved todo lists",
           mimeType: "text/markdown"
         },
         async (uri: any, variables: any) => {
           try {
             const slug = variables.slug;
-            console.log(`[TodoMCPServer] Reading archive resource for slug: ${slug}`);
+            console.log(`[TodoMCPServer] Reading todo list resource for slug: ${slug}`);
             
-            const archived = this.todoManager.getArchivedListBySlug(slug);
-            if (!archived) {
-              throw new Error(`Archive not found for slug: ${slug}`);
+            const savedList = this.todoManager.getArchivedListBySlug(slug);
+            if (!savedList) {
+              throw new Error(`Todo list not found for slug: ${slug}`);
             }
 
-            // Format archived todos as markdown
+            // Format todos as markdown
+            const timeAgo = formatTimeAgo(savedList.archivedAt);
             const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(
-              archived.todos, 
-              `${archived.title} (Archived ${archived.archivedAt.toLocaleDateString()})`
+              savedList.todos, 
+              `${savedList.title} (${timeAgo})`
             );
 
             return {
@@ -409,7 +415,7 @@ export class TodoMCPServer {
               }]
             };
           } catch (error) {
-            console.error('[TodoMCPServer] Error in archive resource handler:', {
+            console.error('[TodoMCPServer] Error in todo list resource handler:', {
               error: error instanceof Error ? error.message : String(error),
               stack: error instanceof Error ? error.stack : undefined,
               slug: variables?.slug
