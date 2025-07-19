@@ -13,3 +13,11 @@ export interface TodoWriteInput {
     todos: TodoItem[];
     title?: string;
 }
+
+export interface SavedTodoList {
+    id: string;
+    title: string;
+    todos: TodoItem[];
+    savedAt: Date;
+    slug: string;
+}

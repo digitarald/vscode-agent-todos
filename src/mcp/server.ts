@@ -10,6 +10,8 @@ import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
 import { TelemetryManager } from '../telemetryManager';
 import { TodoTools } from './tools/todoTools';
+import { SavedTodoList } from '../types';
+import { formatTimeAgo, getCompletionStats } from '../utils/timeUtils';
 
 // Dynamic imports for ESM modules
 let McpServer: any;
@@ -300,13 +302,13 @@ export class TodoMCPServer {
 
       console.log(`[TodoMCPServer] Starting resource registration for session ${sessionId}`);
 
-      // Register resources
+      // Register current todo list resource
       server.registerResource(
-        "todos-markdown",
-        new ResourceTemplate("todos://todos", { list: undefined }),
+        "current-todos",
+        new ResourceTemplate("todos://current", { list: undefined }),
         {
-          title: "Todo List",
-          description: "Current todo list in markdown format",
+          title: "Current Todo List",
+          description: "Active todo list in markdown format",
           mimeType: "text/markdown"
         },
         async (uri: any) => {
@@ -326,9 +328,96 @@ export class TodoMCPServer {
               }]
             };
           } catch (error) {
-            console.error('[TodoMCPServer] Error in resource handler:', {
+            console.error('[TodoMCPServer] Error in current todos resource handler:', {
               error: error instanceof Error ? error.message : String(error),
               stack: error instanceof Error ? error.stack : undefined
+            });
+            throw error;
+          }
+        }
+      );
+
+      // Register historical todo list resources with dynamic template and completion support
+      server.registerResource(
+        "todo-lists",
+        new ResourceTemplate("todos://{slug}", { 
+          list: async () => {
+            try {
+              // List all saved todo lists (previously called "archives")
+              const savedLists = this.todoManager.getSavedLists();
+              return {
+                resources: savedLists.map((list: SavedTodoList) => {
+                  const stats = getCompletionStats(list.todos);
+                  const timeAgo = formatTimeAgo(list.savedAt);
+                  return {
+                    uri: `todos://${list.slug}`,
+                    name: list.title,
+                    description: `${stats.completed}/${stats.total} completed, ${timeAgo}`,
+                    mimeType: "text/markdown"
+                  };
+                })
+              };
+            } catch (error) {
+              console.error('[TodoMCPServer] Error listing todo list resources:', error);
+              return { resources: [] };
+            }
+          },
+          complete: {
+            slug: (partialSlug: string, context?: { arguments?: Record<string, string> }) => {
+              try {
+                console.log(`[TodoMCPServer] Completing todo list slug for input: "${partialSlug}"`);
+
+                // Get all available slugs
+                const availableSlugs = this.todoManager.getSavedListSlugs();
+                console.log(`[TodoMCPServer] Available todo list slugs:`, availableSlugs);
+
+                // Filter slugs that start with the partial input (case-insensitive)
+                const matches = availableSlugs.filter((slug: string) =>
+                  slug.toLowerCase().startsWith(partialSlug.toLowerCase())
+                );
+
+                console.log(`[TodoMCPServer] Filtered matches for "${partialSlug}":`, matches);
+                return matches;
+              } catch (error) {
+                console.error('[TodoMCPServer] Error in todo list slug completion:', error);
+                return [];
+              }
+            }
+          }
+        }),
+        {
+          description: "Access to saved todo lists",
+          mimeType: "text/markdown"
+        },
+        async (uri: any, variables: any) => {
+          try {
+            const slug = variables.slug;
+            console.log(`[TodoMCPServer] Reading todo list resource for slug: ${slug}`);
+            
+            const savedList = this.todoManager.getSavedListBySlug(slug);
+            if (!savedList) {
+              throw new Error(`Todo list not found for slug: ${slug}`);
+            }
+
+            // Format todos as markdown
+            const timeAgo = formatTimeAgo(savedList.savedAt);
+            const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(
+              savedList.todos, 
+              `${savedList.title} (${timeAgo})`
+            );
+
+            return {
+              contents: [{
+                uri: uri.href,
+                mimeType: "text/markdown",
+                text: markdown
+              }]
+            };
+          } catch (error) {
+            console.error('[TodoMCPServer] Error in todo list resource handler:', {
+              error: error instanceof Error ? error.message : String(error),
+              stack: error instanceof Error ? error.stack : undefined,
+              slug: variables?.slug
             });
             throw error;
           }
@@ -1100,6 +1189,20 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     }
   }
 
+  public async broadcastResourceListChanged(): Promise<void> {
+    console.log('[TodoMCPServer] Broadcasting resource list changed notification');
+    
+    // Send resource list changed notification to all active sessions
+    for (const [sessionId, server] of this.mcpServers) {
+      try {
+        server.sendResourceListChanged();
+        console.log(`[TodoMCPServer] Sent resource list changed notification to session: ${sessionId}`);
+      } catch (error) {
+        console.error(`[TodoMCPServer] Failed to send resource list changed notification to session ${sessionId}:`, error);
+      }
+    }
+  }
+
   private async notifyResourceSubscribers(resourceUri: string): Promise<void> {
     // Notify all sessions that are subscribed to this resource
     for (const [sessionId, subscriptions] of this.resourceSubscriptions) {
@@ -1264,6 +1367,14 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           title: change.title,
           timestamp: Date.now()
         });
+      });
+    }
+
+    // Listen for saved list changes to notify resource list updates
+    if (this.todoManager && this.todoManager.onSavedListChange) {
+      this.todoManager.onSavedListChange(() => {
+        console.log('[TodoMCPServer] Saved list changed, sending resource list changed notification');
+        this.broadcastResourceListChanged();
       });
     }
   }

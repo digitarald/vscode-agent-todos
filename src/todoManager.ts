@@ -1,14 +1,20 @@
 import * as vscode from 'vscode';
-import { TodoItem } from './types';
+import { TodoItem, SavedTodoList } from './types';
 import { CopilotInstructionsManager } from './copilotInstructionsManager';
 import { TodoValidator } from './todoValidator';
 import { PerformanceMonitor } from './utils/performance';
 import { TelemetryManager } from './telemetryManager';
+import { generateUniqueSlug } from './utils/slugUtils';
 
 export class TodoManager {
     private static instance: TodoManager;
     private todos: TodoItem[] = [];
     private title: string = 'Todos';
+    // Saved lists storage for previous todo lists
+    private savedLists: Map<string, SavedTodoList> = new Map();
+    // Saved list change event emitter for MCP resource updates
+    private readonly onSavedListChangeEmitter = new vscode.EventEmitter<void>();
+    public readonly onSavedListChange = this.onSavedListChangeEmitter.event;
     // Single consolidated change event for better performance
     private readonly onDidChangeEmitter = new vscode.EventEmitter<{ todos: TodoItem[], title: string }>();
     public readonly onDidChange = this.onDidChangeEmitter.event;
@@ -205,6 +211,15 @@ export class TodoManager {
 
             console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
 
+            // Save current list if we have existing todos and a non-default title
+            // Save on any setTodos call that replaces existing todos, not just title changes
+            if (this.todos.length > 0 && this.title !== 'Todos') {
+                const reason = title !== undefined && title !== this.title 
+                    ? `title change from "${this.title}" to "${title}"`
+                    : `new todo list replacing existing "${this.title}"`;
+                this.saveCurrentList(reason);
+            }
+
             this.todos = [...todos];
             if (title !== undefined && title !== this.title) {
                 this.title = title;
@@ -388,9 +403,47 @@ export class TodoManager {
         this.onShouldOpenViewEmitter.dispose();
         this.onDidChangeConfigurationEmitter.dispose();
         this.onDidChangeEmitter.dispose();
+        this.onSavedListChangeEmitter.dispose();
     }
 
     public getNotCompletedCount(): number {
         return this.todos.filter(todo => todo.status !== 'completed').length;
+    }
+
+    // Saved list management methods
+    public getSavedLists(): SavedTodoList[] {
+        return Array.from(this.savedLists.values()).sort((a, b) => 
+            b.savedAt.getTime() - a.savedAt.getTime()
+        );
+    }
+
+    public getSavedListBySlug(slug: string): SavedTodoList | undefined {
+        return this.savedLists.get(slug);
+    }
+
+    public getSavedListSlugs(): string[] {
+        return Array.from(this.savedLists.keys());
+    }
+
+    private saveCurrentList(reason: string = 'title change'): void {
+        // Only save if we have todos and a non-default title
+        if (this.todos.length > 0 && this.title !== 'Todos') {
+            const existingSlugs = new Set(this.savedLists.keys());
+            const slug = generateUniqueSlug(this.title, existingSlugs);
+            
+            const saved: SavedTodoList = {
+                id: `saved-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+                title: this.title,
+                todos: [...this.todos],
+                savedAt: new Date(),
+                slug: slug
+            };
+
+            this.savedLists.set(slug, saved);
+            console.log(`[TodoManager] Saved todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
+            
+            // Notify saved list change listeners
+            this.onSavedListChangeEmitter.fire();
+        }
     }
 }

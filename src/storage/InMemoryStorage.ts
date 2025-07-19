@@ -6,6 +6,15 @@ export class InMemoryStorage extends EventEmitter implements ITodoStorage {
     private todos: TodoItem[] = [];
     private title: string = 'Todos';
     
+    constructor() {
+        super();
+    }
+    
+    // InMemoryStorage doesn't support external changes - it's only used by one manager instance
+    get supportsExternalChanges(): boolean {
+        return false;
+    }
+    
     async load(): Promise<{ todos: TodoItem[], title: string }> {
         return { todos: [...this.todos], title: this.title };
     }

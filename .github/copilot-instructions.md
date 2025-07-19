@@ -11,12 +11,12 @@ IMPORTANT:
 
 ## Project Overview
 
-This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, and auto-injection into Copilot instructions.
+This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, auto-injection into Copilot instructions.
 
 For more details:
 
 - [Main README](../README.md) - Feature overview and usage
-- [MCP Server Documentation](../src/mcp/README.md) - Server architecture and protocol details
+- [MCP Server Documentation](../src/mcp/README.md) - Server architecture, protocol details, and completion support
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/)
 
 ## Architecture
@@ -393,6 +393,38 @@ sessionTools.todoReadTool = server.registerTool(
 - Use proper Zod schemas from `getTodoWriteZodSchema()` for complex inputs
 - Ensure Zod is initialized before tool registration via `initialize()`
 
+### MCP Resource Completion Pattern
+
+**Resource completions** provide auto-suggestion capabilities for parameterized URIs like `todos://{slug}`:
+
+```typescript
+// ✅ CORRECT: Resource with completion callback
+server.setResourceRequestHandlers({
+  [ResourceTemplates.archive.uriTemplate]: {
+    read: async (request) => {
+      // Resource read handler
+    },
+    complete: {
+      slug: async (input) => {
+        // Auto-completion for {slug} parameter
+        const query = input.argument?.value?.toString().toLowerCase() || '';
+        const slugs = TodoManager.getArchivedListSlugs();
+        return slugs
+          .filter(slug => slug.toLowerCase().startsWith(query))
+          .map(value => ({ value }));
+      }
+    }
+  }
+});
+```
+
+**Key Features:**
+- Completion callbacks are defined per URI parameter (e.g., `{slug}`)
+- Use case-insensitive filtering with `startsWith()` for better UX
+- Return array of `{ value: string }` objects for completion options
+- SDK automatically registers completion capability when ResourceTemplates with complete callbacks are present
+- No manual capability registration needed - handled by `setResourceRequestHandlers()`
+
 ### Dynamic Configuration Updates
 
 The MCP server supports dynamic configuration updates without requiring server restart:
@@ -523,6 +555,43 @@ See [`src/types.ts`](../src/types.ts) for complete type definitions:
 - `TodoItem` - Main todo structure with status, priority, subtasks, and details
 - `Subtask` - Nested task structure
 - `TodoWriteInput` - Input schema for todo_write tool
+- `ArchivedTodoList` - Archive structure with id, title, todos, archivedAt timestamp, and slug
+
+## Archive Management Patterns
+
+### Archive Creation Timing
+
+**CRITICAL**: Archives are only created when title changes to a different non-empty value:
+
+```typescript
+// Archive is created when title changes from one value to another
+manager.setTodos(todos, "Project Alpha");  // No archive (initial set)
+manager.setTodos(todos, "Project Beta");   // Archives "Project Alpha"
+manager.setTodos(todos, "Project Beta");   // No archive (same title)
+```
+
+**Key Rules:**
+- Archives are **NEVER** created on initial title setting
+- Archives are **ONLY** created when title changes to a different value
+- Empty todo lists are **NOT** archived regardless of title changes
+- Archive creation includes all current todos at the time of title change
+
+### Slug Generation
+
+Archives use URL-safe slugs generated from titles:
+
+```typescript
+// Examples of slug generation
+"Project Alpha" → "project-alpha"
+"User Authentication System" → "user-authentication-system"
+"API v2.0 Migration" → "api-v20-migration"
+```
+
+**Slug Rules:**
+- Lowercase conversion
+- Special characters removed or converted to hyphens
+- Unique slugs generated for duplicate titles (e.g., "project-alpha-2")
+- Used in `todos://{slug}` URI pattern for MCP resources
 
 ## Error Handling
 
@@ -636,34 +705,25 @@ See test files in [`src/test/`](../src/test/) for examples.
 
 ## Telemetry Implementation
 
-The extension includes optional privacy-preserving telemetry using Application Insights:
+The extension includes optional privacy-preserving telemetry using Application Insights.
 
-### TelemetryManager
+### For Developers
 
-- **Centralized service**: Handles all telemetry operations
-- **Privacy-first**: Automatically filters sensitive data (content, paths, tokens)
-- **Graceful fallback**: Works when telemetry is disabled or unavailable
-- **VS Code integration**: Proper disposal and resource management
+- **TelemetryManager**: Centralized service in `src/telemetryManager.ts` - handles all telemetry operations with privacy filters
+- **Configuration**: Requires `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable (disabled by default in development)
+- **Privacy-first**: Automatically filters sensitive data (content, paths, tokens) and only collects anonymized usage patterns
 
-### Instrumentation Points
+### Adding New Events
 
-- **Extension lifecycle**: Activation, deactivation, errors
-- **Feature usage**: Command executions, configuration changes
-- **MCP operations**: Server operations, tool usage, read/write events
-- **Error tracking**: Initialization failures, operation errors with sanitized messages
+When adding new telemetry events:
 
-### Privacy Protection
+1. Use `TelemetryManager.trackEvent(name, properties, measurements)` in your code
+2. **CRITICAL**: Update `telemetry.json` with the new event definition including name, description, properties, and measurements
+3. Follow existing patterns for privacy-safe event names and properties
 
-- Filters sensitive property keys (`content`, `text`, `password`, `path`, etc.)
-- Truncates long values to prevent data leakage
-- Sanitizes error messages (removes file paths, tokens)
-- Only collects aggregate usage patterns, not user content
+**Important**: Keep `telemetry.json` in sync with actual telemetry events in the code. This file documents all collected data for transparency.
 
-### Configuration
-
-Requires `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable. Disabled by default in development.
-
-See `telemetry.json` for details on events collected.
+See `telemetry.json` for complete details on events collected.
 
 ```
 

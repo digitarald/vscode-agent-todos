@@ -1,20 +1,26 @@
 // Standalone todo manager without VS Code dependencies
-import { TodoItem, TodoStatus, TodoPriority } from '../types';
+import { TodoItem, TodoStatus, TodoPriority, SavedTodoList } from '../types';
 import { TodoValidator } from '../todoValidator';
 import { EventEmitter } from 'events';
 import { ITodoStorage } from '../storage/ITodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { StandaloneCopilotWriter } from './standaloneCopilotWriter';
+import { generateUniqueSlug } from '../utils/slugUtils';
 
 export class StandaloneTodoManager extends EventEmitter {
   private static instance: StandaloneTodoManager | null = null;
   private todos: TodoItem[] = [];
   private title: string = 'Todos';
+  // Saved lists storage for previous todo lists
+  private savedLists: Map<string, SavedTodoList> = new Map();
   private storage: ITodoStorage;
   private storageDisposable: { dispose: () => void } | undefined;
   private lastUpdateHash: string = '';
   private updateVersion: number = 0;
   private copilotWriter: StandaloneCopilotWriter | null = null;
+  private isSaving: boolean = false;
+  private initializationPromise: Promise<void>;
+  private isInitialized: boolean = false;
   
   constructor(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }) {
     super();
@@ -25,7 +31,7 @@ export class StandaloneTodoManager extends EventEmitter {
         autoInjectConfig.filePath
       );
     }
-    this.initialize();
+    this.initializationPromise = this.initialize();
   }
   
   static getInstance(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }): StandaloneTodoManager {
@@ -39,12 +45,19 @@ export class StandaloneTodoManager extends EventEmitter {
     // Load initial data
     await this.loadTodos();
     
-    // Subscribe to storage changes if supported
-    if (this.storage.onDidChange) {
+    // Subscribe to storage changes if supported and the storage supports external changes
+    // For InMemoryStorage, we don't need to subscribe since it's single-instance
+    const isInMemoryStorage = this.storage.constructor.name === 'InMemoryStorage';
+    if (this.storage.onDidChange && !isInMemoryStorage) {
       this.storageDisposable = this.storage.onDidChange(() => {
-        this.loadTodos();
+        // Don't reload if we're currently saving (prevents recursive loop)
+        if (!this.isSaving) {
+          this.loadTodos();
+        }
       });
     }
+    
+    this.isInitialized = true;
   }
   
   private async loadTodos(): Promise<void> {
@@ -60,6 +73,7 @@ export class StandaloneTodoManager extends EventEmitter {
   
   private async saveTodos(): Promise<void> {
     try {
+      this.isSaving = true;
       await this.storage.save(this.todos, this.title);
       
       // Also write to copilot instructions if enabled
@@ -68,6 +82,8 @@ export class StandaloneTodoManager extends EventEmitter {
       }
     } catch (error) {
       console.error('Failed to save todos:', error);
+    } finally {
+      this.isSaving = false;
     }
   }
   
@@ -85,21 +101,33 @@ export class StandaloneTodoManager extends EventEmitter {
 
   async setTitle(title: string): Promise<void> {
     this.title = title;
-    this.saveTodos();
+    await this.saveTodos();
     this.fireChangeEvent();
   }
   
   async updateTodos(todos: TodoItem[], title?: string): Promise<void> {
+    // Wait for initialization to complete
+    await this.initializationPromise;
+    
     const validationResult = TodoValidator.validateTodos(todos);
     if (!validationResult.valid) {
       throw new Error(validationResult.errors.join(', '));
+    }
+
+    // Save current list if we have existing todos and a non-default title
+    // Save on any updateTodos call that replaces existing todos, not just title changes
+    if (this.todos.length > 0 && this.title !== 'Todos') {
+      const reason = title !== undefined && title !== this.title 
+        ? `title change from "${this.title}" to "${title}"`
+        : `new todo list replacing existing "${this.title}"`;
+      this.saveCurrentList(reason);
     }
     
     this.todos = todos;
     if (title !== undefined) {
       this.title = title;
     }
-    this.saveTodos();
+    await this.saveTodos();  // Wait for save to complete
     this.fireChangeEvent();
   }
   
@@ -110,7 +138,7 @@ export class StandaloneTodoManager extends EventEmitter {
   
   async clearTodos(): Promise<void> {
     this.todos = [];
-    this.saveTodos();
+    await this.saveTodos();
     
     // Remove from copilot instructions if enabled
     if (this.copilotWriter) {
@@ -122,7 +150,7 @@ export class StandaloneTodoManager extends EventEmitter {
   
   async deleteTodo(todoId: string): Promise<void> {
     this.todos = this.todos.filter(todo => todo.id !== todoId);
-    this.saveTodos();
+    await this.saveTodos();
     this.fireChangeEvent();
   }
   
@@ -135,7 +163,7 @@ export class StandaloneTodoManager extends EventEmitter {
         'completed': 'pending'
       };
       todo.status = statusMap[todo.status];
-      this.saveTodos();
+      await this.saveTodos();
       this.fireChangeEvent();
     }
   }
@@ -214,6 +242,52 @@ export class StandaloneTodoManager extends EventEmitter {
   onShouldOpenView(callback: () => void): { dispose: () => void } {
     // Not applicable in standalone mode
     return { dispose: () => {} };
+  }
+
+  // Saved list management methods
+  getSavedLists(): SavedTodoList[] {
+    return Array.from(this.savedLists.values()).sort((a, b) => 
+      b.savedAt.getTime() - a.savedAt.getTime()
+    );
+  }
+
+  getSavedListBySlug(slug: string): SavedTodoList | undefined {
+    return this.savedLists.get(slug);
+  }
+
+  getSavedListSlugs(): string[] {
+    return Array.from(this.savedLists.keys());
+  }
+
+  onSavedListChange(callback: () => void): { dispose: () => void } {
+    this.on('savedListChange', callback);
+    return {
+      dispose: () => {
+        this.off('savedListChange', callback);
+      }
+    };
+  }
+
+  private saveCurrentList(reason: string = 'title change'): void {
+    // Only save if we have todos and a non-default title
+    if (this.todos.length > 0 && this.title !== 'Todos') {
+      const existingSlugs = new Set(this.savedLists.keys());
+      const slug = generateUniqueSlug(this.title, existingSlugs);
+      
+      const saved: SavedTodoList = {
+        id: `saved-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+        title: this.title,
+        todos: [...this.todos],
+        savedAt: new Date(),
+        slug: slug
+      };
+
+      this.savedLists.set(slug, saved);
+      console.log(`[StandaloneTodoManager] Saved todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
+      
+      // Notify saved list change listeners
+      this.emit('savedListChange');
+    }
   }
   
   setAutoInject(config: { workspaceRoot: string; filePath?: string } | null): void {

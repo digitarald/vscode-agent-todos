@@ -10,6 +10,11 @@ export class WorkspaceStateStorage extends EventEmitter implements ITodoStorage 
         super();
     }
     
+    // WorkspaceStateStorage supports external changes (could be modified by other extension instances)
+    get supportsExternalChanges(): boolean {
+        return true;
+    }
+    
     async load(): Promise<{ todos: TodoItem[], title: string }> {
         const storageData = this.context.workspaceState.get<{ todos: TodoItem[], title: string }>(this.storageKey);
         
