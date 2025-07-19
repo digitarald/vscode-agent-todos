@@ -386,7 +386,6 @@ export class TodoMCPServer {
           }
         }),
         {
-          title: "Todo Lists",
           description: "Access to saved todo lists",
           mimeType: "text/markdown"
         },
