@@ -3,7 +3,7 @@ import { TodoManager } from '../todoManager';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { TodoItem } from '../types';
 
-suite('TodoManager Archive Test Suite', () => {
+suite('TodoManager Saved Lists Test Suite', () => {
     let todoManager: TodoManager;
 
     setup(() => {
@@ -42,12 +42,12 @@ suite('TodoManager Archive Test Suite', () => {
         // Change title - should archive the current list
         await todoManager.setTodos([], 'Project Beta');
 
-        // Check that the previous list was archived
-        const archivedLists = todoManager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 1);
-        assert.strictEqual(archivedLists[0].title, 'Project Alpha');
-        assert.strictEqual(archivedLists[0].todos.length, 1);
-        assert.strictEqual(archivedLists[0].todos[0].content, 'Test todo');
+        // Check that the previous list was saved
+        const savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 1);
+        assert.strictEqual(savedLists[0].title, 'Project Alpha');
+        assert.strictEqual(savedLists[0].todos.length, 1);
+        assert.strictEqual(savedLists[0].todos[0].content, 'Test todo');
     });
 
     test('should not archive default title or empty lists', async () => {
@@ -63,16 +63,16 @@ suite('TodoManager Archive Test Suite', () => {
         await todoManager.setTodos([], 'New Project');
 
         // Should not archive default title
-        let archivedLists = todoManager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 0);
+        let savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0);
 
         // Test with empty list
         await todoManager.setTodos([], 'Empty Project');
         await todoManager.setTodos(todos, 'Another Project');
 
         // Should not archive empty list
-        archivedLists = todoManager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 0);
+        savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0);
     });
 
     test('should generate unique slugs for archives', async () => {
@@ -88,18 +88,18 @@ suite('TodoManager Archive Test Suite', () => {
         await todoManager.setTodos(todos, 'Project Alpha');
         await todoManager.setTodos(todos, 'Project Alpha');
 
-        const archivedLists = todoManager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 2); // Two archives (third overwrites current)
+        const savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 2); // Two archives (third overwrites current)
 
-        const slugs = archivedLists.map(archive => archive.slug);
+        const slugs = savedLists.map(archive => archive.slug);
         const uniqueSlugs = new Set(slugs);
         assert.strictEqual(slugs.length, uniqueSlugs.size, 'All slugs should be unique');
     });
 
-    test('should retrieve archived list by slug', async () => {
+    test('should retrieve saved list by slug', async () => {
         const todos: TodoItem[] = [{
             id: 'test-1',
-            content: 'Archived todo',
+            content: 'Saved todo',
             status: 'completed',
             priority: 'high'
         }];
@@ -107,24 +107,24 @@ suite('TodoManager Archive Test Suite', () => {
         await todoManager.setTodos(todos, 'Completed Project');
         await todoManager.setTodos([], 'New Project');
 
-        const archivedLists = todoManager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 1);
+        const savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 1);
 
-        const slug = archivedLists[0].slug;
-        const retrieved = todoManager.getArchivedListBySlug(slug);
+        const slug = savedLists[0].slug;
+        const retrieved = todoManager.getSavedListBySlug(slug);
 
         assert.ok(retrieved);
         assert.strictEqual(retrieved.title, 'Completed Project');
-        assert.strictEqual(retrieved.todos[0].content, 'Archived todo');
+        assert.strictEqual(retrieved.todos[0].content, 'Saved todo');
         assert.strictEqual(retrieved.todos[0].status, 'completed');
     });
 
     test('should return undefined for non-existent slug', () => {
-        const retrieved = todoManager.getArchivedListBySlug('non-existent-slug');
+        const retrieved = todoManager.getSavedListBySlug('non-existent-slug');
         assert.strictEqual(retrieved, undefined);
     });
 
-    test('should return archived lists sorted by date (newest first)', async () => {
+    test('should return saved lists sorted by date (newest first)', async () => {
         const todos1: TodoItem[] = [{
             id: 'test-1',
             content: 'First todo',
@@ -146,16 +146,16 @@ suite('TodoManager Archive Test Suite', () => {
         await new Promise(resolve => setTimeout(resolve, 10)); // Small delay
         await todoManager.setTodos([], 'Final Project');
 
-        const archivedLists = todoManager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 2);
+        const savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 2);
 
         // Should be sorted by date, newest first
-        assert.strictEqual(archivedLists[0].title, 'Second Project');
-        assert.strictEqual(archivedLists[1].title, 'First Project');
-        assert.ok(archivedLists[0].archivedAt >= archivedLists[1].archivedAt);
+        assert.strictEqual(savedLists[0].title, 'Second Project');
+        assert.strictEqual(savedLists[1].title, 'First Project');
+        assert.ok(savedLists[0].savedAt >= savedLists[1].savedAt);
     });
 
-    test('should get list of all archive slugs', async () => {
+    test('should get list of all saved list slugs', async () => {
         const todos: TodoItem[] = [{
             id: 'test-1',
             content: 'Test todo',
@@ -167,7 +167,7 @@ suite('TodoManager Archive Test Suite', () => {
         await todoManager.setTodos(todos, 'Beta Project');
         await todoManager.setTodos([], 'Final Project');
 
-        const slugs = todoManager.getArchivedListSlugs();
+        const slugs = todoManager.getSavedListSlugs();
         assert.strictEqual(slugs.length, 2);
         assert.ok(slugs.includes('alpha-project'));
         assert.ok(slugs.includes('beta-project'));

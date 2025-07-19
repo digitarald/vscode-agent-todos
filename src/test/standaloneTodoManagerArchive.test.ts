@@ -3,7 +3,7 @@ import { StandaloneTodoManager } from '../mcp/standaloneTodoManager';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { TodoItem } from '../types';
 
-suite('StandaloneTodoManager Archive Test Suite', () => {
+suite('StandaloneTodoManager Saved Lists Test Suite', () => {
     let manager: StandaloneTodoManager;
 
     setup(() => {
@@ -29,12 +29,12 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         // Change title - should archive the current list
         await manager.updateTodos([], 'Project Beta');
 
-        // Check that the previous list was archived
-        const archivedLists = manager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 1);
-        assert.strictEqual(archivedLists[0].title, 'Project Alpha');
-        assert.strictEqual(archivedLists[0].todos.length, 1);
-        assert.strictEqual(archivedLists[0].todos[0].content, 'Test todo');
+        // Check that the previous list was saved
+        const savedLists = manager.getSavedLists();
+        assert.strictEqual(savedLists.length, 1);
+        assert.strictEqual(savedLists[0].title, 'Project Alpha');
+        assert.strictEqual(savedLists[0].todos.length, 1);
+        assert.strictEqual(savedLists[0].todos[0].content, 'Test todo');
     });
 
     test('should not archive default title or empty lists', async () => {
@@ -50,16 +50,16 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         await manager.updateTodos([], 'New Project');
 
         // Should not archive default title
-        let archivedLists = manager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 0);
+        let savedLists = manager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0);
 
         // Test with empty list
         await manager.updateTodos([], 'Empty Project');
         await manager.updateTodos(todos, 'Another Project');
 
         // Should not archive empty list
-        archivedLists = manager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 0);
+        savedLists = manager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0);
     });
 
     test('should emit archive change events', (done) => {
@@ -71,7 +71,7 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         }];
 
         // Listen for archive change event
-        const disposable = manager.onArchiveChange(() => {
+        const disposable = manager.onSavedListChange(() => {
             disposable.dispose();
             done();
         });
@@ -82,10 +82,10 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         });
     });
 
-    test('should retrieve archived list by slug', async () => {
+    test('should retrieve saved list by slug', async () => {
         const todos: TodoItem[] = [{
             id: 'test-1',
-            content: 'Archived todo',
+            content: 'Saved todo',
             status: 'completed',
             priority: 'high'
         }];
@@ -93,15 +93,15 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         await manager.updateTodos(todos, 'Completed Project');
         await manager.updateTodos([], 'New Project');
 
-        const archivedLists = manager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 1);
+        const savedLists = manager.getSavedLists();
+        assert.strictEqual(savedLists.length, 1);
 
-        const slug = archivedLists[0].slug;
-        const retrieved = manager.getArchivedListBySlug(slug);
+        const slug = savedLists[0].slug;
+        const retrieved = manager.getSavedListBySlug(slug);
 
         assert.ok(retrieved);
         assert.strictEqual(retrieved.title, 'Completed Project');
-        assert.strictEqual(retrieved.todos[0].content, 'Archived todo');
+        assert.strictEqual(retrieved.todos[0].content, 'Saved todo');
         assert.strictEqual(retrieved.todos[0].status, 'completed');
     });
 
@@ -118,10 +118,10 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         await manager.updateTodos(todos, 'Feature Request');
         await manager.updateTodos(todos, 'Feature Request');
 
-        const archivedLists = manager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 2); // Two archives
+        const savedLists = manager.getSavedLists();
+        assert.strictEqual(savedLists.length, 2); // Two archives
 
-        const slugs = archivedLists.map(archive => archive.slug);
+        const slugs = savedLists.map(archive => archive.slug);
         const uniqueSlugs = new Set(slugs);
         assert.strictEqual(slugs.length, uniqueSlugs.size, 'All slugs should be unique');
 
@@ -141,8 +141,8 @@ suite('StandaloneTodoManager Archive Test Suite', () => {
         await manager.setTodos(todos, 'Project Using SetTodos');
         await manager.setTodos([], 'New Project');
 
-        const archivedLists = manager.getArchivedLists();
-        assert.strictEqual(archivedLists.length, 1);
-        assert.strictEqual(archivedLists[0].title, 'Project Using SetTodos');
+        const savedLists = manager.getSavedLists();
+        assert.strictEqual(savedLists.length, 1);
+        assert.strictEqual(savedLists[0].title, 'Project Using SetTodos');
     });
 });

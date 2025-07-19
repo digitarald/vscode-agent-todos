@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TodoItem, ArchivedTodoList } from './types';
+import { TodoItem, SavedTodoList } from './types';
 import { CopilotInstructionsManager } from './copilotInstructionsManager';
 import { TodoValidator } from './todoValidator';
 import { PerformanceMonitor } from './utils/performance';
@@ -10,11 +10,11 @@ export class TodoManager {
     private static instance: TodoManager;
     private todos: TodoItem[] = [];
     private title: string = 'Todos';
-    // Archive storage for previous todo lists
-    private archivedLists: Map<string, ArchivedTodoList> = new Map();
-    // Archive change event emitter for MCP resource updates
-    private readonly onArchiveChangeEmitter = new vscode.EventEmitter<void>();
-    public readonly onArchiveChange = this.onArchiveChangeEmitter.event;
+    // Saved lists storage for previous todo lists
+    private savedLists: Map<string, SavedTodoList> = new Map();
+    // Saved list change event emitter for MCP resource updates
+    private readonly onSavedListChangeEmitter = new vscode.EventEmitter<void>();
+    public readonly onSavedListChange = this.onSavedListChangeEmitter.event;
     // Single consolidated change event for better performance
     private readonly onDidChangeEmitter = new vscode.EventEmitter<{ todos: TodoItem[], title: string }>();
     public readonly onDidChange = this.onDidChangeEmitter.event;
@@ -211,13 +211,13 @@ export class TodoManager {
 
             console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
 
-            // Archive current list if we have existing todos and a non-default title
-            // Archive on any setTodos call that replaces existing todos, not just title changes
+            // Save current list if we have existing todos and a non-default title
+            // Save on any setTodos call that replaces existing todos, not just title changes
             if (this.todos.length > 0 && this.title !== 'Todos') {
                 const reason = title !== undefined && title !== this.title 
                     ? `title change from "${this.title}" to "${title}"`
                     : `new todo list replacing existing "${this.title}"`;
-                this.archiveCurrentList(reason);
+                this.saveCurrentList(reason);
             }
 
             this.todos = [...todos];
@@ -403,47 +403,47 @@ export class TodoManager {
         this.onShouldOpenViewEmitter.dispose();
         this.onDidChangeConfigurationEmitter.dispose();
         this.onDidChangeEmitter.dispose();
-        this.onArchiveChangeEmitter.dispose();
+        this.onSavedListChangeEmitter.dispose();
     }
 
     public getNotCompletedCount(): number {
         return this.todos.filter(todo => todo.status !== 'completed').length;
     }
 
-    // Archive management methods
-    public getArchivedLists(): ArchivedTodoList[] {
-        return Array.from(this.archivedLists.values()).sort((a, b) => 
-            b.archivedAt.getTime() - a.archivedAt.getTime()
+    // Saved list management methods
+    public getSavedLists(): SavedTodoList[] {
+        return Array.from(this.savedLists.values()).sort((a, b) => 
+            b.savedAt.getTime() - a.savedAt.getTime()
         );
     }
 
-    public getArchivedListBySlug(slug: string): ArchivedTodoList | undefined {
-        return this.archivedLists.get(slug);
+    public getSavedListBySlug(slug: string): SavedTodoList | undefined {
+        return this.savedLists.get(slug);
     }
 
-    public getArchivedListSlugs(): string[] {
-        return Array.from(this.archivedLists.keys());
+    public getSavedListSlugs(): string[] {
+        return Array.from(this.savedLists.keys());
     }
 
-    private archiveCurrentList(reason: string = 'title change'): void {
-        // Only archive if we have todos and a non-default title
+    private saveCurrentList(reason: string = 'title change'): void {
+        // Only save if we have todos and a non-default title
         if (this.todos.length > 0 && this.title !== 'Todos') {
-            const existingSlugs = new Set(this.archivedLists.keys());
+            const existingSlugs = new Set(this.savedLists.keys());
             const slug = generateUniqueSlug(this.title, existingSlugs);
             
-            const archived: ArchivedTodoList = {
-                id: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+            const saved: SavedTodoList = {
+                id: `saved-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
                 title: this.title,
                 todos: [...this.todos],
-                archivedAt: new Date(),
+                savedAt: new Date(),
                 slug: slug
             };
 
-            this.archivedLists.set(slug, archived);
-            console.log(`[TodoManager] Archived todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
+            this.savedLists.set(slug, saved);
+            console.log(`[TodoManager] Saved todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
             
-            // Notify archive change listeners
-            this.onArchiveChangeEmitter.fire();
+            // Notify saved list change listeners
+            this.onSavedListChangeEmitter.fire();
         }
     }
 }

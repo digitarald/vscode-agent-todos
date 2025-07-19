@@ -10,7 +10,7 @@ import { TodoMarkdownFormatter } from '../utils/todoMarkdownFormatter';
 import { TodoValidator } from '../todoValidator';
 import { TelemetryManager } from '../telemetryManager';
 import { TodoTools } from './tools/todoTools';
-import { ArchivedTodoList } from '../types';
+import { SavedTodoList } from '../types';
 import { formatTimeAgo, getCompletionStats } from '../utils/timeUtils';
 
 // Dynamic imports for ESM modules
@@ -344,11 +344,11 @@ export class TodoMCPServer {
           list: async () => {
             try {
               // List all saved todo lists (previously called "archives")
-              const savedLists = this.todoManager.getArchivedLists();
+              const savedLists = this.todoManager.getSavedLists();
               return {
-                resources: savedLists.map((list: ArchivedTodoList) => {
+                resources: savedLists.map((list: SavedTodoList) => {
                   const stats = getCompletionStats(list.todos);
-                  const timeAgo = formatTimeAgo(list.archivedAt);
+                  const timeAgo = formatTimeAgo(list.savedAt);
                   return {
                     uri: `todos://${list.slug}`,
                     name: list.title,
@@ -368,7 +368,7 @@ export class TodoMCPServer {
                 console.log(`[TodoMCPServer] Completing todo list slug for input: "${partialSlug}"`);
 
                 // Get all available slugs
-                const availableSlugs = this.todoManager.getArchivedListSlugs();
+                const availableSlugs = this.todoManager.getSavedListSlugs();
                 console.log(`[TodoMCPServer] Available todo list slugs:`, availableSlugs);
 
                 // Filter slugs that start with the partial input (case-insensitive)
@@ -395,13 +395,13 @@ export class TodoMCPServer {
             const slug = variables.slug;
             console.log(`[TodoMCPServer] Reading todo list resource for slug: ${slug}`);
             
-            const savedList = this.todoManager.getArchivedListBySlug(slug);
+            const savedList = this.todoManager.getSavedListBySlug(slug);
             if (!savedList) {
               throw new Error(`Todo list not found for slug: ${slug}`);
             }
 
             // Format todos as markdown
-            const timeAgo = formatTimeAgo(savedList.archivedAt);
+            const timeAgo = formatTimeAgo(savedList.savedAt);
             const markdown = TodoMarkdownFormatter.formatTodosAsMarkdown(
               savedList.todos, 
               `${savedList.title} (${timeAgo})`
@@ -1371,10 +1371,10 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       });
     }
 
-    // Listen for archive changes to notify resource list updates
-    if (this.todoManager && this.todoManager.onArchiveChange) {
-      this.todoManager.onArchiveChange(() => {
-        console.log('[TodoMCPServer] Archive changed, sending resource list changed notification');
+    // Listen for saved list changes to notify resource list updates
+    if (this.todoManager && this.todoManager.onSavedListChange) {
+      this.todoManager.onSavedListChange(() => {
+        console.log('[TodoMCPServer] Saved list changed, sending resource list changed notification');
         this.broadcastResourceListChanged();
       });
     }

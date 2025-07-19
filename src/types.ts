@@ -14,10 +14,10 @@ export interface TodoWriteInput {
     title?: string;
 }
 
-export interface ArchivedTodoList {
+export interface SavedTodoList {
     id: string;
     title: string;
     todos: TodoItem[];
-    archivedAt: Date;
+    savedAt: Date;
     slug: string;
 }

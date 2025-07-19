@@ -818,7 +818,7 @@ suite('MCP Integration Tests', () => {
         });
     });
 
-    suite('Archive Resource Completion', () => {
+    suite('Saved List Resource Completion', () => {
         let server: TodoMCPServer;
         let todoManager: StandaloneTodoManager;
 
@@ -830,7 +830,7 @@ suite('MCP Integration Tests', () => {
             // Get the standalone todo manager
             todoManager = server.getTodoManager();
 
-            // Create some archived lists for testing
+            // Create some saved lists for testing
             await todoManager.setTodos([
                 { id: 'task1', content: 'Task 1', status: 'completed', priority: 'high' }
             ], 'Project Alpha');
@@ -847,7 +847,7 @@ suite('MCP Integration Tests', () => {
                 { id: 'task4', content: 'Task 4', status: 'pending', priority: 'high' }
             ], 'API Enhancement');
 
-            // Trigger archiving of "API Enhancement" by setting a new title
+            // Trigger saving of "API Enhancement" by setting a new title
             await todoManager.setTodos([
                 { id: 'task5', content: 'Task 5', status: 'pending', priority: 'medium' }
             ], 'Current Project');
@@ -859,13 +859,13 @@ suite('MCP Integration Tests', () => {
             }
         });
 
-        test('Should provide completion for archive slugs with empty input', async () => {
+        test('Should provide completion for saved list slugs with empty input', async () => {
             // Mock ResourceTemplate completion callback
-            const archivesList = todoManager.getArchivedLists();
-            assert.ok(archivesList.length >= 3, 'Should have archived lists from setup');
+            const savedLists = todoManager.getSavedLists();
+            assert.ok(savedLists.length >= 3, 'Should have saved lists from setup');
 
-            const slugs = todoManager.getArchivedListSlugs();
-            assert.ok(slugs.length >= 3, 'Should have archive slugs');
+            const slugs = todoManager.getSavedListSlugs();
+            assert.ok(slugs.length >= 3, 'Should have saved list slugs');
 
             // Test completion with empty input
             const allSlugs = slugs.filter((slug: string) => slug.toLowerCase().startsWith(''));
@@ -875,8 +875,8 @@ suite('MCP Integration Tests', () => {
             assert.ok(allSlugs.includes('database-migration'), 'Should include database-migration slug');
         });
 
-        test('Should provide filtered completion for archive slugs with partial input', async () => {
-            const slugs = todoManager.getArchivedListSlugs();
+        test('Should provide filtered completion for saved list slugs with partial input', async () => {
+            const slugs = todoManager.getSavedListSlugs();
 
             // Test completion with 'project' prefix
             const projectSlugs = slugs.filter((slug: string) =>
@@ -896,7 +896,7 @@ suite('MCP Integration Tests', () => {
         });
 
         test('Should handle case-insensitive completion', async () => {
-            const slugs = todoManager.getArchivedListSlugs();
+            const slugs = todoManager.getSavedListSlugs();
 
             // Test with uppercase input
             const upperCaseResults = slugs.filter((slug: string) =>
@@ -911,7 +911,7 @@ suite('MCP Integration Tests', () => {
         });
 
         test('Should return empty array for non-matching input', async () => {
-            const slugs = todoManager.getArchivedListSlugs();
+            const slugs = todoManager.getSavedListSlugs();
 
             const noMatches = slugs.filter((slug: string) =>
                 slug.toLowerCase().startsWith('nonexistent'.toLowerCase())
@@ -920,7 +920,7 @@ suite('MCP Integration Tests', () => {
         });
 
         test('Should handle partial matches correctly', async () => {
-            const slugs = todoManager.getArchivedListSlugs();
+            const slugs = todoManager.getSavedListSlugs();
 
             // Test with 'api' prefix
             const apiSlugs = slugs.filter((slug: string) =>
@@ -937,8 +937,8 @@ suite('MCP Integration Tests', () => {
         });
 
         test('Should maintain order consistency in completion results', async () => {
-            const slugs1 = todoManager.getArchivedListSlugs();
-            const slugs2 = todoManager.getArchivedListSlugs();
+            const slugs1 = todoManager.getSavedListSlugs();
+            const slugs2 = todoManager.getSavedListSlugs();
 
             assert.deepStrictEqual(slugs1, slugs2, 'Should return consistent order');
 
@@ -954,36 +954,36 @@ suite('MCP Integration Tests', () => {
         });
 
         test('Should handle archive changes dynamically', async () => {
-            const initialSlugs = todoManager.getArchivedListSlugs();
+            const initialSlugs = todoManager.getSavedListSlugs();
             const initialCount = initialSlugs.length;
 
-            // Add a new archived list by setting a title and then changing it
+            // Add a new saved list by setting a title and then changing it
             await todoManager.setTodos([
                 { id: 'new-task', content: 'New Task', status: 'completed', priority: 'medium' }
-            ], 'New Project Archive');
+            ], 'New Project Saved');
 
-            // Archive it by changing the title
+            // Save it by changing the title
             await todoManager.setTodos([
                 { id: 'another-task', content: 'Another Task', status: 'pending', priority: 'low' }
             ], 'Final Project');
 
-            const newSlugs = todoManager.getArchivedListSlugs();
-            // We expect 2 more slugs: "current-project" (archived when setting "New Project Archive") 
-            // and "new-project-archive" (archived when setting "Final Project")
+            const newSlugs = todoManager.getSavedListSlugs();
+            // We expect 2 more slugs: "current-project" (saved when setting "New Project Saved") 
+            // and "new-project-saved" (saved when setting "Final Project")
             assert.strictEqual(newSlugs.length, initialCount + 2, 'Should have two more slugs');
-            assert.ok(newSlugs.includes('new-project-archive'), 'Should include new archive slug');
+            assert.ok(newSlugs.includes('new-project-saved'), 'Should include new archive slug');
             assert.ok(newSlugs.includes('current-project'), 'Should include current-project slug');
 
             // Test completion with the new slug
             const newProjectSlugs = newSlugs.filter((slug: string) =>
                 slug.toLowerCase().startsWith('new'.toLowerCase())
             );
-            assert.ok(newProjectSlugs.includes('new-project-archive'), 'Should complete new archive');
+            assert.ok(newProjectSlugs.includes('new-project-saved'), 'Should complete new archive');
         });
 
         test('Should provide completion context information', async () => {
             // Test that completion callback can receive context parameter
-            const slugs = todoManager.getArchivedListSlugs();
+            const slugs = todoManager.getSavedListSlugs();
 
             // Mock context (simulating what MCP client might send)
             const mockContext = {
