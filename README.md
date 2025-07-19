@@ -134,6 +134,17 @@ Ask GitHub Copilot:
 
 Found a bug or have a feature request? [Open an issue](https://github.com/digitarald/vscode-agent-todos/issues) or submit a pull request.
 
+## Privacy & Telemetry
+
+Agent TODOs includes optional privacy-preserving telemetry to help improve the extension. The telemetry:
+
+- **Only tracks feature usage patterns** (not your todo content or personal data)
+- **Requires explicit configuration** with an Application Insights connection string
+- **Is disabled by default** in development and user installations
+- **Follows VS Code telemetry guidelines** and best practices
+
+For detailed information, see [Telemetry Documentation](docs/telemetry.md).
+
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
