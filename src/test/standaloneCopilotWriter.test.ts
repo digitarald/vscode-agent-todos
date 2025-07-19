@@ -97,39 +97,54 @@ applyTo: '*.js'
         });
 
         test('Should not accumulate frontmatter on multiple updates', () => {
-            // Simulate multiple updates to the same file content
+            // This test verifies the logic used in updateInstructionsWithTodos
             const hasMethod = (writer as any).hasFrontmatter.bind(writer);
             
             // Initial content with our frontmatter
-            let content = `---
+            let originalContent = `---
 applyTo: '**'
 ---
 
 <todos>Initial todos</todos>
 Some existing content`;
 
-            // First update - should preserve frontmatter
-            const hasFrontmatter1 = hasMethod(content);
-            assert.strictEqual(hasFrontmatter1, true, 'Should detect existing frontmatter');
+            // Check if original content has frontmatter BEFORE modifying
+            const hasExistingFrontmatter = hasMethod(originalContent);
+            assert.strictEqual(hasExistingFrontmatter, true, 'Should detect existing frontmatter');
 
-            // Simulate removing todos and re-adding (like in updateInstructionsWithTodos)
-            const contentWithoutTodos = content.replace(/<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/, '');
-            const newTodos = '<todos>Updated todos</todos>\n\n';
+            // Remove existing todo section (like in updateInstructionsWithTodos)
+            const todoRegex = /<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/;
+            const contentWithoutTodo = originalContent.replace(todoRegex, '');
             
-            // Check frontmatter before prepending todos
-            const frontmatterMatch = content.match(/^(---\n.*?\n---\n\n?)/s);
-            assert.ok(frontmatterMatch, 'Should match frontmatter regex');
+            // New todos section to add
+            const newTodosSection = '<todos>Updated todos</todos>\n\n';
             
-            const frontmatter = frontmatterMatch[1];
-            const contentAfterFrontmatter = contentWithoutTodos.replace(frontmatterMatch[1], '');
-            const finalContent = frontmatter + newTodos + contentAfterFrontmatter;
+            let finalContent: string;
+            if (hasExistingFrontmatter) {
+                // Preserve existing frontmatter, just prepend todos after it
+                const frontmatterMatch = originalContent.match(/^(---\n.*?\n---\n\n?)/s);
+                if (frontmatterMatch) {
+                    const frontmatter = frontmatterMatch[1];
+                    const contentAfterFrontmatter = contentWithoutTodo.replace(frontmatterMatch[1], '');
+                    finalContent = frontmatter + newTodosSection + contentAfterFrontmatter;
+                } else {
+                    // Fallback if regex fails
+                    finalContent = newTodosSection + contentWithoutTodo;
+                }
+            } else {
+                // This branch shouldn't execute in this test, but included for completeness
+                finalContent = newTodosSection + contentWithoutTodo;
+            }
 
             // Should still have only one frontmatter section
-            const frontmatterCount = (finalContent.match(/^---\n/gm) || []).length;
-            assert.strictEqual(frontmatterCount, 1, 'Should have exactly one frontmatter section');
+            const frontmatterMatches = finalContent.match(/---\n/g) || [];
+            // Each frontmatter section has exactly 2 `---\n` (start and end)
+            const frontmatterSectionCount = frontmatterMatches.length / 2;
+            assert.strictEqual(frontmatterSectionCount, 1, 'Should have exactly one frontmatter section');
             
             assert.ok(finalContent.includes('Updated todos'));
             assert.ok(finalContent.includes('Some existing content'));
+            assert.ok(finalContent.includes('applyTo: \'**\''));
         });
     });
 

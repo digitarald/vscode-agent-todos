@@ -6,8 +6,12 @@ import { TodoMCPServerProvider } from '../mcp/mcpProvider';
 suite('Extension Lifecycle Tests', () => {
 	let context: vscode.ExtensionContext;
 	let todoManager: TodoManager;
+	let originalWorkspace: any;
 
 	setup(async () => {
+		// Store original workspace for restoration
+		originalWorkspace = vscode.workspace;
+
 		// Mock extension context
 		const workspaceState = new Map<string, any>();
 		context = {
@@ -20,6 +24,26 @@ suite('Extension Lifecycle Tests', () => {
 			}
 		} as any;
 
+		// Mock VS Code workspace methods that are used by TodoMCPServerProvider
+		const mockWorkspace = {
+			...originalWorkspace,
+			workspaceFolders: originalWorkspace.workspaceFolders,
+			getConfiguration: originalWorkspace.getConfiguration,
+			onDidChangeConfiguration: originalWorkspace.onDidChangeConfiguration,
+			onDidChangeWorkspaceFolders: () => {
+				// Return a mock disposable
+				return {
+					dispose: () => { }
+				};
+			}
+		};
+
+		// Replace vscode.workspace with our mock
+		Object.defineProperty(vscode, 'workspace', {
+			value: mockWorkspace,
+			configurable: true
+		});
+
 		todoManager = TodoManager.getInstance();
 		todoManager.initialize(context);
 		await todoManager.clearTodos();
@@ -27,6 +51,14 @@ suite('Extension Lifecycle Tests', () => {
 
 	teardown(async () => {
 		await todoManager?.clearTodos();
+
+		// Restore original workspace
+		if (originalWorkspace) {
+			Object.defineProperty(vscode, 'workspace', {
+				value: originalWorkspace,
+				configurable: true
+			});
+		}
 	});
 
 	test('Should initialize TodoManager singleton', () => {
