@@ -78,6 +78,8 @@ jobs:
 
       - name: Build extension
         run: npm run compile
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
       - name: Install vsce
         run: npm install -g @vscode/vsce
@@ -94,6 +96,8 @@ jobs:
           fi
           echo "VSIX_FILE=$(ls *.vsix)" >> $GITHUB_ENV
           ls -la *.vsix
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
