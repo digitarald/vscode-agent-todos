@@ -18,6 +18,9 @@ export class StandaloneTodoManager extends EventEmitter {
   private lastUpdateHash: string = '';
   private updateVersion: number = 0;
   private copilotWriter: StandaloneCopilotWriter | null = null;
+  private isSaving: boolean = false;
+  private initializationPromise: Promise<void>;
+  private isInitialized: boolean = false;
   
   constructor(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }) {
     super();
@@ -28,7 +31,7 @@ export class StandaloneTodoManager extends EventEmitter {
         autoInjectConfig.filePath
       );
     }
-    this.initialize();
+    this.initializationPromise = this.initialize();
   }
   
   static getInstance(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }): StandaloneTodoManager {
@@ -42,12 +45,19 @@ export class StandaloneTodoManager extends EventEmitter {
     // Load initial data
     await this.loadTodos();
     
-    // Subscribe to storage changes if supported
-    if (this.storage.onDidChange) {
+    // Subscribe to storage changes if supported and the storage supports external changes
+    // For InMemoryStorage, we don't need to subscribe since it's single-instance
+    const isInMemoryStorage = this.storage.constructor.name === 'InMemoryStorage';
+    if (this.storage.onDidChange && !isInMemoryStorage) {
       this.storageDisposable = this.storage.onDidChange(() => {
-        this.loadTodos();
+        // Don't reload if we're currently saving (prevents recursive loop)
+        if (!this.isSaving) {
+          this.loadTodos();
+        }
       });
     }
+    
+    this.isInitialized = true;
   }
   
   private async loadTodos(): Promise<void> {
@@ -63,6 +73,7 @@ export class StandaloneTodoManager extends EventEmitter {
   
   private async saveTodos(): Promise<void> {
     try {
+      this.isSaving = true;
       await this.storage.save(this.todos, this.title);
       
       // Also write to copilot instructions if enabled
@@ -71,6 +82,8 @@ export class StandaloneTodoManager extends EventEmitter {
       }
     } catch (error) {
       console.error('Failed to save todos:', error);
+    } finally {
+      this.isSaving = false;
     }
   }
   
@@ -88,26 +101,33 @@ export class StandaloneTodoManager extends EventEmitter {
 
   async setTitle(title: string): Promise<void> {
     this.title = title;
-    this.saveTodos();
+    await this.saveTodos();
     this.fireChangeEvent();
   }
   
   async updateTodos(todos: TodoItem[], title?: string): Promise<void> {
+    // Wait for initialization to complete
+    await this.initializationPromise;
+    
     const validationResult = TodoValidator.validateTodos(todos);
     if (!validationResult.valid) {
       throw new Error(validationResult.errors.join(', '));
     }
 
-    // Archive current list if title is changing and we have a meaningful list to archive
-    if (title !== undefined && title !== this.title && this.todos.length > 0 && this.title !== 'Todos') {
-      this.archiveCurrentList(`title change from "${this.title}" to "${title}"`);
+    // Archive current list if we have existing todos and a non-default title
+    // Archive on any updateTodos call that replaces existing todos, not just title changes
+    if (this.todos.length > 0 && this.title !== 'Todos') {
+      const reason = title !== undefined && title !== this.title 
+        ? `title change from "${this.title}" to "${title}"`
+        : `new todo list replacing existing "${this.title}"`;
+      this.archiveCurrentList(reason);
     }
     
     this.todos = todos;
     if (title !== undefined) {
       this.title = title;
     }
-    this.saveTodos();
+    await this.saveTodos();  // Wait for save to complete
     this.fireChangeEvent();
   }
   
@@ -118,7 +138,7 @@ export class StandaloneTodoManager extends EventEmitter {
   
   async clearTodos(): Promise<void> {
     this.todos = [];
-    this.saveTodos();
+    await this.saveTodos();
     
     // Remove from copilot instructions if enabled
     if (this.copilotWriter) {
@@ -130,7 +150,7 @@ export class StandaloneTodoManager extends EventEmitter {
   
   async deleteTodo(todoId: string): Promise<void> {
     this.todos = this.todos.filter(todo => todo.id !== todoId);
-    this.saveTodos();
+    await this.saveTodos();
     this.fireChangeEvent();
   }
   
@@ -143,7 +163,7 @@ export class StandaloneTodoManager extends EventEmitter {
         'completed': 'pending'
       };
       todo.status = statusMap[todo.status];
-      this.saveTodos();
+      await this.saveTodos();
       this.fireChangeEvent();
     }
   }

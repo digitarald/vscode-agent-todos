@@ -211,9 +211,13 @@ export class TodoManager {
 
             console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
 
-            // Archive current list if title is changing and we have a meaningful list to archive
-            if (title !== undefined && title !== this.title && this.todos.length > 0 && this.title !== 'Todos') {
-                this.archiveCurrentList(`title change from "${this.title}" to "${title}"`);
+            // Archive current list if we have existing todos and a non-default title
+            // Archive on any setTodos call that replaces existing todos, not just title changes
+            if (this.todos.length > 0 && this.title !== 'Todos') {
+                const reason = title !== undefined && title !== this.title 
+                    ? `title change from "${this.title}" to "${title}"`
+                    : `new todo list replacing existing "${this.title}"`;
+                this.archiveCurrentList(reason);
             }
 
             this.todos = [...todos];

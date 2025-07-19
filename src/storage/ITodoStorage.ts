@@ -25,4 +25,10 @@ export interface ITodoStorage {
      * @returns Disposable to unsubscribe
      */
     onDidChange?(callback: () => void): { dispose: () => void };
+    
+    /**
+     * Whether this storage supports external changes that require reloading
+     * Set to false for in-memory storage to avoid reload loops
+     */
+    readonly supportsExternalChanges?: boolean;
 }
