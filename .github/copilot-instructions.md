@@ -705,34 +705,25 @@ See test files in [`src/test/`](../src/test/) for examples.
 
 ## Telemetry Implementation
 
-The extension includes optional privacy-preserving telemetry using Application Insights:
+The extension includes optional privacy-preserving telemetry using Application Insights.
 
-### TelemetryManager
+### For Developers
 
-- **Centralized service**: Handles all telemetry operations
-- **Privacy-first**: Automatically filters sensitive data (content, paths, tokens)
-- **Graceful fallback**: Works when telemetry is disabled or unavailable
-- **VS Code integration**: Proper disposal and resource management
+- **TelemetryManager**: Centralized service in `src/telemetryManager.ts` - handles all telemetry operations with privacy filters
+- **Configuration**: Requires `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable (disabled by default in development)
+- **Privacy-first**: Automatically filters sensitive data (content, paths, tokens) and only collects anonymized usage patterns
 
-### Instrumentation Points
+### Adding New Events
 
-- **Extension lifecycle**: Activation, deactivation, errors
-- **Feature usage**: Command executions, configuration changes
-- **MCP operations**: Server operations, tool usage, read/write events
-- **Error tracking**: Initialization failures, operation errors with sanitized messages
+When adding new telemetry events:
 
-### Privacy Protection
+1. Use `TelemetryManager.trackEvent(name, properties, measurements)` in your code
+2. **CRITICAL**: Update `telemetry.json` with the new event definition including name, description, properties, and measurements
+3. Follow existing patterns for privacy-safe event names and properties
 
-- Filters sensitive property keys (`content`, `text`, `password`, `path`, etc.)
-- Truncates long values to prevent data leakage
-- Sanitizes error messages (removes file paths, tokens)
-- Only collects aggregate usage patterns, not user content
+**Important**: Keep `telemetry.json` in sync with actual telemetry events in the code. This file documents all collected data for transparency.
 
-### Configuration
-
-Requires `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable. Disabled by default in development.
-
-See `telemetry.json` for details on events collected.
+See `telemetry.json` for complete details on events collected.
 
 ```
 
