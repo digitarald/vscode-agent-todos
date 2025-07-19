@@ -663,7 +663,7 @@ The extension includes optional privacy-preserving telemetry using Application I
 
 Requires `APPLICATIONINSIGHTS_CONNECTION_STRING` environment variable. Disabled by default in development.
 
-See [`docs/telemetry.md`](../docs/telemetry.md) for detailed documentation.
+See `telemetry.json` for details on events collected.
 
 ```
 

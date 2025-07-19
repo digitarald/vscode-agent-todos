@@ -1,0 +1,131 @@
+{
+  "events": [
+    {
+      "name": "extension.activate",
+      "description": "Extension activation event",
+      "properties": {
+        "extensionVersion": "Extension version number"
+      },
+      "measurements": {}
+    },
+    {
+      "name": "extension.deactivate", 
+      "description": "Extension deactivation event",
+      "properties": {},
+      "measurements": {}
+    },
+    {
+      "name": "command.clearTodos",
+      "description": "User cleared all todos",
+      "properties": {},
+      "measurements": {
+        "todoCount": "Number of todos that were cleared"
+      }
+    },
+    {
+      "name": "command.toggleAutoInject",
+      "description": "User toggled auto-inject setting",
+      "properties": {
+        "enabled": "Whether auto-inject was enabled or disabled"
+      },
+      "measurements": {}
+    },
+    {
+      "name": "command.runTodo",
+      "description": "User ran a todo in VS Code chat",
+      "properties": {
+        "status": "Todo status (pending, in-progress, completed)",
+        "priority": "Todo priority level (low, medium, high)"
+      },
+      "measurements": {}
+    },
+    {
+      "name": "todos.updated",
+      "description": "Todo list was modified",
+      "properties": {},
+      "measurements": {
+        "todoCount": "Total number of todos",
+        "pendingCount": "Number of pending todos",
+        "inProgressCount": "Number of in-progress todos", 
+        "completedCount": "Number of completed todos"
+      }
+    },
+    {
+      "name": "todos.cleared",
+      "description": "All todos were cleared",
+      "properties": {},
+      "measurements": {
+        "clearedCount": "Number of todos that were cleared"
+      }
+    },
+    {
+      "name": "mcp.provider.registered",
+      "description": "MCP server provider was registered with VS Code",
+      "properties": {},
+      "measurements": {}
+    },
+    {
+      "name": "mcp.server.started",
+      "description": "MCP server started successfully",
+      "properties": {
+        "standalone": "Whether running in standalone mode"
+      },
+      "measurements": {}
+    },
+    {
+      "name": "mcp.read.success",
+      "description": "Successful MCP read operation",
+      "properties": {
+        "standalone": "Whether running in standalone mode"
+      },
+      "measurements": {
+        "todoCount": "Number of todos read"
+      }
+    },
+    {
+      "name": "mcp.read.blocked",
+      "description": "MCP read operation was blocked (e.g. auto-inject enabled)",
+      "properties": {
+        "reason": "Reason for blocking the read operation"
+      },
+      "measurements": {}
+    },
+    {
+      "name": "mcp.write.success",
+      "description": "Successful MCP write operation",
+      "properties": {
+        "standalone": "Whether running in standalone mode"
+      },
+      "measurements": {
+        "todoCount": "Total number of todos after write",
+        "pendingCount": "Number of pending todos",
+        "inProgressCount": "Number of in-progress todos",
+        "completedCount": "Number of completed todos"
+      }
+    },
+    {
+      "name": "extension.error",
+      "description": "Extension error occurred",
+      "properties": {
+        "phase": "Extension phase where error occurred (e.g. activation)",
+        "errorType": "Type of error that occurred"
+      },
+      "measurements": {}
+    },
+    {
+      "name": "extension.exception",
+      "description": "Unhandled exception in extension",
+      "properties": {
+        "errorType": "Type of exception that occurred"
+      },
+      "measurements": {}
+    }
+  ],
+  "commonProperties": {
+    "common.os": "Operating system",
+    "common.platformversion": "Platform version",
+    "common.product": "VS Code product name",
+    "common.productversion": "VS Code version"
+  },
+  "description": "Agent TODOs extension telemetry events. No personal data or todo content is collected. Only anonymized usage patterns and error rates are tracked to improve the extension."
+}
