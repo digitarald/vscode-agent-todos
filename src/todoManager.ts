@@ -428,7 +428,7 @@ export class TodoManager {
             const slug = generateUniqueSlug(this.title, existingSlugs);
             
             const archived: ArchivedTodoList = {
-                id: `archive-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                id: `archive-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
                 title: this.title,
                 todos: [...this.todos],
                 archivedAt: new Date(),
