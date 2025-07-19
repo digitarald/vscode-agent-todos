@@ -366,7 +366,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     const reminder = inProgressTaskCount === 0 && pendingCount > 0 ? '\nReminder: Mark a task as in_progress BEFORE starting work on it.' : '';
 
     const autoInjectNote = this.isAutoInjectEnabled() && !this.server.isStandalone()
-      ? '\nNote: Todos are automatically synced to <todos> in .github/copilot-instructions.md'
+      ? '\nNote: Todos are automatically synced to <todos> in instructions file'
       : '';
 
     const titleMsg = title ? ` and title to "${title}"` : '';

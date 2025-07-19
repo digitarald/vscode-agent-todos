@@ -93,9 +93,9 @@ export class TodoManager {
 
     private getAutoInjectFilePath(): string {
         try {
-            return vscode.workspace.getConfiguration('agentTodos').get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+            return vscode.workspace.getConfiguration('agentTodos').get<string>('autoInjectFilePath', '.github/instructions/todos.instructions.md');
         } catch (error) {
-            return '.github/copilot-instructions.md'; // Default when vscode is not available
+            return '.github/instructions/todos.instructions.md'; // Default when vscode is not available
         }
     }
 

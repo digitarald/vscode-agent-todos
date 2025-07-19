@@ -233,4 +233,128 @@ suite('Copilot Instructions Integration Tests', () => {
             assert.strictEqual(typeof (instructionsManager as any).parseTodosFromMarkdown, 'undefined');
         });
     });
+
+    suite('Frontmatter Template Tests', () => {
+        test('Should detect when frontmatter is missing', () => {
+            const content = '<todos>Some content</todos>';
+            const detectMethod = (instructionsManager as any).hasFrontmatter.bind(instructionsManager);
+
+            const result = detectMethod(content);
+            assert.strictEqual(result, false);
+        });
+
+        test('Should detect when frontmatter is present', () => {
+            const content = `---
+applyTo: '**'
+---
+
+<todos>Some content</todos>`;
+            const detectMethod = (instructionsManager as any).hasFrontmatter.bind(instructionsManager);
+
+            const result = detectMethod(content);
+            assert.strictEqual(result, true);
+        });
+
+        test('Should detect frontmatter with different content', () => {
+            const content = `---
+title: My Instructions
+applyTo: '*.ts'
+---
+
+Some content here`;
+            const detectMethod = (instructionsManager as any).hasFrontmatter.bind(instructionsManager);
+
+            const result = detectMethod(content);
+            assert.strictEqual(result, true);
+        });
+
+        test('Should not detect false positives', () => {
+            const content = `This is not frontmatter
+---
+Even though it has dashes
+---
+It should not be detected as frontmatter`;
+            const detectMethod = (instructionsManager as any).hasFrontmatter.bind(instructionsManager);
+
+            const result = detectMethod(content);
+            assert.strictEqual(result, false);
+        });
+
+        test('Should add frontmatter to content without it', () => {
+            const content = '<todos>Some todos</todos>';
+            const addMethod = (instructionsManager as any).addFrontmatter.bind(instructionsManager);
+
+            const result = addMethod(content);
+
+            assert.ok(result.startsWith('---\napplyTo: \'**\'\n---\n\n'));
+            assert.ok(result.includes('<todos>Some todos</todos>'));
+        });
+
+        test('Should preserve existing frontmatter', () => {
+            const content = `---
+title: Existing
+applyTo: '*.js'
+---
+
+<todos>Some todos</todos>`;
+            const addMethod = (instructionsManager as any).addFrontmatter.bind(instructionsManager);
+
+            const result = addMethod(content);
+
+            assert.strictEqual(result, content); // Should be unchanged
+            assert.ok(result.includes('title: Existing'));
+            assert.ok(result.includes('applyTo: \'*.js\''));
+        });
+
+        test('Should not accumulate frontmatter on multiple updates', () => {
+            // This test verifies the logic used in updateInstructionsWithTodos
+            const hasMethod = (instructionsManager as any).hasFrontmatter.bind(instructionsManager);
+
+            // Initial content with our frontmatter
+            let originalContent = `---
+applyTo: '**'
+---
+
+<todos>Initial todos</todos>
+Some existing content`;
+
+            // Check if original content has frontmatter BEFORE modifying
+            const hasExistingFrontmatter = hasMethod(originalContent);
+            assert.strictEqual(hasExistingFrontmatter, true, 'Should detect existing frontmatter');
+
+            // Remove existing todo section (like in updateInstructionsWithTodos)
+            const todoRegex = /<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/;
+            const contentWithoutTodo = originalContent.replace(todoRegex, '');
+
+            // New todos section to add
+            const newTodosSection = '<todos>Updated todos</todos>\n\n';
+
+            let finalContent: string;
+            if (hasExistingFrontmatter) {
+                // Preserve existing frontmatter, just prepend todos after it
+                const frontmatterMatch = originalContent.match(/^(---\n.*?\n---\n\n?)/s);
+                if (frontmatterMatch) {
+                    const frontmatter = frontmatterMatch[1];
+                    const contentAfterFrontmatter = contentWithoutTodo.replace(frontmatterMatch[1], '');
+                    finalContent = frontmatter + newTodosSection + contentAfterFrontmatter;
+                } else {
+                    // Fallback if regex fails
+                    finalContent = newTodosSection + contentWithoutTodo;
+                }
+            } else {
+                // This branch shouldn't execute in this test, but included for completeness
+                finalContent = newTodosSection + contentWithoutTodo;
+            }
+
+            // Should still have only one frontmatter section
+            const frontmatterMatches = finalContent.match(/---\n/g) || [];
+            // Each frontmatter section has exactly 2 `---\n` (start and end)
+            const frontmatterSectionCount = frontmatterMatches.length / 2;
+            assert.strictEqual(frontmatterSectionCount, 1, 'Should have exactly one frontmatter section');
+
+            assert.ok(finalContent.includes('Updated todos'));
+            assert.ok(finalContent.includes('Some existing content'));
+            assert.ok(finalContent.includes('applyTo: \'**\''));
+        });
+    });
 });

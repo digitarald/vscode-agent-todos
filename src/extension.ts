@@ -173,7 +173,7 @@ export async function activate(context: vscode.ExtensionContext) {
 				await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
 
 				const status = !currentValue ? 'enabled' : 'disabled';
-				vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
+				vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} instructions file`);
 				
 				telemetryManager.sendEvent('command.toggleAutoInject', {
 					newValue: String(!currentValue)
@@ -192,7 +192,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			await config.update('autoInject', !currentValue, vscode.ConfigurationTarget.Workspace);
 
 			const status = !currentValue ? 'enabled' : 'disabled';
-			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} .github/copilot-instructions.md`);
+			vscode.window.showInformationMessage(`Auto-inject ${status}. Todo list will ${!currentValue ? 'now be automatically injected into' : 'be removed from'} instructions file`);
 		});
 
 		const toggleAutoOpenViewCommand = vscode.commands.registerCommand('agentTodos.toggleAutoOpenView', async () => {

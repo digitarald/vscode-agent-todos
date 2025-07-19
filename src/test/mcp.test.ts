@@ -11,8 +11,12 @@ import { TodoItem } from '../types';
 
 suite('MCP Integration Tests', () => {
     let context: vscode.ExtensionContext;
+    let originalWorkspace: any;
 
     setup(() => {
+        // Store original workspace for restoration
+        originalWorkspace = vscode.workspace;
+
         // Mock extension context
         const workspaceState = new Map<string, any>();
         context = {
@@ -24,6 +28,36 @@ suite('MCP Integration Tests', () => {
                 }
             }
         } as any;
+
+        // Mock VS Code workspace methods that are used by TodoMCPServerProvider
+        const mockWorkspace = {
+            ...originalWorkspace,
+            workspaceFolders: originalWorkspace.workspaceFolders,
+            getConfiguration: originalWorkspace.getConfiguration,
+            onDidChangeConfiguration: originalWorkspace.onDidChangeConfiguration,
+            onDidChangeWorkspaceFolders: () => {
+                // Return a mock disposable
+                return {
+                    dispose: () => { }
+                };
+            }
+        };
+
+        // Replace vscode.workspace with our mock
+        Object.defineProperty(vscode, 'workspace', {
+            value: mockWorkspace,
+            configurable: true
+        });
+    });
+
+    teardown(() => {
+        // Restore original workspace
+        if (originalWorkspace) {
+            Object.defineProperty(vscode, 'workspace', {
+                value: originalWorkspace,
+                configurable: true
+            });
+        }
     });
 
     suite('MCP Server', () => {

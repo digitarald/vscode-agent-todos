@@ -374,4 +374,69 @@ suite('TodoManager Core Tests', () => {
             assert.notDeepStrictEqual(todos1[0].status, todos3[0].status);
         });
     });
+
+    suite('Configuration Tests', () => {
+        test('Should use new default autoInjectFilePath when VS Code config is unavailable', () => {
+            // Access the private method using bracket notation for testing
+            const defaultPath = (todoManager as any).getAutoInjectFilePath();
+
+            // Mock VS Code config to throw error to test fallback
+            const originalVscode = require('vscode');
+            const mockWorkspace = {
+                getConfiguration: () => {
+                    throw new Error('VS Code not available');
+                }
+            };
+
+            // Temporarily replace vscode workspace
+            Object.defineProperty(require('vscode'), 'workspace', {
+                value: mockWorkspace,
+                configurable: true
+            });
+
+            try {
+                const fallbackPath = (todoManager as any).getAutoInjectFilePath();
+                assert.strictEqual(fallbackPath, '.github/instructions/todos.instructions.md');
+            } finally {
+                // Restore original vscode
+                Object.defineProperty(require('vscode'), 'workspace', {
+                    value: originalVscode.workspace,
+                    configurable: true
+                });
+            }
+        });
+
+        test('Should respect custom autoInjectFilePath configuration', () => {
+            // Mock VS Code configuration
+            const mockConfig = {
+                get: (key: string, defaultValue: string) => {
+                    if (key === 'autoInjectFilePath') {
+                        return '/custom/path/todos.md';
+                    }
+                    return defaultValue;
+                }
+            };
+
+            const mockWorkspace = {
+                getConfiguration: () => mockConfig
+            };
+
+            const originalVscode = require('vscode');
+            Object.defineProperty(require('vscode'), 'workspace', {
+                value: mockWorkspace,
+                configurable: true
+            });
+
+            try {
+                const customPath = (todoManager as any).getAutoInjectFilePath();
+                assert.strictEqual(customPath, '/custom/path/todos.md');
+            } finally {
+                // Restore original vscode
+                Object.defineProperty(require('vscode'), 'workspace', {
+                    value: originalVscode.workspace,
+                    configurable: true
+                });
+            }
+        });
+    });
 });

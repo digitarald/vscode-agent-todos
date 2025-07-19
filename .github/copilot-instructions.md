@@ -1,14 +1,3 @@
-This is a VS Code extension project. Please use the get_vscode_api with a query as input to fetch the latest VS Code API references.
-
-IMPORTANT:
-
-- ALWAYS plan changes using detailed todos
-- ALWAYS keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation!
-- ALWAYS validate changes by running compile and test commands!
-- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
-- NEVER make changes backwards compatible unless explicitly requested by the User.
-- NEVER create one-off scripts to test changes.
-
 ## Project Overview
 
 This extension provides VS Code agent mode with todo management tools through MCP (Model Context Protocol) and an integrated VS Code tree view. It enables AI assistants to proactively track tasks during development workflows with support for subtasks, priorities, auto-injection into Copilot instructions.
@@ -18,6 +7,15 @@ For more details:
 - [Main README](../README.md) - Feature overview and usage
 - [MCP Server Documentation](../src/mcp/README.md) - Server architecture, protocol details, and completion support
 - [MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/)
+
+## IMPORTANT:
+
+- ALWAYS plan changes using detailed todos
+- ALWAYS keep `.github/copilot-instructions.md` up-to-date with the latest architecture and coding standards, addressing any drifts in implementation!
+- ALWAYS validate changes by running compile and test commands!
+- NEVER proactively create documentation files (\*.md) or README files. Only create documentation files if explicitly requested by the User.
+- NEVER make changes backwards compatible unless explicitly requested by the User.
+- NEVER create one-off scripts to test changes.
 
 ## Architecture
 
@@ -60,7 +58,7 @@ graph TB
 
     subgraph ExternalInterfaces[External Interfaces]
         VSC[VS Code API]
-        CI[copilot-instructions.md]
+        CI[todos.instructions.md]
         MC[MCP Clients<br/>AI Assistants]
         MCPAPI[VS Code MCP API]
     end
@@ -319,7 +317,7 @@ Available implementations:
 
 ### Export Pattern
 
-The copilot-instructions.md file is treated as a write-only export destination, not a storage backend:
+The instructions file is treated as a write-only export destination, not a storage backend:
 
 ```typescript
 // VS Code mode: Uses CopilotInstructionsManager
@@ -450,7 +448,7 @@ const configDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
       config: {
         autoInject: config.get<boolean>('autoInject', false),
         enableSubtasks: config.get<boolean>('enableSubtasks', true),
-        autoInjectFilePath: config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md')
+        autoInjectFilePath: config.get<string>('autoInjectFilePath', '.github/instructions/todos.instructions.md')
       },
       timestamp: Date.now()
     });
@@ -542,7 +540,7 @@ See [`package.json`](../package.json) for full configuration:
   - Configuration commands (auto-inject, auto-open view)
 - **Configuration**: Settings under `agentTodos.*` namespace including:
   - `agentTodos.autoInject` - Enable write-only export to copilot instructions file
-  - `agentTodos.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/copilot-instructions.md`)
+  - `agentTodos.autoInjectFilePath` - Configurable file path for auto-injection (default: `.github/instructions/todos.instructions.md`)
   - `agentTodos.autoOpenView` - Automatically open todo view when list changes
   - `agentTodos.enableSubtasks` - Enable subtasks feature
 

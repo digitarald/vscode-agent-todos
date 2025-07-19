@@ -17,6 +17,25 @@ export class CopilotInstructionsManager {
         return CopilotInstructionsManager.instance;
     }
 
+    private hasFrontmatter(content: string): boolean {
+        // Check if content starts with YAML frontmatter
+        return /^---\n.*?\n---\n/s.test(content);
+    }
+
+    private addFrontmatter(content: string): string {
+        // Add frontmatter only if missing
+        if (this.hasFrontmatter(content)) {
+            return content; // Preserve existing frontmatter
+        }
+
+        const frontmatter = `---
+applyTo: '**'
+---
+
+`;
+        return frontmatter + content;
+    }
+
     private validateFilePath(filePath: string): boolean {
         // Check for empty or whitespace-only paths
         if (!filePath || filePath.trim().length === 0) {
@@ -45,17 +64,17 @@ export class CopilotInstructionsManager {
     private getConfiguredFilePath(): string {
         try {
             const config = vscode.workspace.getConfiguration('agentTodos');
-            const filePath = config.get<string>('autoInjectFilePath', '.github/copilot-instructions.md');
+            const filePath = config.get<string>('autoInjectFilePath', '.github/instructions/todos.instructions.md');
 
             if (!this.validateFilePath(filePath)) {
                 console.warn(`[CopilotInstructionsManager] Invalid file path configured: ${filePath}, using default`);
-                return '.github/copilot-instructions.md';
+                return '.github/instructions/todos.instructions.md';
             }
 
             return filePath;
         } catch (error) {
             // Default when vscode is not available
-            return '.github/copilot-instructions.md';
+            return '.github/instructions/todos.instructions.md';
         }
     }
 
@@ -119,15 +138,35 @@ export class CopilotInstructionsManager {
             let newContent: string;
 
             if (existingContent) {
+                // Check if original content has frontmatter before modifying
+                const hasExistingFrontmatter = this.hasFrontmatter(existingContent);
+
                 // Remove existing todo section if it exists
                 const todoRegex = /<todos[^>]*>[\s\S]*?<\/todos>\s*\n?/;
                 const contentWithoutTodo = existingContent.replace(todoRegex, '');
 
-                // Prepend the new todo section
-                newContent = planSection + contentWithoutTodo;
+                if (hasExistingFrontmatter) {
+                    // Preserve existing frontmatter, just prepend todos after it
+                    const frontmatterMatch = existingContent.match(/^(---\n.*?\n---\n\n?)/s);
+                    if (frontmatterMatch) {
+                        const frontmatter = frontmatterMatch[1];
+                        const contentAfterFrontmatter = contentWithoutTodo.replace(frontmatterMatch[1], '');
+                        newContent = frontmatter + planSection + contentAfterFrontmatter;
+                    } else {
+                        // Fallback if regex fails
+                        newContent = planSection + contentWithoutTodo;
+                    }
+                } else {
+                    // No existing frontmatter, add it to the whole content
+                    const contentWithTodo = planSection + contentWithoutTodo;
+                    newContent = this.addFrontmatter(contentWithTodo);
+                }
             } else {
                 // Create a minimal file with just the todo section
-                newContent = `<!-- Auto-generated todo section -->\n${planSection}<!-- Add your custom Copilot instructions below -->\n`;
+                const minimalContent = `<!-- Auto-generated todo section -->\n${planSection}<!-- Add your custom Copilot instructions below -->\n`;
+
+                // Add frontmatter
+                newContent = this.addFrontmatter(minimalContent);
             }
 
             // Write the updated content
