@@ -1,0 +1,52 @@
+title: Agent TODOs
+description: Your AI pair programmer's memory system for VS Code
+url: "https://digitarald.github.io/vscode-agent-todos"
+baseurl: "/vscode-agent-todos"
+
+# GitHub Pages settings
+theme: minima
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Site metadata
+author:
+  name: digitarald
+  email: hello@digitarald.com
+
+social_links:
+  github: digitarald
+  twitter: digitarald
+
+# Navigation
+header_pages:
+  - index.md
+
+# Build settings
+markdown: kramdown
+kramdown:
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: 'highlight'
+
+# Collections
+collections_dir: docs
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - .github/
+  - src/
+  - dist/
+  - out/
+  - test-workspace/
+  - "*.json"
+  - "*.js"
+  - "*.mjs"
+  - "*.ts"
