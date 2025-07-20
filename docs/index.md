@@ -6,132 +6,234 @@ layout: home
 
 **Your AI pair programmer's memory system.** Seamlessly integrate persistent task tracking with GitHub Copilot and VS Code's native AI features—giving your coding assistant perfect memory across sessions.
 
-[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/digitarald.agent-todos?style=for-the-badge&logo=visual-studio-code)](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
-[![Downloads](https://img.shields.io/visual-studio-marketplace/d/digitarald.agent-todos?style=for-the-badge)](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
+[![VS Code Marketplace](https://img.shields.io/visual-studio-marketplace/v/digitarald.agent-todos?style=for-the-badge&logo=visual-studio-code&logoColor=white&color=007ACC)](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/digitarald.agent-todos?style=for-the-badge&logo=download&logoColor=white&color=success)](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)
+[![CI](https://img.shields.io/github/actions/workflow/status/digitarald/vscode-agent-todos/auto-release.yml?style=for-the-badge&logo=github&logoColor=white)](https://github.com/digitarald/vscode-agent-todos/actions)
 
-## Install Now
+<div class="install-cta">
+  <h2>🚀 Ready to supercharge your AI coding workflow?</h2>
+  <p>Get started in seconds with one click</p>
+  <a href="https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos">Install from VS Code Marketplace</a>
+</div>
 
-🚀 **[Install from VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos)**
-
-Or install directly in VS Code:
-1. Open VS Code
-2. Press `Ctrl+P` (or `Cmd+P` on Mac)
-3. Type: `ext install digitarald.agent-todos`
-4. Press Enter
+<div class="quick-install">
+  <h3>Quick Install</h3>
+  <p>Or install directly in VS Code:</p>
+  <ol>
+    <li>Press <code>Ctrl+P</code> (or <code>Cmd+P</code> on Mac)</li>
+    <li>Type: <code>ext install digitarald.agent-todos</code></li>
+    <li>Press Enter and start planning!</li>
+  </ol>
+</div>
 
 ## Why Agent TODOs?
 
-VS Code's agent mode is brilliant at writing code but lacks persistent memory between sessions. AI can spot TODO comments but can't maintain an actionable task list that evolves with your project.
+<div class="workflow-example">
+  <strong>The Problem:</strong> VS Code's agent mode is brilliant at writing code but lacks persistent memory between sessions. AI can spot TODO comments but can't maintain an actionable task list that evolves with your project.
+  
+  <strong>The Solution:</strong> Agent TODOs bridges this gap by giving VS Code's AI ecosystem a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
+</div>
 
-**Agent TODOs bridges this gap** by giving VS Code's AI ecosystem a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
+> *"Finally, an AI assistant that remembers what we planned to do next."* — Developer using Agent TODOs
 
-> *"Finally, an AI assistant that remembers what we planned to do next."*
-
-## Key Features
-
-- **🤖 Native VS Code Integration**: Built-in `todo_read` and `todo_write` tools that work seamlessly with GitHub Copilot and VS Code's agent mode
-- **🧠 Persistent AI Memory**: AI can read, update, and remember tasks between sessions—no more lost context
-- **📋 Visual Task Management**: Interactive tree view in VS Code's Explorer with one-click status updates
-- **🔗 Auto-Sync with Copilot**: Automatically inject todos into `.github/copilot-instructions.md` for enhanced AI context
-- **⚡ Instant AI Execution**: Run todos directly in VS Code Chat with context-aware assistance
-- **🎯 Smart Organization**: Subtasks, priorities, rich descriptions, and three-state workflow (pending → in-progress → completed)
-- **🔧 Flexible Integration**: Works as VS Code extension or standalone MCP server for advanced integrations
+<div class="feature-grid">
+  <div class="feature-item">
+    <h3>🤖 Native VS Code Integration</h3>
+    <p>Built-in <code>todo_read</code> and <code>todo_write</code> tools that work seamlessly with GitHub Copilot and VS Code's agent mode. No configuration needed—just install and start planning.</p>
+  </div>
+  
+  <div class="feature-item">
+    <h3>🧠 Persistent AI Memory</h3>
+    <p>AI can read, update, and remember tasks between sessions. Your coding assistant never forgets what you were working on or what comes next in your project.</p>
+  </div>
+  
+  <div class="feature-item">
+    <h3>📋 Visual Task Management</h3>
+    <p>Interactive tree view in VS Code's Explorer with one-click status updates. See your progress at a glance and manage tasks without leaving your code.</p>
+  </div>
+  
+  <div class="feature-item">
+    <h3>🔗 Auto-Sync with Copilot</h3>
+    <p>Automatically inject todos into <code>.github/copilot-instructions.md</code> for enhanced AI context. Your AI always knows your current priorities and project state.</p>
+  </div>
+  
+  <div class="feature-item">
+    <h3>⚡ Instant AI Execution</h3>
+    <p>Run todos directly in VS Code Chat with context-aware assistance. Click any todo to continue working on it with full AI support.</p>
+  </div>
+  
+  <div class="feature-item">
+    <h3>🎯 Smart Organization</h3>
+    <p>Subtasks, priorities, rich descriptions, and three-state workflow (pending → in-progress → completed). Keep complex projects organized and trackable.</p>
+  </div>
+</div>
 
 ## How It Works
 
-1. **Install** → Extension adds todo tools to GitHub Copilot automatically
-2. **Plan** → Ask Copilot to create and organize your development tasks  
-3. **Track** → Visual tree view shows progress; AI remembers everything
-4. **Execute** → Run todos directly in VS Code Chat with full context
+<div class="workflow-steps">
+  <div class="step">
+    <div class="step-number">1</div>
+    <div class="step-content">
+      <h4>Install</h4>
+      <p>Extension adds todo tools to GitHub Copilot automatically</p>
+    </div>
+  </div>
+  
+  <div class="step">
+    <div class="step-number">2</div>
+    <div class="step-content">
+      <h4>Plan</h4>
+      <p>Ask Copilot to create and organize your development tasks</p>
+    </div>
+  </div>
+  
+  <div class="step">
+    <div class="step-number">3</div>
+    <div class="step-content">
+      <h4>Track</h4>
+      <p>Visual tree view shows progress; AI remembers everything</p>
+    </div>
+  </div>
+  
+  <div class="step">
+    <div class="step-number">4</div>
+    <div class="step-content">
+      <h4>Execute</h4>
+      <p>Run todos directly in VS Code Chat with full context</p>
+    </div>
+  </div>
+</div>
 
-### Example Workflow
-
-```
-You: "Create a todo list for implementing user authentication"
-
-GitHub Copilot: "I'll create a structured plan for user authentication. 
-Let me organize this into actionable tasks..."
-
-📝 Creating todos:
-• Set up authentication routes (high priority)
-• Configure auth library integration
-• Create login/register endpoints
-• Add JWT middleware for protected routes
-• Write authentication tests
-
-You: "Start with the first task"
-
-GitHub Copilot: "I'll help you set up the authentication routes. 
-First, let me mark this as in-progress..."
-
-🔄 Updated todo: "Set up authentication routes" → in_progress
-
-*Creates auth.routes.ts file*
-*Implements basic route structure*
-
-✅ Marking "Set up authentication routes" as completed
-```
+<div class="workflow-example">
+  <h3>🔄 Example Workflow</h3>
+  
+  <div class="chat-example">
+    <div class="chat-message user">
+      <strong>You:</strong> "Create a todo list for implementing user authentication"
+    </div>
+    
+    <div class="chat-message assistant">
+      <strong>GitHub Copilot:</strong> "I'll create a structured plan for user authentication. Let me organize this into actionable tasks..."
+      
+      <div class="todo-creation">
+        📝 <strong>Creating todos:</strong>
+        <ul>
+          <li>✅ Set up authentication routes (high priority)</li>
+          <li>⏳ Configure auth library integration</li>
+          <li>⏳ Create login/register endpoints</li>
+          <li>⏳ Add JWT middleware for protected routes</li>
+          <li>⏳ Write authentication tests</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="chat-message user">
+      <strong>You:</strong> "Start with the first task"
+    </div>
+    
+    <div class="chat-message assistant">
+      <strong>GitHub Copilot:</strong> "I'll help you set up the authentication routes. First, let me mark this as in-progress..."
+      
+      <div class="status-update">
+        🔄 <strong>Updated todo:</strong> "Set up authentication routes" → <span class="status in-progress">in_progress</span>
+      </div>
+      
+      <p><em>*Creates auth.routes.ts file*</em><br>
+      <em>*Implements basic route structure*</em></p>
+      
+      <div class="status-update">
+        ✅ <strong>Completed:</strong> "Set up authentication routes"
+      </div>
+    </div>
+  </div>
+</div>
 
 ## Quick Start
 
-### For AI Assistants (Recommended)
+<div class="quick-start-tabs">
+  <div class="tab-content">
+    <h3>🤖 For AI Assistants (Recommended)</h3>
+    <ol>
+      <li><strong>Install</strong> the extension from VS Code Marketplace</li>
+      <li><strong>Chat with GitHub Copilot</strong>: Your AI now has <code>todo_read</code> and <code>todo_write</code> tools automatically</li>
+      <li><strong>Start planning</strong>: Ask Copilot to create todos, track progress, or suggest next steps</li>
+      <li><strong>Watch the magic</strong>: Todos appear in the Explorer tree view and sync with Copilot's memory</li>
+    </ol>
+    
+    <div class="try-commands">
+      <h4>💬 Try asking GitHub Copilot:</h4>
+      <ul>
+        <li><em>"Create a todo list for implementing user authentication"</em></li>
+        <li><em>"What should I work on next based on my current todos?"</em></li>
+        <li><em>"Mark the database setup task as completed and suggest the next step"</em></li>
+        <li><em>"Break down the API integration task into smaller subtasks"</em></li>
+      </ul>
+    </div>
+  </div>
+  
+  <div class="tab-content">
+    <h3>👤 For Manual Use</h3>
+    <ol>
+      <li><strong>Open Explorer</strong>: Find "Agent TODOs" in the VS Code Explorer sidebar</li>
+      <li><strong>Start Planning</strong>: Click "Start Planning" to open VS Code Chat</li>
+      <li><strong>Add Tasks</strong>: Use the tree view buttons or chat commands to manage todos</li>
+      <li><strong>Track Progress</strong>: Click todos to change status, priority, or add details</li>
+    </ol>
+  </div>
+</div>
 
-1. **Install** the extension from VS Code Marketplace
-2. **Chat with GitHub Copilot**: Your AI now has `todo_read` and `todo_write` tools automatically
-3. **Start planning**: Ask Copilot to create todos, track progress, or suggest next steps
-4. **Watch the magic**: Todos appear in the Explorer tree view and sync with Copilot's memory
+## Advanced Features
 
-**Try asking GitHub Copilot:**
-- *"Create a todo list for implementing user authentication"*
-- *"What should I work on next based on my current todos?"*  
-- *"Mark the database setup task as completed and suggest the next step"*
-
-### For Manual Use
-
-1. **Open Explorer**: Find "Agent TODOs" in the VS Code Explorer sidebar
-2. **Start Planning**: Click "Start Planning" to open VS Code Chat
-3. **Add Tasks**: Use the tree view buttons or chat commands to manage todos
-4. **Track Progress**: Click todos to change status, priority, or add details
-
-## Documentation
-
-### Configuration
-
-Configure the extension through VS Code settings (`Ctrl+,` then search for "Agent TODOs"):
-
-- **Auto-inject**: Automatically sync todos to `.github/copilot-instructions.md`
-- **Auto-open view**: Open the todo view when changes occur
-- **File path**: Customize where auto-injected todos are saved
-
-### Advanced Usage
-
-#### MCP Server Mode
-
-For advanced integrations, run the standalone MCP server:
-
-```bash
-npm install -g agent-todos
+<div class="feature-grid">
+  <div class="feature-item">
+    <h3>⚙️ Smart Configuration</h3>
+    <p>Configure through VS Code settings (<code>Ctrl+,</code> then search "Agent TODOs"):</p>
+    <ul>
+      <li><strong>Auto-inject</strong>: Sync todos to <code>.github/copilot-instructions.md</code></li>
+      <li><strong>Auto-open view</strong>: Open todo view when changes occur</li>
+      <li><strong>Custom file path</strong>: Choose where auto-injected todos are saved</li>
+    </ul>
+  </div>
+  
+  <div class="feature-item">
+    <h3>🏗️ MCP Server Mode</h3>
+    <p>For advanced integrations, run the standalone MCP server:</p>
+    <pre><code>npm install -g agent-todos
 # or
-npx agent-todos
-```
-
-The server provides HTTP endpoints and SSE for real-time todo synchronization across multiple clients.
-
-#### Subtasks & Priorities
-
-- **Subtasks**: Break down complex todos into manageable pieces
-- **Priorities**: High, Medium, Low with visual indicators
-- **Status Tracking**: Pending → In Progress → Completed workflow
-- **Rich Details**: Add architecture decisions (ADR) and implementation notes
-
-#### Auto-Sync with Copilot
-
-Enable auto-inject to automatically maintain a `.github/copilot-instructions.md` file with your current todos. This gives GitHub Copilot perfect context about your project's current state and priorities.
+npx agent-todos</code></pre>
+    <p>Provides HTTP endpoints and SSE for real-time todo synchronization across multiple clients.</p>
+  </div>
+  
+  <div class="feature-item">
+    <h3>📋 Rich Task Management</h3>
+    <ul>
+      <li><strong>Subtasks</strong>: Break down complex todos into manageable pieces</li>
+      <li><strong>Priorities</strong>: High, Medium, Low with visual indicators</li>
+      <li><strong>Status Tracking</strong>: Pending → In Progress → Completed workflow</li>
+      <li><strong>Rich Details</strong>: Add architecture decisions (ADR) and implementation notes</li>
+    </ul>
+  </div>
+  
+  <div class="feature-item">
+    <h3>🔄 Auto-Sync with Copilot</h3>
+    <p>Enable auto-inject to automatically maintain a <code>.github/copilot-instructions.md</code> file with your current todos.</p>
+    <p>This gives GitHub Copilot perfect context about your project's current state and priorities across all conversations.</p>
+  </div>
+</div>
 
 ## Requirements
 
-- **VS Code** 1.102.0 or higher
-- **GitHub Copilot** extension (recommended for full features)
+<div class="requirements">
+  <div class="requirement">
+    <h4>🆔 VS Code</h4>
+    <p>Version 1.102.0 or higher</p>
+  </div>
+  
+  <div class="requirement">
+    <h4>🤖 GitHub Copilot</h4>
+    <p>Extension (recommended for full features)</p>
+  </div>
+</div>
 
 ## Support & Contributing
 
