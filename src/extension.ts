@@ -1,9 +1,11 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { TodoManager } from './todoManager';
 import { TodoTreeDataProvider, TodoDecorationProvider } from './todoTreeProvider';
 import { TodoMCPServerProvider } from './mcp/mcpProvider';
 import { TodoMarkdownFormatter } from './utils/todoMarkdownFormatter';
 import { TelemetryManager } from './telemetryManager';
+import { CopilotInstructionsManager } from './copilotInstructionsManager';
 
 export async function activate(context: vscode.ExtensionContext) {
 	console.log('Todos extension is now active!');
@@ -54,6 +56,11 @@ export async function activate(context: vscode.ExtensionContext) {
 		const updateContextKeys = () => {
 			const hasTodos = todoManager.getTodos().length > 0;
 			vscode.commands.executeCommand('setContext', 'agentTodos.hasTodos', hasTodos);
+			
+			// Set context key for autoInject enabled
+			const config = vscode.workspace.getConfiguration('agentTodos');
+			const autoInjectEnabled = config.get<boolean>('autoInject', false);
+			vscode.commands.executeCommand('setContext', 'agentTodos.autoInjectEnabled', autoInjectEnabled);
 		};
 		updateContextKeys();
 
@@ -64,6 +71,13 @@ export async function activate(context: vscode.ExtensionContext) {
 			// Update context key for non-empty todos
 			const hasTodos = change.todos.length > 0;
 			vscode.commands.executeCommand('setContext', 'agentTodos.hasTodos', hasTodos);
+		});
+
+		// Listen for configuration changes to update context keys
+		const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+			if (e.affectsConfiguration('agentTodos.autoInject')) {
+				updateContextKeys();
+			}
 		});
 
 		// Listen for auto-open view events
@@ -460,6 +474,64 @@ export async function activate(context: vscode.ExtensionContext) {
 			await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:digitarald.agent-todos');
 		});
 
+		// Open instructions file command
+		const openInstructionsFileCommand = vscode.commands.registerCommand('agentTodos.openInstructionsFile', async () => {
+			const config = vscode.workspace.getConfiguration('agentTodos');
+			const autoInjectEnabled = config.get<boolean>('autoInject', false);
+			
+			if (!autoInjectEnabled) {
+				vscode.window.showWarningMessage('Auto-inject must be enabled to open the instructions file');
+				return;
+			}
+
+			try {
+				const copilotManager = CopilotInstructionsManager.getInstance();
+				const filePath = copilotManager.getInstructionsFilePath();
+				
+				// Get workspace folder to resolve relative paths
+				const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+				if (!workspaceFolder) {
+					vscode.window.showErrorMessage('No workspace folder found');
+					return;
+				}
+
+				let fileUri: vscode.Uri;
+				if (path.isAbsolute(filePath)) {
+					fileUri = vscode.Uri.file(filePath);
+				} else {
+					fileUri = vscode.Uri.joinPath(workspaceFolder.uri, filePath);
+				}
+
+				// Check if file exists, create if it doesn't
+				try {
+					await vscode.workspace.fs.stat(fileUri);
+				} catch (error) {
+					// File doesn't exist, ask user if they want to create it
+					const choice = await vscode.window.showInformationMessage(
+						`Instructions file '${filePath}' does not exist. Would you like to create it?`,
+						'Create', 'Cancel'
+					);
+					
+					if (choice === 'Create') {
+						// Create the directory if it doesn't exist
+						const dirUri = vscode.Uri.joinPath(fileUri, '..');
+						await vscode.workspace.fs.createDirectory(dirUri);
+						
+						// Create a minimal instructions file
+						const content = '<!-- Auto-generated instructions file -->\n\n<!-- Add your Copilot instructions here -->\n';
+						await vscode.workspace.fs.writeFile(fileUri, Buffer.from(content, 'utf8'));
+					} else {
+						return;
+					}
+				}
+
+				// Open the file
+				await vscode.commands.executeCommand('vscode.open', fileUri);
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to open instructions file: ${error instanceof Error ? error.message : String(error)}`);
+			}
+		});
+
 		// Add all disposables to context
 		context.subscriptions.push(
 			treeView,
@@ -485,6 +557,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			startPlanningCommand,
 			saveTodosCommand,
 			loadTodosCommand,
+			openSettingsCommand,
+			openInstructionsFileCommand,
+			configChangeDisposable,
 			showHistoryCommand,
 			openSettingsCommand
 		);

@@ -151,6 +151,12 @@
         "icon": "$(settings-gear)"
       },
       {
+        "command": "agentTodos.openInstructionsFile",
+        "title": "Open Instructions File",
+        "category": "Agent TODOs",
+        "icon": "$(file-text)"
+      },
+      {
         "command": "agentTodos.showHistory",
         "title": "Show History",
         "category": "Agent TODOs",
@@ -201,6 +207,11 @@
         {
           "command": "agentTodos.loadTodos",
           "when": "view == agentTodos",
+          "group": "2_file_operations"
+        },
+        {
+          "command": "agentTodos.openInstructionsFile",
+          "when": "view == agentTodos && agentTodos.autoInjectEnabled",
           "group": "2_file_operations"
         },
         {
