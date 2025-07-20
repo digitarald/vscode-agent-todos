@@ -24,8 +24,10 @@ suite('AutoInject Feature Integration Tests', () => {
             const writer = new StandaloneCopilotWriter(tempDir);
             const pathMethod = (writer as any).getInstructionsPath.bind(writer);
             
-            const path = pathMethod();
-            assert.ok(path.endsWith('.github/instructions/todos.instructions.md'));
+            const actualPath = pathMethod();
+            // Normalize path separators for cross-platform testing
+            const normalizedPath = actualPath.replace(/\\/g, '/');
+            assert.ok(normalizedPath.endsWith('.github/instructions/todos.instructions.md'));
         });
 
         test('CopilotInstructionsManager should use new default path', () => {

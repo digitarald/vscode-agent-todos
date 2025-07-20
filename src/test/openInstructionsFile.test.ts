@@ -47,7 +47,9 @@ suite('Open Instructions File Command Tests', () => {
         const resolvedRelative = path.isAbsolute(relativePath) 
             ? relativePath 
             : path.join(workspacePath, relativePath);
-        assert.strictEqual(resolvedRelative, '/test/workspace/.github/instructions/todos.instructions.md');
+        // Use posix path for consistent testing across platforms
+        const expectedRelative = path.posix.join(workspacePath, relativePath);
+        assert.strictEqual(resolvedRelative.replace(/\\/g, '/'), expectedRelative);
         
         // Test absolute path
         const absolutePath = '/home/user/instructions.md';
