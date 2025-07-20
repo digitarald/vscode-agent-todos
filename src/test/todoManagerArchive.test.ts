@@ -83,17 +83,21 @@ suite('TodoManager Saved Lists Test Suite', () => {
             priority: 'medium'
         }];
 
-        // Create multiple archives with similar titles
+        // Create multiple archives by changing titles (proper way to create archives)
         await todoManager.setTodos(todos, 'Project Alpha');
-        await todoManager.setTodos(todos, 'Project Alpha');
-        await todoManager.setTodos(todos, 'Project Alpha');
+        await todoManager.setTodos(todos, 'Project Alpha V2'); // Different title - creates archive
+        await todoManager.setTodos(todos, 'Project Alpha');   // Back to same title as first - creates archive
 
         const savedLists = todoManager.getSavedLists();
-        assert.strictEqual(savedLists.length, 2); // Two archives (third overwrites current)
+        assert.strictEqual(savedLists.length, 2); // Two archives from title changes
 
         const slugs = savedLists.map(archive => archive.slug);
         const uniqueSlugs = new Set(slugs);
         assert.strictEqual(slugs.length, uniqueSlugs.size, 'All slugs should be unique');
+        
+        // Should have slugs for both titles
+        assert.ok(slugs.some(slug => slug === 'project-alpha-v2'), 'Should have slug for Project Alpha V2');
+        assert.ok(slugs.some(slug => slug.startsWith('project-alpha')), 'Should have slug for Project Alpha');
     });
 
     test('should retrieve saved list by slug', async () => {
@@ -171,5 +175,72 @@ suite('TodoManager Saved Lists Test Suite', () => {
         assert.strictEqual(slugs.length, 2);
         assert.ok(slugs.includes('alpha-project'));
         assert.ok(slugs.includes('beta-project'));
+    });
+
+    test('should NOT create duplicate archives when updating todo statuses within same project', async () => {
+        // Setup initial todo list with custom title
+        const todos: TodoItem[] = [
+            {
+                id: 'task-1',
+                content: 'First task',
+                status: 'pending',
+                priority: 'medium'
+            },
+            {
+                id: 'task-2', 
+                content: 'Second task',
+                status: 'pending',
+                priority: 'medium'
+            }
+        ];
+
+        await todoManager.setTodos(todos, 'My Project');
+
+        // Verify no archives yet
+        let savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0, 'Should have no archives initially');
+
+        // Update first task status to in_progress (same title)
+        const updatedTodos1 = [
+            { ...todos[0], status: 'in_progress' as const },
+            todos[1]
+        ];
+        await todoManager.setTodos(updatedTodos1, 'My Project');
+
+        // Should still have no archives (same title)
+        savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0, 'Should have no archives after status update');
+
+        // Complete first task (same title)
+        const updatedTodos2 = [
+            { ...todos[0], status: 'completed' as const },
+            todos[1]
+        ];
+        await todoManager.setTodos(updatedTodos2, 'My Project');
+
+        // Should still have no archives (same title)
+        savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0, 'Should have no archives after completion');
+
+        // Complete second task (same title)
+        const updatedTodos3 = [
+            { ...todos[0], status: 'completed' as const },
+            { ...todos[1], status: 'completed' as const }
+        ];
+        await todoManager.setTodos(updatedTodos3, 'My Project');
+
+        // Should still have no archives (same title)
+        savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 0, 'Should have no archives after all completions');
+
+        // NOW change title - this should create exactly ONE archive
+        await todoManager.setTodos([], 'New Project');
+
+        // Should now have exactly one archive
+        savedLists = todoManager.getSavedLists();
+        assert.strictEqual(savedLists.length, 1, 'Should have exactly one archive after title change');
+        assert.strictEqual(savedLists[0].title, 'My Project', 'Archive should have original title');
+        assert.strictEqual(savedLists[0].todos.length, 2, 'Archive should have final todos');
+        assert.strictEqual(savedLists[0].todos[0].status, 'completed', 'Archive should have final status');
     });
 });

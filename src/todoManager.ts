@@ -211,12 +211,11 @@ export class TodoManager {
 
             console.log(`[TodoManager] Setting todos: ${todos.length} items${title ? `, title: ${title}` : ''}`);
 
-            // Save current list if we have existing todos and a non-default title
-            // Save on any setTodos call that replaces existing todos, not just title changes
-            if (this.todos.length > 0 && this.title !== 'Todos') {
-                const reason = title !== undefined && title !== this.title 
-                    ? `title change from "${this.title}" to "${title}"`
-                    : `new todo list replacing existing "${this.title}"`;
+            // Save current list ONLY when title is explicitly changing to a different value
+            // This prevents duplicate archives when just updating todo statuses within same project
+            if (this.todos.length > 0 && this.title !== 'Todos' && 
+                title !== undefined && title !== this.title) {
+                const reason = `title change from "${this.title}" to "${title}"`;
                 this.saveCurrentList(reason);
             }
 

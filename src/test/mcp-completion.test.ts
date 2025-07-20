@@ -146,7 +146,7 @@ suite('Saved List Resource Completion', () => {
             { id: 'new-task', content: 'New Task', status: 'completed', priority: 'medium' }
         ], 'New Project Saved');
 
-        // Save it by changing the title
+        // Save it by changing the title (this will archive "Current Project" and "New Project Saved")
         await todoManager.setTodos([
             { id: 'another-task', content: 'Another Task', status: 'pending', priority: 'low' }
         ], 'Final Project');
