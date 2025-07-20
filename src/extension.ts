@@ -469,6 +469,17 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
+		// Issue reporting command for VS Code issue reporter integration
+		const reportIssueCommand = vscode.commands.registerCommand('agentTodos.reportIssue', async () => {
+			try {
+				await vscode.commands.executeCommand('workbench.action.openIssueReporter', {
+					extensionId: 'digitarald.agent-todos'
+				});
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to open issue reporter: ${error instanceof Error ? error.message : String(error)}`);
+			}
+		});
+
 		// Open settings command
 		const openSettingsCommand = vscode.commands.registerCommand('agentTodos.openSettings', async () => {
 			await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:digitarald.agent-todos');
@@ -561,7 +572,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			openInstructionsFileCommand,
 			configChangeDisposable,
 			showHistoryCommand,
-			openSettingsCommand
+			reportIssueCommand
 		);
 
 		// MCP disposables are now added in the async initialization
