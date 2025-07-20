@@ -149,6 +149,12 @@
         "title": "Open Settings",
         "category": "Agent TODOs",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "agentTodos.openInstructionsFile",
+        "title": "Open Instructions File",
+        "category": "Agent TODOs",
+        "icon": "$(file-text)"
       }
     ],
     "viewsContainers": {
@@ -195,6 +201,11 @@
         {
           "command": "agentTodos.loadTodos",
           "when": "view == agentTodos",
+          "group": "2_file_operations"
+        },
+        {
+          "command": "agentTodos.openInstructionsFile",
+          "when": "view == agentTodos && agentTodos.autoInjectEnabled",
           "group": "2_file_operations"
         }
       ],
