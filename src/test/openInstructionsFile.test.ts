@@ -5,11 +5,38 @@ import { CopilotInstructionsManager } from '../copilotInstructionsManager';
 
 suite('Open Instructions File Command Tests', () => {
     test('CopilotInstructionsManager.getInstructionsFilePath should return configured path', () => {
-        const manager = CopilotInstructionsManager.getInstance();
-        const filePath = manager.getInstructionsFilePath();
+        // Clear singleton to ensure fresh state
+        (CopilotInstructionsManager as any).instance = null;
         
-        // Should return the default path when VS Code config is not available
-        assert.strictEqual(filePath, '.github/instructions/todos.instructions.md');
+        // Store original workspace.getConfiguration
+        const originalGetConfiguration = vscode.workspace.getConfiguration;
+        
+        // Mock getConfiguration to return default value
+        (vscode.workspace as any).getConfiguration = (section?: string) => {
+            return {
+                get: <T>(key: string, defaultValue?: T): T => {
+                    // Always return the default value for autoInjectFilePath
+                    return defaultValue!;
+                },
+                has: (key: string): boolean => false,
+                inspect: (key: string): any => ({ defaultValue: undefined }),
+                update: async () => {}
+            };
+        };
+        
+        try {
+            const manager = CopilotInstructionsManager.getInstance();
+            const filePath = manager.getInstructionsFilePath();
+            
+            // Should return the default path when VS Code config is not available
+            assert.strictEqual(filePath, '.github/instructions/todos.instructions.md');
+        } finally {
+            // Restore original getConfiguration
+            (vscode.workspace as any).getConfiguration = originalGetConfiguration;
+            
+            // Clear singleton after test
+            (CopilotInstructionsManager as any).instance = null;
+        }
     });
 
     test('Path resolution logic should work correctly', () => {

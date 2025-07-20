@@ -29,12 +29,41 @@ suite('AutoInject Feature Integration Tests', () => {
         });
 
         test('CopilotInstructionsManager should use new default path', () => {
-            const manager = CopilotInstructionsManager.getInstance();
-            const pathMethod = (manager as any).getConfiguredFilePath.bind(manager);
+            // Create a fresh instance by clearing the singleton first
+            (CopilotInstructionsManager as any).instance = null;
             
-            // This will use the fallback since VS Code isn't available in tests
-            const path = pathMethod();
-            assert.strictEqual(path, '.github/instructions/todos.instructions.md');
+            // Mock vscode for this specific test
+            const originalVscode = require('vscode');
+            const mockConfig = {
+                get: (key: string, defaultValue: string) => {
+                    // Return default value for autoInjectFilePath
+                    return defaultValue;
+                }
+            };
+            const mockWorkspace = {
+                getConfiguration: () => mockConfig
+            };
+            
+            Object.defineProperty(require('vscode'), 'workspace', {
+                value: mockWorkspace,
+                configurable: true
+            });
+            
+            try {
+                const manager = CopilotInstructionsManager.getInstance();
+                const pathMethod = (manager as any).getConfiguredFilePath.bind(manager);
+                
+                const path = pathMethod();
+                assert.strictEqual(path, '.github/instructions/todos.instructions.md');
+            } finally {
+                // Restore original vscode
+                Object.defineProperty(require('vscode'), 'workspace', {
+                    value: originalVscode.workspace,
+                    configurable: true
+                });
+                // Clear singleton for other tests
+                (CopilotInstructionsManager as any).instance = null;
+            }
         });
     });
 
@@ -147,8 +176,10 @@ Some custom content here.
             await writer.updateInstructionsWithTodos(todos1, 'First Update');
 
             let content = fs.readFileSync(filePath, 'utf8');
-            let frontmatterCount = (content.match(/^---\n/gm) || []).length;
-            assert.strictEqual(frontmatterCount, 1, 'Should have exactly one frontmatter section after first update');
+            let frontmatterMatches = (content.match(/^---\n/gm) || []).length;
+            // Each frontmatter section has exactly 2 `---\n` (start and end)
+            let frontmatterSectionCount = frontmatterMatches / 2;
+            assert.strictEqual(frontmatterSectionCount, 1, 'Should have exactly one frontmatter section after first update');
 
             // Second update - should not add more frontmatter
             const todos2: TodoItem[] = [
@@ -158,8 +189,10 @@ Some custom content here.
             await writer.updateInstructionsWithTodos(todos2, 'Second Update');
 
             content = fs.readFileSync(filePath, 'utf8');
-            frontmatterCount = (content.match(/^---\n/gm) || []).length;
-            assert.strictEqual(frontmatterCount, 1, 'Should still have exactly one frontmatter section after second update');
+            frontmatterMatches = (content.match(/^---\n/gm) || []).length;
+            // Each frontmatter section has exactly 2 `---\n` (start and end)
+            frontmatterSectionCount = frontmatterMatches / 2;
+            assert.strictEqual(frontmatterSectionCount, 1, 'Should still have exactly one frontmatter section after second update');
 
             // Third update - should still not accumulate
             const todos3: TodoItem[] = [
@@ -169,14 +202,17 @@ Some custom content here.
             await writer.updateInstructionsWithTodos(todos3, 'Third Update');
 
             content = fs.readFileSync(filePath, 'utf8');
-            frontmatterCount = (content.match(/^---\n/gm) || []).length;
-            assert.strictEqual(frontmatterCount, 1, 'Should still have exactly one frontmatter section after third update');
+            frontmatterMatches = (content.match(/^---\n/gm) || []).length;
+            // Each frontmatter section has exactly 2 `---\n` (start and end)
+            frontmatterSectionCount = frontmatterMatches / 2;
+            assert.strictEqual(frontmatterSectionCount, 1, 'Should still have exactly one frontmatter section after third update');
 
             // Verify content structure is correct
             assert.ok(content.startsWith('---\napplyTo: \'**\'\n---\n\n'));
             assert.ok(content.includes('Third Update'));
             assert.ok(content.includes('Third todo'));
-            assert.ok(content.includes('in_progress'));
+            // Check for in-progress checkbox notation [-] instead of the status text
+            assert.ok(content.includes('[-]'), 'Should include in-progress checkbox notation');
         });
 
         test('Should preserve custom frontmatter across multiple updates', async () => {
@@ -217,8 +253,10 @@ Some custom content.
                 assert.strictEqual(content.indexOf('applyTo: \'**\''), -1);
                 
                 // Should have only one frontmatter section
-                const frontmatterCount = (content.match(/^---\n/gm) || []).length;
-                assert.strictEqual(frontmatterCount, 1, `Should have exactly one frontmatter section after update ${i}`);
+                const frontmatterMatches = (content.match(/^---\n/gm) || []).length;
+                // Each frontmatter section has exactly 2 `---\n` (start and end)
+                const frontmatterSectionCount = frontmatterMatches / 2;
+                assert.strictEqual(frontmatterSectionCount, 1, `Should have exactly one frontmatter section after update ${i}`);
                 
                 // Should include the updated todo
                 assert.ok(content.includes(`Update ${i} todo`));

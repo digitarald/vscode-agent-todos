@@ -78,10 +78,10 @@ applyTo: '**'
                 
                 if (hasExistingFrontmatter) {
                     // Preserve existing frontmatter, just prepend todos after it
-                    const frontmatterMatch = existingContent.match(/^(---\n.*?\n---\n\n?)/s);
+                    const frontmatterMatch = contentWithoutTodo.match(/^(---\n.*?\n---\n\n?)/s);
                     if (frontmatterMatch) {
                         const frontmatter = frontmatterMatch[1];
-                        const contentAfterFrontmatter = contentWithoutTodo.replace(frontmatterMatch[1], '');
+                        const contentAfterFrontmatter = contentWithoutTodo.substring(frontmatterMatch[0].length);
                         newContent = frontmatter + planSection + contentAfterFrontmatter;
                     } else {
                         // Fallback if regex fails
