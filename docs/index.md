@@ -29,9 +29,9 @@ layout: home
 ## Why Agent TODOs?
 
 <div class="workflow-example">
-  <strong>The Problem:</strong> VS Code's agent mode excels at writing code but lacks persistent memory between sessions. AI can identify TODO comments but cannot maintain an actionable task list that evolves with your project.
+  <strong>The Problem:</strong> VS Code's agent mode is incredibly powerful for code generation and problem-solving, but complex multi-session projects need persistent memory and workflow state management.
   
-  <strong>The Solution:</strong> Agent TODOs provides VS Code's AI ecosystem with a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
+  <strong>The Solution:</strong> Agent TODOs takes this foundation to the next level by adding advanced workflow management capabilities that transform how agent mode handles complex development tasks.
 </div>
 
 > *"An AI assistant that remembers what we planned to do next."* — Developer using Agent TODOs
@@ -44,27 +44,27 @@ layout: home
   
   <div class="feature-item">
     <h3>🧠 Persistent AI Memory</h3>
-    <p>AI can read, update, and remember tasks between sessions. Your coding assistant maintains context about your work and upcoming tasks.</p>
+    <p>Structured task decomposition that survives session restarts. Your coding assistant maintains context about work progress and upcoming tasks without losing information between sessions.</p>
   </div>
   
   <div class="feature-item">
     <h3>📋 Visual Task Management</h3>
-    <p>Interactive tree view in VS Code's Explorer with one-click status updates. Monitor progress and manage tasks without leaving your editor.</p>
+    <p>Interactive tree view in VS Code's Explorer with one-click status updates. Monitor progress, change priorities, and manage complex workflows without leaving your editor.</p>
   </div>
   
   <div class="feature-item">
     <h3>🔗 Auto-Sync with Copilot</h3>
-    <p>Automatically inject todos into <code>.github/copilot-instructions.md</code> for enhanced AI context. Keep your AI informed about current priorities and project state.</p>
+    <p>Automatically inject todos into <code>.github/copilot-instructions.md</code> for enhanced AI context. Keep your AI informed about current priorities and project state across all conversations.</p>
   </div>
   
   <div class="feature-item">
     <h3>⚡ Direct AI Execution</h3>
-    <p>Run todos directly in VS Code Chat with context-aware assistance. Click any todo to continue working with full AI support.</p>
+    <p>Run todos directly in VS Code Chat with context-aware assistance. Click any todo to continue working with full AI support and workflow state tracking.</p>
   </div>
   
   <div class="feature-item">
     <h3>🎯 Smart Organization</h3>
-    <p>Subtasks, priorities, descriptions, and three-state workflow (pending → in-progress → completed). Keep complex projects organized and trackable.</p>
+    <p>Priorities, descriptions, and three-state workflow (pending → in-progress → completed). Keep complex projects organized with granular tracking and rollback capabilities.</p>
   </div>
 </div>
 
@@ -152,7 +152,7 @@ layout: home
 
 <div class="quick-start-tabs">
   <div class="tab-content">
-    <h3>🤖 For AI Assistants (Recommended)</h3>
+    <h3>🤖 For Agent Mode (Recommended)</h3>
     <ol>
       <li><strong>Install</strong> the extension from VS Code Marketplace</li>
       <li><strong>Chat with GitHub Copilot</strong>: Your AI now has <code>todo_read</code> and <code>todo_write</code> tools automatically</li>
@@ -166,7 +166,6 @@ layout: home
         <li><em>"Create a todo list for implementing user authentication"</em></li>
         <li><em>"What should I work on next based on my current todos?"</em></li>
         <li><em>"Mark the database setup task as completed and suggest the next step"</em></li>
-        <li><em>"Break down the API integration task into smaller subtasks"</em></li>
       </ul>
     </div>
   </div>
@@ -207,7 +206,6 @@ npx agent-todos</code></pre>
   <div class="feature-item">
     <h3>📋 Rich Task Management</h3>
     <ul>
-      <li><strong>Subtasks</strong>: Break down complex todos into manageable pieces</li>
       <li><strong>Priorities</strong>: High, Medium, Low with visual indicators</li>
       <li><strong>Status Tracking</strong>: Pending → In Progress → Completed workflow</li>
       <li><strong>Rich Details</strong>: Add architecture decisions (ADR) and implementation notes</li>

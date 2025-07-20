@@ -11,18 +11,24 @@
 
 ## Why Agent TODOs?
 
-VS Code's agent mode is brilliant at writing code but lacks persistent memory between sessions. AI can spot TODO comments but can't maintain an actionable task list that evolves with your project.
+VS Code's agent mode is incredibly powerful for code generation and problem-solving. Agent TODOs takes this foundation to the next level by adding advanced workflow management capabilities that transform how agent mode handles complex, multi-session projects.
 
-**Agent TODOs bridges this gap** by giving VS Code's AI ecosystem a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
+**Agent TODOs upgrades your AI coding experience** by adding a persistent memory system that:
+
+- **Enhances workflow continuity** across sessions, building on VS Code's excellent chat capabilities
+- **Scales task complexity** by adding structured decomposition to complement VS Code's problem-solving power  
+- **Optimizes context efficiency** by working alongside VS Code's native AI to manage information flow
+- **Adds professional tracking** with rollback capabilities that extend VS Code's debugging features
 
 ## Key Features
 
+- **🗺️ Persistent AI Memory**: Structured task decomposition that survives session restarts—no more lost context or repeated work
+- **📊 Workflow State Management**: Three-state tracking (pending → in-progress → completed) with priority levels and rich task descriptions
 - **🤖 Native VS Code Integration**: Built-in `todo_read` and `todo_write` tools that work seamlessly with GitHub Copilot and VS Code's agent mode
-- **🧠 Persistent AI Memory**: AI can read, update, and remember tasks between sessions—no more lost context
-- **📋 Visual Task Management**: Interactive tree view in VS Code's Explorer with one-click status updates
-- **🔗 Auto-Sync with Copilot**: Automatically inject todos into `.github/copilot-instructions.md` for enhanced AI context
-- **⚡ Instant AI Execution**: Run todos directly in VS Code Chat with context-aware assistance
-- **🎯 Smart Organization**: Subtasks, priorities, rich descriptions, and three-state workflow (pending → in-progress → completed)
+- **🧠 Context Window Optimization**: Isolates active tasks to prevent token overflow while maintaining full project context
+- **🔗 Auto-Sync with Copilot**: Automatically inject todos into `.github/copilot-instructions.md` for enhanced AI context awareness
+- **🎯 Smart Task Management**: Interactive tree view in VS Code's Explorer with one-click status updates and instant AI execution
+- **🛡️ Error Recovery**: Granular tracking enables rollback, retry, and debugging of failed development steps
 - **🔧 Flexible Integration**: Works as VS Code extension or standalone MCP server for advanced integrations
 
 ## How It Works
@@ -37,18 +43,18 @@ VS Code's agent mode is brilliant at writing code but lacks persistent memory be
 ```
 You: "Create a todo list for implementing user authentication"
 
-GitHub Copilot: "I'll create a structured plan for user authentication. Let me organize this into actionable tasks..."
+GitHub Copilot: "I'll create a structured plan for user authentication. Let me break this down into atomic, trackable tasks..."
 
 📝 Creating todos:
 • Set up authentication routes (high priority)
-• Configure auth library integration
+• Configure auth library integration  
 • Create login/register endpoints
 • Add JWT middleware for protected routes
 • Write authentication tests
 
 You: "Start with the first task"
 
-GitHub Copilot: "I'll help you set up the authentication routes. First, let me mark this as in-progress..."
+GitHub Copilot: "I'll help you set up the authentication routes. First, let me mark this as in-progress to track our workflow state..."
 
 🔄 Updated todo: "Set up authentication routes" → in_progress
 
@@ -57,7 +63,7 @@ GitHub Copilot: "I'll help you set up the authentication routes. First, let me m
 
 ✅ Marking "Set up authentication routes" as completed
 
-Now configuring the auth library integration...
+Now moving to the next task in our workflow...
 
 🔄 Updated todo: "Configure auth library integration" → in_progress
 
@@ -68,35 +74,35 @@ Now configuring the auth library integration...
 
 You: "What's left to do?"
 
-GitHub Copilot: "Let me check your remaining todos..."
+GitHub Copilot: "Let me check your current workflow state..."
 
 📋 Authentication TODOs (2/5 completed):
 ✅ Set up authentication routes
-✅ Configure auth library integration
+✅ Configure auth library integration  
 ⏳ Create login/register endpoints (next up)
 ⏳ Add JWT middleware for protected routes
 ⏳ Write authentication tests
 
 You: "Use the existing auth library we have"
 
-GitHub Copilot: "I see you already have `express-jwt` and `passport` in your dependencies. Let me update our approach to leverage these existing libraries..."
+GitHub Copilot: "I see you already have `express-jwt` and `passport` in your dependencies. Let me update our approach to leverage these existing libraries and avoid redundant work..."
 
 🔄 Updated todo: "Create login/register endpoints" → in_progress
 
 *Configures passport strategies*
-*Integrates with existing user model*
+*Integrates with existing user model*  
 *Creates streamlined auth endpoints using passport*
 
 ✅ Completed "Create login/register endpoints"
 
-The existing auth library simplified our implementation significantly. Let me now add the JWT middleware...
+The existing auth library simplified our implementation significantly. Our persistent workflow state helped me avoid reprocessing the project setup...
 
 🔄 Updated todo: "Add JWT middleware for protected routes" → in_progress
 ```
 
 ## Quick Start
 
-### For AI Assistants (Recommended)
+### For Agent Mode (Recommended)
 
 1. **Install** the extension from VS Code Marketplace
 2. **Chat with GitHub Copilot**: Your AI now has `todo_read` and `todo_write` tools automatically

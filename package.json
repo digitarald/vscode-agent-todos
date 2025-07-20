@@ -1,7 +1,7 @@
 {
   "name": "agent-todos",
   "displayName": "Agent TODOs",
-  "description": "Gives VS Code agent mode planning superpowers with dynamic todo lists",
+  "description": "Upgrades VS Code's agent mode with persistent memory and workflow management",
   "version": "0.0.2",
   "publisher": "digitarald",
   "preview": true,
