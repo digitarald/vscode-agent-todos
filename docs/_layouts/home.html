@@ -26,14 +26,13 @@ body {
   background: #ffffff;
 }
 
-/* Hero section with gradient background */
+/* Hero section with VS Code inspired design */
 .hero-section {
   text-align: center;
   padding: 4rem 1rem;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #0078d4 0%, #106ebe 100%);
   color: white;
   position: relative;
-  overflow: hidden;
 }
 
 .hero-section::before {
@@ -43,14 +42,8 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 1000'%3E%3Cg %3E%3Ccircle fill='%23667eea' cx='50' cy='0' r='50'/%3E%3Cg fill='%236b7de6' %3E%3Ccircle cx='0' cy='50' r='50'/%3E%3Ccircle cx='100' cy='50' r='50'/%3E%3C/g%3E%3Ccircle fill='%23707be2' cx='50' cy='100' r='50'/%3E%3C/g%3E%3C/svg%3E") repeat;
-  opacity: 0.1;
-  animation: float 20s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 1000'%3E%3Cg %3E%3Ccircle fill='%230078d4' cx='50' cy='0' r='50'/%3E%3Cg fill='%23106ebe' %3E%3Ccircle cx='0' cy='50' r='50'/%3E%3Ccircle cx='100' cy='50' r='50'/%3E%3C/g%3E%3Ccircle fill='%23005a9e' cx='50' cy='100' r='50'/%3E%3C/g%3E%3C/svg%3E") repeat;
+  opacity: 0.05;
 }
 
 /* Hero content */
@@ -86,25 +79,23 @@ body {
 /* Enhanced CTA buttons */
 .hero-section a[href*="marketplace.visualstudio.com"] {
   display: inline-block;
-  background: linear-gradient(45deg, #007ACC, #0066b3);
+  background: #0078d4;
   color: white;
   padding: 16px 32px;
-  border-radius: 12px;
+  border-radius: 4px;
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 500;
   font-size: 1.1rem;
   margin: 1rem 0.5rem;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 122, 204, 0.4);
+  transition: all 0.2s ease;
   position: relative;
   z-index: 1;
-  border: 2px solid transparent;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 .hero-section a[href*="marketplace.visualstudio.com"]:hover {
-  background: linear-gradient(45deg, #0066b3, #004d85);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 122, 204, 0.6);
+  background: #106ebe;
+  transform: translateY(-1px);
 }
 
 .hero-section a[href*="marketplace.visualstudio.com"]:active {
@@ -128,13 +119,11 @@ body {
 
 .feature-item {
   padding: 2rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
   background: #ffffff;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 .feature-item::before {
@@ -143,14 +132,14 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  height: 3px;
+  background: #0078d4;
 }
 
 .feature-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-  border-color: #007ACC;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: #0078d4;
 }
 
 .feature-item h3 {
@@ -197,83 +186,55 @@ pre code {
 
 /* Enhanced workflow example */
 .workflow-example {
-  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-  border-left: 4px solid #667eea;
+  background: #f6f8fa;
+  border-left: 4px solid #0078d4;
   padding: 2rem;
   margin: 2rem 0;
-  border-radius: 0 12px 12px 0;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-  position: relative;
-}
-
-.workflow-example::before {
-  content: '💡';
-  position: absolute;
-  top: 1rem;
-  right: 1.5rem;
-  font-size: 1.5rem;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
 /* Enhanced install CTA */
 .install-cta {
   text-align: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: #f6f8fa;
+  border: 1px solid #d1d5db;
+  color: #24292f;
   padding: 3rem 2rem;
-  border-radius: 20px;
+  border-radius: 8px;
   margin: 3rem 0;
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.install-cta::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-  100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
 }
 
 .install-cta h2 {
   margin-bottom: 1rem;
-  font-size: 2rem;
-  font-weight: 700;
+  font-size: 1.75rem;
+  font-weight: 600;
+  color: #24292f;
 }
 
 .install-cta p {
   margin-bottom: 2rem;
-  font-size: 1.2rem;
-  opacity: 0.9;
+  font-size: 1.1rem;
+  color: #57606a;
 }
 
 .install-cta a {
   color: white;
   text-decoration: none;
-  font-size: 1.3rem;
-  font-weight: 600;
-  position: relative;
-  z-index: 1;
+  font-size: 1.1rem;
+  font-weight: 500;
   display: inline-block;
-  padding: 1rem 2rem;
-  background: rgba(255,255,255,0.2);
-  border-radius: 12px;
-  border: 2px solid rgba(255,255,255,0.3);
-  transition: all 0.3s ease;
+  padding: 12px 24px;
+  background: #0078d4;
+  border-radius: 4px;
+  border: 1px solid #0078d4;
+  transition: all 0.2s ease;
 }
 
 .install-cta a:hover {
-  background: rgba(255,255,255,0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  background: #106ebe;
+  border-color: #106ebe;
+  transform: translateY(-1px);
 }
 
 /* Responsive design */
@@ -365,12 +326,12 @@ pre code {
 }
 
 .step:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
 .step-number {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: #0078d4;
   color: white;
   width: 2.5rem;
   height: 2.5rem;
@@ -378,8 +339,8 @@ pre code {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 1.1rem;
+  font-weight: 600;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
@@ -397,27 +358,27 @@ pre code {
 }
 
 .chat-example {
-  background: #1f2937;
-  border-radius: 12px;
+  background: #1e1e1e;
+  border-radius: 8px;
   padding: 1.5rem;
   margin: 1rem 0;
-  color: #f9fafb;
+  color: #cccccc;
 }
 
 .chat-message {
   margin-bottom: 1.5rem;
   padding: 1rem;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .chat-message.user {
-  background: rgba(59, 130, 246, 0.1);
-  border-left: 3px solid #3b82f6;
+  background: rgba(0, 120, 212, 0.1);
+  border-left: 3px solid #0078d4;
 }
 
 .chat-message.assistant {
-  background: rgba(16, 185, 129, 0.1);
-  border-left: 3px solid #10b981;
+  background: rgba(22, 163, 74, 0.1);
+  border-left: 3px solid #16a34a;
 }
 
 .todo-creation, .status-update {

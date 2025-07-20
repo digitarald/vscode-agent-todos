@@ -11,8 +11,8 @@ layout: home
 [![CI](https://img.shields.io/github/actions/workflow/status/digitarald/vscode-agent-todos/auto-release.yml?style=for-the-badge&logo=github&logoColor=white)](https://github.com/digitarald/vscode-agent-todos/actions)
 
 <div class="install-cta">
-  <h2>🚀 Ready to supercharge your AI coding workflow?</h2>
-  <p>Get started in seconds with one click</p>
+  <h2>Get Started</h2>
+  <p>Install Agent TODOs and start organizing your development tasks for agentic AI workflows</p>
   <a href="https://marketplace.visualstudio.com/items?itemName=digitarald.agent-todos">Install from VS Code Marketplace</a>
 </div>
 
@@ -29,42 +29,42 @@ layout: home
 ## Why Agent TODOs?
 
 <div class="workflow-example">
-  <strong>The Problem:</strong> VS Code's agent mode is brilliant at writing code but lacks persistent memory between sessions. AI can spot TODO comments but can't maintain an actionable task list that evolves with your project.
+  <strong>The Problem:</strong> VS Code's agent mode excels at writing code but lacks persistent memory between sessions. AI can identify TODO comments but cannot maintain an actionable task list that evolves with your project.
   
-  <strong>The Solution:</strong> Agent TODOs bridges this gap by giving VS Code's AI ecosystem a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
+  <strong>The Solution:</strong> Agent TODOs provides VS Code's AI ecosystem with a dedicated memory system for tracking tasks, context, and priorities across coding sessions.
 </div>
 
-> *"Finally, an AI assistant that remembers what we planned to do next."* — Developer using Agent TODOs
+> *"An AI assistant that remembers what we planned to do next."* — Developer using Agent TODOs
 
 <div class="feature-grid">
   <div class="feature-item">
     <h3>🤖 Native VS Code Integration</h3>
-    <p>Built-in <code>todo_read</code> and <code>todo_write</code> tools that work seamlessly with GitHub Copilot and VS Code's agent mode. No configuration needed—just install and start planning.</p>
+    <p>Built-in <code>todo_read</code> and <code>todo_write</code> tools work with GitHub Copilot and VS Code's agent mode. No configuration required—install and start planning.</p>
   </div>
   
   <div class="feature-item">
     <h3>🧠 Persistent AI Memory</h3>
-    <p>AI can read, update, and remember tasks between sessions. Your coding assistant never forgets what you were working on or what comes next in your project.</p>
+    <p>AI can read, update, and remember tasks between sessions. Your coding assistant maintains context about your work and upcoming tasks.</p>
   </div>
   
   <div class="feature-item">
     <h3>📋 Visual Task Management</h3>
-    <p>Interactive tree view in VS Code's Explorer with one-click status updates. See your progress at a glance and manage tasks without leaving your code.</p>
+    <p>Interactive tree view in VS Code's Explorer with one-click status updates. Monitor progress and manage tasks without leaving your editor.</p>
   </div>
   
   <div class="feature-item">
     <h3>🔗 Auto-Sync with Copilot</h3>
-    <p>Automatically inject todos into <code>.github/copilot-instructions.md</code> for enhanced AI context. Your AI always knows your current priorities and project state.</p>
+    <p>Automatically inject todos into <code>.github/copilot-instructions.md</code> for enhanced AI context. Keep your AI informed about current priorities and project state.</p>
   </div>
   
   <div class="feature-item">
-    <h3>⚡ Instant AI Execution</h3>
-    <p>Run todos directly in VS Code Chat with context-aware assistance. Click any todo to continue working on it with full AI support.</p>
+    <h3>⚡ Direct AI Execution</h3>
+    <p>Run todos directly in VS Code Chat with context-aware assistance. Click any todo to continue working with full AI support.</p>
   </div>
   
   <div class="feature-item">
     <h3>🎯 Smart Organization</h3>
-    <p>Subtasks, priorities, rich descriptions, and three-state workflow (pending → in-progress → completed). Keep complex projects organized and trackable.</p>
+    <p>Subtasks, priorities, descriptions, and three-state workflow (pending → in-progress → completed). Keep complex projects organized and trackable.</p>
   </div>
 </div>
 
@@ -132,7 +132,7 @@ layout: home
     </div>
     
     <div class="chat-message assistant">
-      <strong>GitHub Copilot:</strong> "I'll help you set up the authentication routes. First, let me mark this as in-progress..."
+      <strong>GitHub Copilot:</strong> "I'll help you set up the authentication routes. Let me mark this as in-progress..."
       
       <div class="status-update">
         🔄 <strong>Updated todo:</strong> "Set up authentication routes" → <span class="status in-progress">in_progress</span>
@@ -157,7 +157,7 @@ layout: home
       <li><strong>Install</strong> the extension from VS Code Marketplace</li>
       <li><strong>Chat with GitHub Copilot</strong>: Your AI now has <code>todo_read</code> and <code>todo_write</code> tools automatically</li>
       <li><strong>Start planning</strong>: Ask Copilot to create todos, track progress, or suggest next steps</li>
-      <li><strong>Watch the magic</strong>: Todos appear in the Explorer tree view and sync with Copilot's memory</li>
+      <li><strong>View results</strong>: Todos appear in the Explorer tree view and sync with Copilot's memory</li>
     </ol>
     
     <div class="try-commands">
