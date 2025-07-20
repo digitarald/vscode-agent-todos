@@ -421,6 +421,54 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
+		// Show history command - displays saved todo lists in a quick pick
+		const showHistoryCommand = vscode.commands.registerCommand('agentTodos.showHistory', async () => {
+			try {
+				const savedLists = todoManager.getSavedLists();
+				
+				if (savedLists.length === 0) {
+					vscode.window.showInformationMessage('No saved todo lists found. Todo lists are automatically saved when you change the title.');
+					return;
+				}
+
+				// Create quick pick items from saved lists
+				const quickPickItems = savedLists.map(savedList => ({
+					label: savedList.title,
+					description: `${savedList.todos.length} todo(s)`,
+					detail: `Saved on ${savedList.savedAt.toLocaleDateString()} at ${savedList.savedAt.toLocaleTimeString()}`,
+					savedList: savedList
+				}));
+
+				const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
+					placeHolder: 'Select a saved todo list to load',
+					title: 'Todo History'
+				});
+
+				if (!selectedItem) {
+					return; // User cancelled
+				}
+
+				// Ask for confirmation before replacing current todos
+				const currentTodos = todoManager.getTodos();
+				if (currentTodos.length > 0) {
+					const choice = await vscode.window.showWarningMessage(
+						`This will replace ${currentTodos.length} existing todo(s) with ${selectedItem.savedList.todos.length} todo(s) from "${selectedItem.savedList.title}". Continue?`,
+						'Yes', 'No'
+					);
+					
+					if (choice !== 'Yes') {
+						return;
+					}
+				}
+
+				// Load the selected saved list
+				await todoManager.setTodos(selectedItem.savedList.todos, selectedItem.savedList.title);
+				vscode.window.showInformationMessage(`Loaded "${selectedItem.savedList.title}" with ${selectedItem.savedList.todos.length} todo(s)`);
+			} catch (error) {
+				vscode.window.showErrorMessage(`Failed to load saved todo list: ${error instanceof Error ? error.message : String(error)}`);
+			}
+		});
+
 		// Open settings command
 		const openSettingsCommand = vscode.commands.registerCommand('agentTodos.openSettings', async () => {
 			await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:digitarald.agent-todos');
@@ -511,7 +559,9 @@ export async function activate(context: vscode.ExtensionContext) {
 			loadTodosCommand,
 			openSettingsCommand,
 			openInstructionsFileCommand,
-			configChangeDisposable
+			configChangeDisposable,
+			showHistoryCommand,
+			openSettingsCommand
 		);
 
 		// MCP disposables are now added in the async initialization
