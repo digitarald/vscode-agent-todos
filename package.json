@@ -161,6 +161,12 @@
         "title": "Show History",
         "category": "Agent TODOs",
         "icon": "$(history)"
+      },
+      {
+        "command": "agentTodos.reportIssue",
+        "title": "Report Issue",
+        "category": "Agent TODOs",
+        "icon": "$(report)"
       }
     ],
     "viewsContainers": {
@@ -190,7 +196,7 @@
           "group": "navigation"
         },
         {
-          "command": "agentTodos.refreshTodos",
+          "command": "agentTodos.showHistory",
           "when": "view == agentTodos",
           "group": "navigation"
         },
@@ -198,6 +204,11 @@
           "command": "agentTodos.openSettings",
           "when": "view == agentTodos",
           "group": "navigation"
+        },
+        {
+          "command": "agentTodos.refreshTodos",
+          "when": "view == agentTodos",
+          "group": "2_file_operations"
         },
         {
           "command": "agentTodos.saveTodos",
@@ -213,11 +224,11 @@
           "command": "agentTodos.openInstructionsFile",
           "when": "view == agentTodos && agentTodos.autoInjectEnabled",
           "group": "2_file_operations"
-        },
+        }
+      ],
+      "issue/reporter": [
         {
-          "command": "agentTodos.showHistory",
-          "when": "view == agentTodos",
-          "group": "2_file_operations"
+          "command": "agentTodos.reportIssue"
         }
       ],
       "view/item/context": [
