@@ -31,6 +31,12 @@
         "icon": "$(clear-all)"
       },
       {
+        "command": "agentTodos.clearSavedTodos",
+        "title": "Clear Saved Todos",
+        "category": "Agent TODOs",
+        "icon": "$(trash)"
+      },
+      {
         "command": "agentTodos.refreshTodos",
         "title": "Refresh Todos",
         "category": "Agent TODOs",
@@ -199,6 +205,11 @@
           "command": "agentTodos.showHistory",
           "when": "view == agentTodos",
           "group": "navigation"
+        },
+        {
+          "command": "agentTodos.clearSavedTodos",
+          "when": "view == agentTodos",
+          "group": "1_saved_lists"
         },
         {
           "command": "agentTodos.openSettings",

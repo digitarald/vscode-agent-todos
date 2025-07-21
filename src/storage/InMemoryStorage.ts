@@ -1,10 +1,12 @@
 import { EventEmitter } from 'events';
 import { ITodoStorage } from './ITodoStorage';
-import { TodoItem } from '../types';
+import { IExtendedTodoStorage } from './IExtendedTodoStorage';
+import { TodoItem, SavedTodoList } from '../types';
 
-export class InMemoryStorage extends EventEmitter implements ITodoStorage {
+export class InMemoryStorage extends EventEmitter implements IExtendedTodoStorage {
     private todos: TodoItem[] = [];
     private title: string = 'Todos';
+    private savedLists: SavedTodoList[] = [];
     
     constructor() {
         super();
@@ -36,5 +38,19 @@ export class InMemoryStorage extends EventEmitter implements ITodoStorage {
         return {
             dispose: () => this.off('change', callback)
         };
+    }
+
+    async loadSavedLists(): Promise<SavedTodoList[]> {
+        return [...this.savedLists];
+    }
+
+    async saveSavedLists(savedLists: SavedTodoList[]): Promise<void> {
+        this.savedLists = [...savedLists];
+        this.emit('change');
+    }
+
+    async clearSavedLists(): Promise<void> {
+        this.savedLists = [];
+        this.emit('change');
     }
 }

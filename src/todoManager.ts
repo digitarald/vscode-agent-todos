@@ -5,6 +5,8 @@ import { TodoValidator } from './todoValidator';
 import { PerformanceMonitor } from './utils/performance';
 import { TelemetryManager } from './telemetryManager';
 import { generateUniqueSlug } from './utils/slugUtils';
+import { WorkspaceStateStorage } from './storage/WorkspaceStateStorage';
+import { IExtendedTodoStorage } from './storage/IExtendedTodoStorage';
 
 export class TodoManager {
     private static instance: TodoManager;
@@ -26,6 +28,7 @@ export class TodoManager {
     private copilotInstructionsManager: CopilotInstructionsManager;
     private configurationDisposable: vscode.Disposable | undefined;
     private context: vscode.ExtensionContext | undefined;
+    private storage: IExtendedTodoStorage | undefined;
     private pendingUpdate: { todos?: TodoItem[], title?: string } | null = null;
     private updateInProgress = false;
     private lastUpdateHash: string = '';
@@ -62,12 +65,17 @@ export class TodoManager {
         return TodoManager.instance;
     }
 
-    public initialize(context?: vscode.ExtensionContext): void {
+    public async initialize(context?: vscode.ExtensionContext): Promise<void> {
         this.context = context;
+
+        // Create storage instance
+        if (context) {
+            this.storage = new WorkspaceStateStorage(context);
+        }
 
         // Load todos from storage
         if (context) {
-            this.loadFromStorage();
+            await this.loadFromStorage();
         }
     }
 
@@ -216,7 +224,7 @@ export class TodoManager {
             if (this.todos.length > 0 && this.title !== 'Todos' && 
                 title !== undefined && title !== this.title) {
                 const reason = `title change from "${this.title}" to "${title}"`;
-                this.saveCurrentList(reason);
+                await this.saveCurrentList(reason);
             }
 
             this.todos = [...todos];
@@ -381,7 +389,39 @@ export class TodoManager {
         }
     }
 
-    private loadFromStorage(): void {
+    private async saveSavedListsToStorage(): Promise<void> {
+        if (!this.storage) {
+            console.warn('[TodoManager] Cannot save saved lists to storage: storage not initialized');
+            return;
+        }
+
+        try {
+            const savedListsArray = Array.from(this.savedLists.values());
+            await this.storage.saveSavedLists(savedListsArray);
+            console.log(`[TodoManager] Saved ${savedListsArray.length} saved lists to storage`);
+        } catch (error) {
+            console.error('[TodoManager] Failed to save saved lists to storage:', error);
+        }
+    }
+
+    private async loadSavedListsFromStorage(): Promise<void> {
+        if (!this.storage) {
+            return;
+        }
+
+        try {
+            const savedListsArray = await this.storage.loadSavedLists();
+            this.savedLists.clear();
+            for (const savedList of savedListsArray) {
+                this.savedLists.set(savedList.slug, savedList);
+            }
+            console.log(`[TodoManager] Loaded ${savedListsArray.length} saved lists from storage`);
+        } catch (error) {
+            console.error('[TodoManager] Failed to load saved lists from storage:', error);
+        }
+    }
+
+    private async loadFromStorage(): Promise<void> {
         if (!this.context) {
             return;
         }
@@ -393,6 +433,9 @@ export class TodoManager {
             this.title = storageData.title || 'Todos';
             this.fireConsolidatedChange();
         }
+
+        // Load saved lists
+        await this.loadSavedListsFromStorage();
     }
 
     public dispose(): void {
@@ -424,7 +467,24 @@ export class TodoManager {
         return Array.from(this.savedLists.keys());
     }
 
-    private saveCurrentList(reason: string = 'title change'): void {
+    public async clearSavedLists(): Promise<void> {
+        this.savedLists.clear();
+        await this.saveSavedListsToStorage();
+        this.onSavedListChangeEmitter.fire();
+        console.log('[TodoManager] Cleared all saved todo lists');
+    }
+
+    public async deleteSavedList(slug: string): Promise<boolean> {
+        const deleted = this.savedLists.delete(slug);
+        if (deleted) {
+            await this.saveSavedListsToStorage();
+            this.onSavedListChangeEmitter.fire();
+            console.log(`[TodoManager] Deleted saved todo list with slug: ${slug}`);
+        }
+        return deleted;
+    }
+
+    private async saveCurrentList(reason: string = 'title change'): Promise<void> {
         // Only save if we have todos and a non-default title
         if (this.todos.length > 0 && this.title !== 'Todos') {
             const existingSlugs = new Set(this.savedLists.keys());
@@ -441,6 +501,9 @@ export class TodoManager {
             this.savedLists.set(slug, saved);
             console.log(`[TodoManager] Saved todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
             
+            // Persist saved lists to storage
+            await this.saveSavedListsToStorage();
+
             // Notify saved list change listeners
             this.onSavedListChangeEmitter.fire();
         }

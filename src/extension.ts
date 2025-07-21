@@ -20,7 +20,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		// Initialize todo manager
 		const todoManager = TodoManager.getInstance();
-		todoManager.initialize(context);
+		await todoManager.initialize(context);
 
 
 		// Register file decoration provider for todo styling
@@ -149,6 +149,36 @@ export async function activate(context: vscode.ExtensionContext) {
 					command: 'clearTodos'
 				});
 				throw error;
+			}
+		});
+
+		const clearSavedTodosCommand = vscode.commands.registerCommand('agentTodos.clearSavedTodos', async () => {
+			try {
+				const savedLists = todoManager.getSavedLists();
+				if (savedLists.length === 0) {
+					vscode.window.showInformationMessage('No saved todo lists to clear.');
+					return;
+				}
+
+				const choice = await vscode.window.showWarningMessage(
+					`This will permanently delete all ${savedLists.length} saved todo list(s). This action cannot be undone.`,
+					'Clear All',
+					'Cancel'
+				);
+
+				if (choice === 'Clear All') {
+					await todoManager.clearSavedLists();
+					vscode.window.showInformationMessage(`Cleared ${savedLists.length} saved todo list(s).`);
+
+					telemetryManager.sendEvent('command.clearSavedTodos', {}, {
+						clearedCount: savedLists.length
+					});
+				}
+			} catch (error) {
+				telemetryManager.sendError(error instanceof Error ? error : new Error(String(error)), {
+					command: 'clearSavedTodos'
+				});
+				vscode.window.showErrorMessage(`Failed to clear saved todos: ${error instanceof Error ? error.message : String(error)}`);
 			}
 		});
 
@@ -431,39 +461,100 @@ export async function activate(context: vscode.ExtensionContext) {
 					return;
 				}
 
-				// Create quick pick items from saved lists
-				const quickPickItems = savedLists.map(savedList => ({
+				// Create quick pick with delete buttons
+				const quickPick = vscode.window.createQuickPick();
+				quickPick.title = 'Todo History';
+				quickPick.placeholder = 'Select a saved todo list to load, or click the delete button to remove';
+
+				// Create items with delete buttons
+				const deleteButton: vscode.QuickInputButton = {
+					iconPath: new vscode.ThemeIcon('trash'),
+					tooltip: 'Delete this saved todo list'
+				};
+
+				quickPick.items = savedLists.map(savedList => ({
 					label: savedList.title,
 					description: `${savedList.todos.length} todo(s)`,
 					detail: `Saved on ${savedList.savedAt.toLocaleDateString()} at ${savedList.savedAt.toLocaleTimeString()}`,
+					buttons: [deleteButton],
 					savedList: savedList
 				}));
 
-				const selectedItem = await vscode.window.showQuickPick(quickPickItems, {
-					placeHolder: 'Select a saved todo list to load',
-					title: 'Todo History'
-				});
-
-				if (!selectedItem) {
-					return; // User cancelled
-				}
-
-				// Ask for confirmation before replacing current todos
-				const currentTodos = todoManager.getTodos();
-				if (currentTodos.length > 0) {
-					const choice = await vscode.window.showWarningMessage(
-						`This will replace ${currentTodos.length} existing todo(s) with ${selectedItem.savedList.todos.length} todo(s) from "${selectedItem.savedList.title}". Continue?`,
-						'Yes', 'No'
-					);
-					
-					if (choice !== 'Yes') {
+				quickPick.onDidAccept(async () => {
+					const selectedItem = quickPick.selectedItems[0] as any;
+					if (!selectedItem) {
+						quickPick.dispose();
 						return;
 					}
-				}
 
-				// Load the selected saved list
-				await todoManager.setTodos(selectedItem.savedList.todos, selectedItem.savedList.title);
-				vscode.window.showInformationMessage(`Loaded "${selectedItem.savedList.title}" with ${selectedItem.savedList.todos.length} todo(s)`);
+					quickPick.dispose();
+
+					// Ask for confirmation before replacing current todos
+					const currentTodos = todoManager.getTodos();
+					if (currentTodos.length > 0) {
+						const choice = await vscode.window.showWarningMessage(
+							`This will replace ${currentTodos.length} existing todo(s) with ${selectedItem.savedList.todos.length} todo(s) from "${selectedItem.savedList.title}". Continue?`,
+							'Yes', 'No'
+						);
+
+						if (choice !== 'Yes') {
+							return;
+						}
+					}
+
+					// Load the selected saved list
+					await todoManager.setTodos(selectedItem.savedList.todos, selectedItem.savedList.title);
+					vscode.window.showInformationMessage(`Loaded "${selectedItem.savedList.title}" with ${selectedItem.savedList.todos.length} todo(s)`);
+				});
+
+				quickPick.onDidTriggerItemButton(async (e) => {
+					const item = e.item as any;
+					const button = e.button;
+
+					if (button === deleteButton) {
+						// Confirm deletion
+						const choice = await vscode.window.showWarningMessage(
+							`Delete saved todo list "${item.savedList.title}"? This action cannot be undone.`,
+							'Delete',
+							'Cancel'
+						);
+
+						if (choice === 'Delete') {
+							const deleted = await todoManager.deleteSavedList(item.savedList.slug);
+							if (deleted) {
+								vscode.window.showInformationMessage(`Deleted saved todo list "${item.savedList.title}"`);
+
+								// Refresh the quick pick items
+								const updatedSavedLists = todoManager.getSavedLists();
+								if (updatedSavedLists.length === 0) {
+									quickPick.dispose();
+									vscode.window.showInformationMessage('No more saved todo lists.');
+									return;
+								}
+
+								quickPick.items = updatedSavedLists.map(savedList => ({
+									label: savedList.title,
+									description: `${savedList.todos.length} todo(s)`,
+									detail: `Saved on ${savedList.savedAt.toLocaleDateString()} at ${savedList.savedAt.toLocaleTimeString()}`,
+									buttons: [deleteButton],
+									savedList: savedList
+								}));
+
+								telemetryManager.sendEvent('command.deleteSavedTodo', {}, {
+									deletedListId: item.savedList.id
+								});
+							} else {
+								vscode.window.showErrorMessage(`Failed to delete saved todo list "${item.savedList.title}"`);
+							}
+						}
+					}
+				});
+
+				quickPick.onDidHide(() => {
+					quickPick.dispose();
+				});
+
+				quickPick.show();
 			} catch (error) {
 				vscode.window.showErrorMessage(`Failed to load saved todo list: ${error instanceof Error ? error.message : String(error)}`);
 			}
@@ -548,6 +639,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			treeView,
 			decorationProviderDisposable,
 			clearTodosCommand,
+			clearSavedTodosCommand,
 			refreshTodosCommand,
 			refreshDecorationsCommand,
 			toggleTodoStatusCommand,

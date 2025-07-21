@@ -3,6 +3,7 @@ import { TodoItem, TodoStatus, TodoPriority, SavedTodoList } from '../types';
 import { TodoValidator } from '../todoValidator';
 import { EventEmitter } from 'events';
 import { ITodoStorage } from '../storage/ITodoStorage';
+import { IExtendedTodoStorage } from '../storage/IExtendedTodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { StandaloneCopilotWriter } from './standaloneCopilotWriter';
 import { generateUniqueSlug } from '../utils/slugUtils';
@@ -14,6 +15,7 @@ export class StandaloneTodoManager extends EventEmitter {
   // Saved lists storage for previous todo lists
   private savedLists: Map<string, SavedTodoList> = new Map();
   private storage: ITodoStorage;
+  private extendedStorage: IExtendedTodoStorage | undefined;
   private storageDisposable: { dispose: () => void } | undefined;
   private lastUpdateHash: string = '';
   private updateVersion: number = 0;
@@ -25,12 +27,17 @@ export class StandaloneTodoManager extends EventEmitter {
   constructor(storage?: ITodoStorage, autoInjectConfig?: { workspaceRoot: string; filePath?: string }) {
     super();
     this.storage = storage || new InMemoryStorage();
+    // Check if storage supports extended features
+    this.extendedStorage = 'loadSavedLists' in this.storage &&
+      'saveSavedLists' in this.storage &&
+      'clearSavedLists' in this.storage
+      ? this.storage as IExtendedTodoStorage
+      : undefined;
+
     if (autoInjectConfig) {
-      this.copilotWriter = new StandaloneCopilotWriter(
-        autoInjectConfig.workspaceRoot,
-        autoInjectConfig.filePath
-      );
+      this.setAutoInject(autoInjectConfig);
     }
+
     this.initializationPromise = this.initialize();
   }
   
@@ -45,6 +52,9 @@ export class StandaloneTodoManager extends EventEmitter {
     // Load initial data
     await this.loadTodos();
     
+    // Load saved lists
+    this.loadSavedListsFromStorage();
+
     // Subscribe to storage changes if supported and the storage supports external changes
     // For InMemoryStorage, we don't need to subscribe since it's single-instance
     const isInMemoryStorage = this.storage.constructor.name === 'InMemoryStorage';
@@ -53,6 +63,7 @@ export class StandaloneTodoManager extends EventEmitter {
         // Don't reload if we're currently saving (prevents recursive loop)
         if (!this.isSaving) {
           this.loadTodos();
+          this.loadSavedListsFromStorage();
         }
       });
     }
@@ -258,6 +269,62 @@ export class StandaloneTodoManager extends EventEmitter {
     return Array.from(this.savedLists.keys());
   }
 
+  clearSavedLists(): void {
+    this.savedLists.clear();
+    this.saveSavedListsToStorage();
+    this.emit('savedListChange');
+    console.log('[StandaloneTodoManager] Cleared all saved todo lists');
+  }
+
+  deleteSavedList(slug: string): boolean {
+    const deleted = this.savedLists.delete(slug);
+    if (deleted) {
+      this.saveSavedListsToStorage();
+      this.emit('savedListChange');
+      console.log(`[StandaloneTodoManager] Deleted saved todo list with slug: ${slug}`);
+    }
+    return deleted;
+  }
+
+  private shouldPersistSavedLists(): boolean {
+    // Only persist saved lists when using storage that supports extended features and can synchronize
+    return this.extendedStorage !== undefined && this.storage.supportsExternalChanges !== false;
+  }
+
+  private saveSavedListsToStorage(): void {
+    if (!this.shouldPersistSavedLists() || !this.extendedStorage) {
+      return; // Don't persist saved lists for storage without extended support
+    }
+
+    try {
+      const savedListsArray = Array.from(this.savedLists.values());
+      this.extendedStorage.saveSavedLists(savedListsArray);
+      console.log(`[StandaloneTodoManager] Saved ${savedListsArray.length} saved lists to storage`);
+    } catch (error) {
+      console.error('[StandaloneTodoManager] Failed to save saved lists to storage:', error);
+    }
+  }
+
+  private loadSavedListsFromStorage(): void {
+    if (!this.shouldPersistSavedLists() || !this.extendedStorage) {
+      return; // Don't load saved lists for storage without extended support
+    }
+
+    try {
+      this.extendedStorage.loadSavedLists().then(savedListsArray => {
+        this.savedLists.clear();
+        for (const savedList of savedListsArray) {
+          this.savedLists.set(savedList.slug, savedList);
+        }
+        console.log(`[StandaloneTodoManager] Loaded ${savedListsArray.length} saved lists from storage`);
+      }).catch(error => {
+        console.error('[StandaloneTodoManager] Failed to load saved lists from storage:', error);
+      });
+    } catch (error) {
+      console.error('[StandaloneTodoManager] Failed to load saved lists from storage:', error);
+    }
+  }
+
   onSavedListChange(callback: () => void): { dispose: () => void } {
     this.on('savedListChange', callback);
     return {
@@ -284,6 +351,9 @@ export class StandaloneTodoManager extends EventEmitter {
       this.savedLists.set(slug, saved);
       console.log(`[StandaloneTodoManager] Saved todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
       
+      // Persist saved lists to storage
+      this.saveSavedListsToStorage();
+
       // Notify saved list change listeners
       this.emit('savedListChange');
     }

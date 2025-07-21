@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import { EventEmitter } from 'events';
 import { ITodoStorage } from './ITodoStorage';
-import { TodoItem } from '../types';
+import { IExtendedTodoStorage } from './IExtendedTodoStorage';
+import { TodoItem, SavedTodoList } from '../types';
 
-export class WorkspaceStateStorage extends EventEmitter implements ITodoStorage {
+export class WorkspaceStateStorage extends EventEmitter implements IExtendedTodoStorage {
     private readonly storageKey = 'agentTodos.todos';
+    private readonly savedListsKey = 'agentTodos.savedLists';
     
     constructor(private context: vscode.ExtensionContext) {
         super();
@@ -44,5 +46,29 @@ export class WorkspaceStateStorage extends EventEmitter implements ITodoStorage 
         return {
             dispose: () => this.off('change', callback)
         };
+    }
+
+    async loadSavedLists(): Promise<SavedTodoList[]> {
+        const savedListsArray = this.context.workspaceState.get<SavedTodoList[]>(this.savedListsKey);
+
+        if (savedListsArray && Array.isArray(savedListsArray)) {
+            // Convert savedAt back to Date if it's a string
+            return savedListsArray.map(savedList => ({
+                ...savedList,
+                savedAt: typeof savedList.savedAt === 'string' ? new Date(savedList.savedAt) : savedList.savedAt
+            }));
+        }
+
+        return [];
+    }
+
+    async saveSavedLists(savedLists: SavedTodoList[]): Promise<void> {
+        await this.context.workspaceState.update(this.savedListsKey, savedLists);
+        this.emit('change');
+    }
+
+    async clearSavedLists(): Promise<void> {
+        await this.context.workspaceState.update(this.savedListsKey, []);
+        this.emit('change');
     }
 }
