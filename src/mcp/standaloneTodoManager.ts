@@ -7,6 +7,7 @@ import { IExtendedTodoStorage } from '../storage/IExtendedTodoStorage';
 import { InMemoryStorage } from '../storage/InMemoryStorage';
 import { StandaloneCopilotWriter } from './standaloneCopilotWriter';
 import { generateUniqueSlug } from '../utils/slugUtils';
+import { areListsExactMatch } from '../utils/listComparison';
 
 export class StandaloneTodoManager extends EventEmitter {
   private static instance: StandaloneTodoManager | null = null;
@@ -337,18 +338,30 @@ export class StandaloneTodoManager extends EventEmitter {
   private saveCurrentList(reason: string = 'title change'): void {
     // Only save if we have todos and a non-default title
     if (this.todos.length > 0 && this.title !== 'Todos') {
-      const existingSlugs = new Set(this.savedLists.keys());
-      const slug = generateUniqueSlug(this.title, existingSlugs);
-      
-      const saved: SavedTodoList = {
+      // Create the potential saved list to check for duplicates
+      const potentialSaved: SavedTodoList = {
         id: `saved-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         title: this.title,
         todos: [...this.todos],
         savedAt: new Date(),
-        slug: slug
+        slug: '' // Will be set after duplicate check
       };
 
-      this.savedLists.set(slug, saved);
+      // Check for exact duplicates in existing saved lists
+      const existingLists = Array.from(this.savedLists.values());
+      for (const existingList of existingLists) {
+        if (areListsExactMatch(potentialSaved, existingList)) {
+          console.log(`[StandaloneTodoManager] Prevented duplicate save of "${this.title}" (${reason}) - exact match found with existing list "${existingList.slug}" saved at ${existingList.savedAt.toISOString()}`);
+          return; // Silent prevention - do not save duplicate
+        }
+      }
+
+      // No duplicate found, proceed with saving
+      const existingSlugs = new Set(this.savedLists.keys());
+      const slug = generateUniqueSlug(this.title, existingSlugs);
+      potentialSaved.slug = slug;
+
+      this.savedLists.set(slug, potentialSaved);
       console.log(`[StandaloneTodoManager] Saved todo list "${this.title}" as "${slug}" (${reason}), ${this.todos.length} todos`);
       
       // Persist saved lists to storage
