@@ -24,6 +24,45 @@ suite('Collapsed Mode Tests', () => {
         await todoManager.clearTodos();
     });
 
+    test('should trigger change event when collapsed mode setting changes', async () => {
+        // Add some todos first
+        const todos: TodoItem[] = [
+            { id: '1', content: 'Todo 1', status: 'pending', priority: 'medium' },
+            { id: '2', content: 'Todo 2', status: 'in_progress', priority: 'high' },
+            { id: '3', content: 'Todo 3', status: 'completed', priority: 'low' }
+        ];
+        await todoManager.setTodos(todos);
+
+        // Listen for change events
+        let changeEventFired = false;
+        const changeListener = todoManager.onDidChange(() => {
+            changeEventFired = true;
+        });
+
+        try {
+            // Reset the flag
+            changeEventFired = false;
+
+            // Mock configuration change to simulate toggling collapsed mode
+            const originalIsCollapsedEnabled = todoManager.isCollapsedModeEnabled;
+            const originalMode = originalIsCollapsedEnabled.call(todoManager);
+            const newMode = !originalMode; // Toggle the mode
+            (todoManager as any).isCollapsedModeEnabled = () => newMode;
+
+            // Simulate configuration change by calling the internal method directly
+            // This mimics what happens when the configuration changes
+            (todoManager as any).fireConsolidatedChange();
+
+            // Change should fire even with same todos because collapsed mode state is now part of hash
+            assert.ok(changeEventFired, 'Change event should fire when collapsed mode state changes');
+
+            // Restore original method
+            (todoManager as any).isCollapsedModeEnabled = originalIsCollapsedEnabled;
+        } finally {
+            changeListener.dispose();
+        }
+    });
+
     test('should show flat list when collapsed mode is disabled', async () => {
         // Add some todos
         const todos: TodoItem[] = [

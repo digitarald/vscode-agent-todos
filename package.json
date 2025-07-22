@@ -194,7 +194,7 @@
       "todos-container": [
         {
           "id": "agentTodos",
-          "name": "Agent TODOs",
+          "name": "Todos",
           "when": "true",
           "icon": "$(checklist)"
         }

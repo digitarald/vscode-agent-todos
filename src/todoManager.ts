@@ -173,10 +173,11 @@ export class TodoManager {
         isEmptyTransition = (previousTodoCount > 0 && currentTodoCount === 0) ||
             (previousTodoCount === 0 && currentTodoCount > 0);
 
-        // Include version in hash for forced updates
+        // Include version and collapsed mode in hash for forced updates
         const currentHash = JSON.stringify({
             todos: this.todos,
             title: this.title,
+            collapsedMode: this.isCollapsedModeEnabled(),
             version: isEmptyTransition ? ++this.updateVersion : this.updateVersion
         });
 
