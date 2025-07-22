@@ -111,6 +111,16 @@ jobs:
         env:
           APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
+      - name: Install vsce
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22.x'
+        run: npm install -g @vscode/vsce
+
+      - name: Create VSIX package
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22.x'
+        run: vsce package --no-git-tag-version
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
