@@ -44,6 +44,10 @@ export class TodoManager {
                 if (event.affectsConfiguration('agentTodos.autoInject')) {
                     await this.handleAutoInjectSettingChange();
                 }
+                if (event.affectsConfiguration('agentTodos.collapsedMode')) {
+                    // Fire consolidated change to refresh tree view
+                    this.fireConsolidatedChange();
+                }
                 // Broadcast changes for all configuration settings that affect MCP tools
                 if (event.affectsConfiguration('agentTodos')) {
                     this.onDidChangeConfigurationEmitter.fire({
@@ -97,6 +101,14 @@ export class TodoManager {
         } catch (error) {
             console.log(`[TodoManager] isAutoOpenViewEnabled error: ${error}, defaulting to true`);
             return true; // Default to true when vscode is not available
+        }
+    }
+
+    public isCollapsedModeEnabled(): boolean {
+        try {
+            return vscode.workspace.getConfiguration('agentTodos').get<boolean>('collapsedMode', false);
+        } catch (error) {
+            return false; // Default to false when vscode is not available
         }
     }
 
@@ -519,6 +531,19 @@ export class TodoManager {
 
             // Notify saved list change listeners
             this.onSavedListChangeEmitter.fire();
+        }
+    }
+
+    public async toggleCollapsedMode(): Promise<void> {
+        try {
+            const config = vscode.workspace.getConfiguration('agentTodos');
+            const currentValue = config.get<boolean>('collapsedMode', false);
+            await config.update('collapsedMode', !currentValue, vscode.ConfigurationTarget.Workspace);
+            
+            // Fire consolidated change to refresh tree view
+            this.fireConsolidatedChange();
+        } catch (error) {
+            console.error('[TodoManager] Error toggling collapsed mode:', error);
         }
     }
 }

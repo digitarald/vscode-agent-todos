@@ -2,6 +2,35 @@ import * as vscode from 'vscode';
 import { TodoItem } from './types';
 import { TodoManager } from './todoManager';
 
+// Section tree item for grouping todos in collapsed mode
+export class TodoSectionItem extends vscode.TreeItem {
+    constructor(
+        public readonly sectionType: 'completed' | 'pending',
+        public readonly todos: TodoItem[],
+        collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Expanded
+    ) {
+        const count = todos.length;
+        const label = sectionType === 'completed' 
+            ? `Completed (${count})` 
+            : `Pending (${count})`;
+        
+        super(label, collapsibleState);
+        
+        this.contextValue = `todoSection section-${sectionType}`;
+        this.tooltip = `${count} ${sectionType} todo${count === 1 ? '' : 's'}`;
+        
+        // Set different icons for sections
+        if (sectionType === 'completed') {
+            this.iconPath = new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('testing.iconPassed'));
+        } else {
+            this.iconPath = new vscode.ThemeIcon('list-unordered', new vscode.ThemeColor('foreground'));
+        }
+        
+        // Add visual distinction
+        this.description = sectionType === 'completed' ? '✓' : '○';
+    }
+}
+
 export class TodoTreeItem extends vscode.TreeItem {
     private static recentlyChangedItems = new Set<string>();
 
@@ -81,8 +110,11 @@ export class TodoTreeItem extends vscode.TreeItem {
     }
 }
 
-export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeItem> {
-    private readonly _onDidChangeTreeData = new vscode.EventEmitter<TodoTreeItem | undefined | null | void>();
+// Union type for tree items
+export type TodoTreeNode = TodoTreeItem | TodoSectionItem;
+
+export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeNode> {
+    private readonly _onDidChangeTreeData = new vscode.EventEmitter<TodoTreeNode | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
     private todoManager: TodoManager;
@@ -120,19 +152,61 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeIte
         this.previousTodos = [...currentTodos];
     }
 
-    getTreeItem(element: TodoTreeItem): vscode.TreeItem {
+    getTreeItem(element: TodoTreeNode): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: TodoTreeItem): Thenable<TodoTreeItem[]> {
+    getChildren(element?: TodoTreeNode): Thenable<TodoTreeNode[]> {
         if (!element) {
-            // Root level - return all todos
+            // Root level - check if collapsed mode is enabled
             const todos = this.todoManager.getTodos();
-
+            const isCollapsedMode = this.todoManager.isCollapsedModeEnabled();
+            
+            if (!isCollapsedMode) {
+                // Normal mode - return all todos as flat list
+                return Promise.resolve(
+                    todos.map(todo => new TodoTreeItem(todo))
+                );
+            }
+            
+            // Collapsed mode - group todos by status
+            const completedTodos = todos.filter(t => t.status === 'completed');
+            const pendingTodos = todos.filter(t => t.status === 'pending');
+            const inProgressTodos = todos.filter(t => t.status === 'in_progress');
+            
+            const result: TodoTreeNode[] = [];
+            
+            // Show in-progress todos individually at the top
+            inProgressTodos.forEach(todo => {
+                result.push(new TodoTreeItem(todo));
+            });
+            
+            // If no in-progress todos, show pending todos individually instead of grouped
+            if (inProgressTodos.length === 0) {
+                pendingTodos.forEach(todo => {
+                    result.push(new TodoTreeItem(todo));
+                });
+            } else {
+                // Show pending todos grouped only if there are in-progress todos
+                if (pendingTodos.length > 0) {
+                    result.push(new TodoSectionItem('pending', pendingTodos));
+                }
+            }
+            
+            // Always group completed todos if there are any
+            if (completedTodos.length > 0) {
+                result.push(new TodoSectionItem('completed', completedTodos));
+            }
+            
+            return Promise.resolve(result);
+        } else if (element instanceof TodoSectionItem) {
+            // Return todos for the section
             return Promise.resolve(
-                todos.map(todo => new TodoTreeItem(todo))
+                element.todos.map(todo => new TodoTreeItem(todo))
             );
         }
+        
+        // TodoTreeItem has no children
         return Promise.resolve([]);
     }
 
