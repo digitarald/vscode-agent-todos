@@ -483,7 +483,10 @@ export class TodoMCPServer {
             {
               title: "Check Todos",
               description: this.buildReadDescription(),
-              inputSchema: emptySchema // Proper Zod schema for no parameters
+              inputSchema: emptySchema, // Proper Zod schema for no parameters
+              annotations: {
+                readOnlyHint: true
+              }
             },
             async () => {
               try {
@@ -537,7 +540,10 @@ export class TodoMCPServer {
             {
               title: "Update Todos",
               description: this.buildWriteDescription(),
-              inputSchema: writeSchema
+              inputSchema: writeSchema,
+              annotations: {
+                readOnlyHint: false
+              }
             },
             async (args: any, { sendNotification, _meta }: any) => {
               try {
@@ -607,7 +613,10 @@ export class TodoMCPServer {
           sessionTools.todoWriteTool.update({
             title: "Update Todos",
             description: this.buildWriteDescription(),
-            inputSchema: writeSchema
+            inputSchema: writeSchema,
+            annotations: {
+              readOnlyHint: false
+            }
           });
           console.log(`[TodoMCPServer] Successfully updated todo_write tool for session ${sessionId}`);
         } catch (error) {

@@ -125,7 +125,8 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
         description: writeDescription,
         inputSchema: this.getTodoWriteSchema(),
         annotations: {
-          title: 'Update Todos'
+          title: 'Update Todos',
+          readOnlyHint: false
         }
       });
       console.log('[TodoTools] todo_write tool added');
@@ -406,12 +407,12 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
         else if (completedCount === totalTodos && totalTodos > 0) {
           notificationLabel = `Completed "${title || 'untitled'}" (${todos.length})`;
         }
-        // Find newly completed tasks by comparing with previous state
         else {
           // Create a map of previous todos by ID for quick lookup
           const previousTodoMap = new Map(previousTodos.map(t => [t.id, t]));
+          const currentTodoMap = new Map(todos.map(t => [t.id, t]));
 
-          // Find tasks that were just completed (not completed before, completed now)
+          // Detect various types of changes
           const newlyCompleted = todos.filter(todo => {
             const prevTodo = previousTodoMap.get(todo.id);
             const wasCompleted = prevTodo && prevTodo.status === 'completed';
@@ -419,10 +420,67 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
             return isNowCompleted && !wasCompleted;
           });
 
+          const newlyInProgress = todos.filter(todo => {
+            const prevTodo = previousTodoMap.get(todo.id);
+            const wasInProgress = prevTodo && prevTodo.status === 'in_progress';
+            const isNowInProgress = todo.status === 'in_progress';
+            return isNowInProgress && !wasInProgress;
+          });
+
+          const statusChangedFromInProgress = previousTodos.filter(prevTodo => {
+            const currentTodo = currentTodoMap.get(prevTodo.id);
+            const wasInProgress = prevTodo.status === 'in_progress';
+            const isStillInProgress = currentTodo && currentTodo.status === 'in_progress';
+            return wasInProgress && !isStillInProgress;
+          });
+
+          const newTasks = todos.filter(todo => !previousTodoMap.has(todo.id));
+          const deletedTasks = previousTodos.filter(prevTodo => !currentTodoMap.has(prevTodo.id));
+
+          const priorityChanges = todos.filter(todo => {
+            const prevTodo = previousTodoMap.get(todo.id);
+            return prevTodo && prevTodo.priority !== todo.priority;
+          });
+
+          // Prioritize notifications by importance
           if (newlyCompleted.length > 0) {
-            // Get the most recently completed task
+            // Newly completed tasks (highest priority)
             const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
             notificationLabel = `✅ (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
+          }
+          else if (newlyInProgress.length > 0) {
+            // Tasks starting work (high priority)
+            const lastStarted = newlyInProgress[newlyInProgress.length - 1];
+            notificationLabel = `🔄 Started: ${lastStarted.content}`;
+          }
+          else if (statusChangedFromInProgress.length > 0) {
+            // Tasks no longer in progress (could be paused/reverted)
+            const firstStopped = statusChangedFromInProgress[0];
+            const currentTodo = currentTodoMap.get(firstStopped.id);
+            const newStatus = currentTodo?.status || 'unknown';
+            notificationLabel = `⏸️ Paused: ${firstStopped.content} (now ${newStatus})`;
+          }
+          else if (newTasks.length > 0) {
+            // New tasks added
+            if (newTasks.length === 1) {
+              notificationLabel = `➕ Added: ${newTasks[0].content}`;
+            } else {
+              notificationLabel = `➕ Added ${newTasks.length} new tasks`;
+            }
+          }
+          else if (deletedTasks.length > 0) {
+            // Tasks removed
+            if (deletedTasks.length === 1) {
+              notificationLabel = `➖ Removed: ${deletedTasks[0].content}`;
+            } else {
+              notificationLabel = `➖ Removed ${deletedTasks.length} tasks`;
+            }
+          }
+          else if (priorityChanges.length > 0) {
+            // Priority changes (lowest priority notification)
+            const firstPriorityChange = priorityChanges[0];
+            const prevTodo = previousTodoMap.get(firstPriorityChange.id);
+            notificationLabel = `🔄 Priority: ${firstPriorityChange.content} (${prevTodo?.priority} → ${firstPriorityChange.priority})`;
           }
         }
 
