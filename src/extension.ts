@@ -634,6 +634,12 @@ export async function activate(context: vscode.ExtensionContext) {
 			}
 		});
 
+		const toggleCollapsedModeCommand = vscode.commands.registerCommand('agentTodos.toggleCollapsedMode', async () => {
+			await todoManager.toggleCollapsedMode();
+			const isCollapsed = todoManager.isCollapsedModeEnabled();
+			vscode.window.showInformationMessage(`Collapsed mode ${isCollapsed ? 'enabled' : 'disabled'}. ${isCollapsed ? 'Todos are now grouped by status.' : 'Todos are shown in a flat list.'}`);
+		});
+
 		// Add all disposables to context
 		context.subscriptions.push(
 			treeView,
@@ -662,6 +668,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			loadTodosCommand,
 			openSettingsCommand,
 			openInstructionsFileCommand,
+			toggleCollapsedModeCommand,
 			configChangeDisposable,
 			showHistoryCommand,
 			reportIssueCommand

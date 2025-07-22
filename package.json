@@ -173,6 +173,12 @@
         "title": "Report Issue",
         "category": "Agent TODOs",
         "icon": "$(report)"
+      },
+      {
+        "command": "agentTodos.toggleCollapsedMode",
+        "title": "Toggle Collapsed Mode",
+        "category": "Agent TODOs",
+        "icon": "$(list-tree)"
       }
     ],
     "viewsContainers": {
@@ -213,6 +219,11 @@
         },
         {
           "command": "agentTodos.openSettings",
+          "when": "view == agentTodos",
+          "group": "navigation"
+        },
+        {
+          "command": "agentTodos.toggleCollapsedMode",
           "when": "view == agentTodos",
           "group": "navigation"
         },
@@ -322,6 +333,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically open the Todos view when the todo list changes"
+        },
+        "agentTodos.collapsedMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Group completed and pending todos into collapsible sections, focusing on in-progress items"
         }
       }
     },
