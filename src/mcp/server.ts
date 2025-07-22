@@ -1347,6 +1347,24 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
     return this.config.standalone || false;
   }
 
+  public getMcpServer(context?: any): any {
+    // Try to extract session ID from context meta if available
+    const sessionId = context?._meta?.sessionId;
+
+    if (sessionId && this.mcpServers.has(sessionId)) {
+      return this.mcpServers.get(sessionId);
+    }
+
+    // Fallback: Return any available MCP server (for single-session scenarios)
+    const servers = Array.from(this.mcpServers.values());
+    if (servers.length > 0) {
+      return servers[0]; // Return the first available server
+    }
+
+    console.warn('[TodoMCPServer] No MCP server available for elicitation');
+    return null;
+  }
+
   public setTodoManager(manager: any): void {
     console.log('[TodoMCPServer.setTodoManager] 🔧 Setting todo manager:', {
       hasManager: !!manager,

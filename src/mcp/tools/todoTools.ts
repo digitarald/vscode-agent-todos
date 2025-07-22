@@ -18,6 +18,7 @@ interface MCPServerLike {
   isStandalone(): boolean;
   broadcastUpdate(event: any): void;
   getConfig(): any;
+  getMcpServer(context?: ToolContext): any; // Returns the underlying MCP server instance for elicitation
 }
 
 interface TodoManagerLike {
@@ -346,7 +347,69 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       this.todoSync.markExternalChange();
     }
 
-    // Update todos
+    if (title && previousTitle && previousTitle !== 'Todos' && title !== previousTitle) {
+      console.log(`[TodoTools] Title change detected: "${previousTitle}" → "${title}"`);
+
+      try {
+        const mcpServer = this.server.getMcpServer(context);
+        if (mcpServer && mcpServer.server && typeof mcpServer.server.elicitInput === 'function') {
+          console.log('[TodoTools] Requesting user confirmation for title change via MCP elicitation');
+
+          const elicitResult = await mcpServer.server.elicitInput({
+            message: `Please confirm that you want to replace the current todo list "${previousTitle}" with "${title}".`,
+            requestedSchema: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  title: "Action to take",
+                  description: "How to handle the suggested list update",
+                  enum: ["yes_archive", "reject"],
+                  enumNames: ["Yes, archive current list", "Reject update, keep current list"]
+                }
+              },
+              required: ["action"]
+            }
+          });
+
+          if (elicitResult.action === "accept" && elicitResult.content) {
+            const userChoice = elicitResult.content.action;
+            console.log(`[TodoTools] User chose action: ${userChoice}`);
+
+            switch (userChoice) {
+              case "reject":
+                // Reject the entire update - return early
+                console.log(`[TodoTools] User rejected the todo update, cancelling operation`);
+                return {
+                  content: [{
+                    type: 'text',
+                    text: 'Todo update cancelled by user'
+                  }]
+                };
+              default:
+                console.log(`[TodoTools] Answered "${userChoice}", replacing list"`);
+            }
+          } else {
+            // User cancelled or declined - reject the entire update
+            console.log(`[TodoTools] User cancelled or declined todo update, cancelling operation`);
+            return {
+              content: [{
+                type: 'text',
+                text: 'Todo update cancelled by user'
+              }]
+            };
+          }
+        } else {
+          console.log('[TodoTools] MCP server not available for elicitation, proceeding with update');
+        }
+      } catch (elicitError) {
+        console.error('[TodoTools] Elicitation failed, proceeding with title change:', {
+          error: elicitError instanceof Error ? elicitError.message : String(elicitError)
+        });
+      }
+    }
+
+    // Update todos with the final title
     await this.todoManager.updateTodos(todos, title);
 
     // Get state after update
