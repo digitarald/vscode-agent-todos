@@ -7,7 +7,7 @@ export class TodoSectionItem extends vscode.TreeItem {
     constructor(
         public readonly sectionType: 'completed' | 'pending',
         public readonly todos: TodoItem[],
-        collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Expanded
+        collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
     ) {
         const count = todos.length;
         const label = sectionType === 'completed' 
@@ -23,7 +23,7 @@ export class TodoSectionItem extends vscode.TreeItem {
         if (sectionType === 'completed') {
             this.iconPath = new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('testing.iconPassed'));
         } else {
-            this.iconPath = new vscode.ThemeIcon('list-unordered', new vscode.ThemeColor('foreground'));
+            this.iconPath = new vscode.ThemeIcon('circle-large', new vscode.ThemeColor('foreground'));
         }
         
         // Add visual distinction
@@ -55,7 +55,7 @@ export class TodoTreeItem extends vscode.TreeItem {
 
         // Add adr to tooltip if present
         if (todo.adr) {
-            tooltipText += `\n\nADR: ${todo.adr}`;
+            tooltipText += `\n\n${todo.adr}`;
         }
 
         this.tooltip = tooltipText;
@@ -68,11 +68,11 @@ export class TodoTreeItem extends vscode.TreeItem {
         switch (todo.status) {
             case 'pending':
                 if (todo.priority === 'high') {
-                    this.iconPath = new vscode.ThemeIcon('arrow-circle-up', new vscode.ThemeColor('list.warningForeground'));
+                    this.iconPath = new vscode.ThemeIcon('circle-large', new vscode.ThemeColor('list.warningForeground'));
                 } else if (todo.priority === 'medium') {
-                    this.iconPath = new vscode.ThemeIcon('arrow-circle-right');
+                    this.iconPath = new vscode.ThemeIcon('circle');
                 } else {
-                    this.iconPath = new vscode.ThemeIcon('arrow-circle-down', new vscode.ThemeColor('descriptionForeground'));
+                    this.iconPath = new vscode.ThemeIcon('circle-small', new vscode.ThemeColor('descriptionForeground'));
                 }
                 break;
             case 'in_progress':
@@ -89,7 +89,7 @@ export class TodoTreeItem extends vscode.TreeItem {
 
         // Add description to show details indicator
         if (todo.adr) {
-            this.description = '•';
+            this.description = todo.adr;
         }
 
         // No click command - use inline action instead
@@ -181,21 +181,24 @@ export class TodoTreeDataProvider implements vscode.TreeDataProvider<TodoTreeNod
                 result.push(new TodoTreeItem(todo));
             });
             
-            // If no in-progress todos, show pending todos individually instead of grouped
-            if (inProgressTodos.length === 0) {
-                pendingTodos.forEach(todo => {
-                    result.push(new TodoTreeItem(todo));
-                });
-            } else {
-                // Show pending todos grouped only if there are in-progress todos
-                if (pendingTodos.length > 0) {
-                    result.push(new TodoSectionItem('pending', pendingTodos));
+            // Handle pending todos
+            if (pendingTodos.length > 0) {
+                if (inProgressTodos.length === 0 && pendingTodos.length > 0) {
+                    // No in-progress tasks: show first pending individually, then group the rest
+                    result.push(new TodoTreeItem(pendingTodos[0]));
+                    if (pendingTodos.length > 1) {
+                        const remainingPending = pendingTodos.slice(1);
+                        result.push(new TodoSectionItem('pending', remainingPending, vscode.TreeItemCollapsibleState.Collapsed));
+                    }
+                } else {
+                // Has in-progress tasks: group all pending todos
+                    result.push(new TodoSectionItem('pending', pendingTodos, vscode.TreeItemCollapsibleState.Collapsed));
                 }
             }
             
             // Always group completed todos if there are any
             if (completedTodos.length > 0) {
-                result.push(new TodoSectionItem('completed', completedTodos));
+                result.push(new TodoSectionItem('completed', completedTodos, vscode.TreeItemCollapsibleState.Collapsed));
             }
             
             return Promise.resolve(result);

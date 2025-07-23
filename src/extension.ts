@@ -61,6 +61,10 @@ export async function activate(context: vscode.ExtensionContext) {
 			const config = vscode.workspace.getConfiguration('agentTodos');
 			const autoInjectEnabled = config.get<boolean>('autoInject', false);
 			vscode.commands.executeCommand('setContext', 'agentTodos.autoInjectEnabled', autoInjectEnabled);
+			
+			// Set context key for collapsed mode enabled
+			const collapsedModeEnabled = todoManager.isCollapsedModeEnabled();
+			vscode.commands.executeCommand('setContext', 'agentTodos.collapsedModeEnabled', collapsedModeEnabled);
 		};
 		updateContextKeys();
 
@@ -75,7 +79,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 		// Listen for configuration changes to update context keys
 		const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
-			if (e.affectsConfiguration('agentTodos.autoInject')) {
+			if (e.affectsConfiguration('agentTodos.autoInject') || e.affectsConfiguration('agentTodos.collapsedMode')) {
 				updateContextKeys();
 			}
 		});
@@ -637,6 +641,14 @@ export async function activate(context: vscode.ExtensionContext) {
 		const toggleCollapsedModeCommand = vscode.commands.registerCommand('agentTodos.toggleCollapsedMode', async () => {
 			await todoManager.toggleCollapsedMode();
 			const isCollapsed = todoManager.isCollapsedModeEnabled();
+			vscode.commands.executeCommand('setContext', 'agentTodos.collapsedModeEnabled', isCollapsed);
+			vscode.window.showInformationMessage(`Collapsed mode ${isCollapsed ? 'enabled' : 'disabled'}. ${isCollapsed ? 'Todos are now grouped by status.' : 'Todos are shown in a flat list.'}`);
+		});
+
+		const toggleCollapsedModeEnabledCommand = vscode.commands.registerCommand('agentTodos.toggleCollapsedModeEnabled', async () => {
+			await todoManager.toggleCollapsedMode();
+			const isCollapsed = todoManager.isCollapsedModeEnabled();
+			vscode.commands.executeCommand('setContext', 'agentTodos.collapsedModeEnabled', isCollapsed);
 			vscode.window.showInformationMessage(`Collapsed mode ${isCollapsed ? 'enabled' : 'disabled'}. ${isCollapsed ? 'Todos are now grouped by status.' : 'Todos are shown in a flat list.'}`);
 		});
 
@@ -669,6 +681,7 @@ export async function activate(context: vscode.ExtensionContext) {
 			openSettingsCommand,
 			openInstructionsFileCommand,
 			toggleCollapsedModeCommand,
+			toggleCollapsedModeEnabledCommand,
 			configChangeDisposable,
 			showHistoryCommand,
 			reportIssueCommand

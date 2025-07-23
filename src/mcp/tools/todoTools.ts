@@ -57,13 +57,13 @@ export class TodoTools {
 
 <when-to-use>
 You should make use of this tool as often as possible, especially in the following situations:
-• At the beginning of conversations to see what's pending
-• Before starting new tasks to prioritize work
-• When the user asks about previous tasks or plans
-• Whenever you're uncertain about what to do next
-• After completing tasks to update your understanding of remaining work
-• After every few messages to ensure you're on track
-• When working on tasks that would benefit from a todo list
+- At the beginning of conversations to see what's pending
+- Before starting new tasks to prioritize work
+- When the user asks about previous tasks or plans
+- Whenever you're uncertain about what to do next
+- After completing tasks to update your understanding of remaining work
+- After every few messages to ensure you're on track
+- When working on tasks that would benefit from a todo list
 </when-to-use>
 
 <persistence-reminder>
@@ -73,28 +73,28 @@ CRITICAL: Keep checking todos throughout the conversation. Do not assume you rem
 <instructions>
   <comprehensive-coverage>
   This tool tracks ALL work types:
-  • Development (features, bugs, refactoring, optimization)
-  • Research (analysis, exploration, investigation, learning)
-  • Documentation (guides, API docs, specifications, tutorials)
-  • Planning (architecture, roadmaps, strategies, workflows)
-  • Reviews (code review, security audit, performance analysis)
+  - Development (features, bugs, refactoring, optimization)
+  - Research (analysis, exploration, investigation, learning)
+  - Documentation (guides, API docs, specifications, tutorials)
+  - Planning (architecture, roadmaps, strategies, workflows)
+  - Reviews (code review, security audit, performance analysis)
   </comprehensive-coverage>
 
   <skip-conditions>
   Only skip when:
-  • User explicitly says "start fresh" or "ignore previous todos"
-  • You JUST updated todos (< 30 seconds ago)
-  • Pure factual questions with zero task implications
-  • Auto-inject is enabled (todos already in context)
+  - User explicitly says "start fresh" or "ignore previous todos"
+  - You JUST updated todos (< 30 seconds ago)
+  - Pure factual questions with zero task implications
+  - Auto-inject is enabled (todos already in context)
   </skip-conditions>
 </instructions>
 
 <usage-notes>
-• This tool takes no parameters - leave the input blank
-• Returns a list of todo items with their status, priority, and content
-• Use this information to track progress and plan next steps
-• If no todos exist yet, an empty list will be returned
-• When empty: Immediately use todo_write to plan the requested work
+- This tool takes no parameters - leave the input blank
+- Returns a list of todo items with their status, priority, and content
+- Use this information to track progress and plan next steps
+- If no todos exist yet, an empty list will be returned
+- When empty: Immediately use todo_write to plan the requested work
 </usage-notes>
 
 <response>
@@ -147,18 +147,18 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
 
 <when-to-use>
 Use this tool proactively in these scenarios:
-1. Complex multi-step tasks - When a task requires 3 or more distinct steps or actions
+1. ANY multi-step tasks - When a task requires 3 or more distinct steps or actions
 2. Non-trivial and complex tasks - Tasks that require careful planning or multiple operations
-3. User explicitly requests todo list - When the user directly asks you to use the todo list
+3. User explicitly requests planning or todo list - When the user directly asks you to plan or use the todo list
 4. User provides multiple tasks - When users provide a list of things to be done
 5. After receiving new instructions - Immediately capture user requirements as todos
 6. When you start working on a task - Mark it as in_progress BEFORE beginning work
-7. After completing a task - Mark it as completed and add any new follow-up tasks
+7. After completing a task - Mark it as completed, update the adr, add any new follow-up tasks, and mark the next task as in_progress in the same call
 
 Skip when:
-• Single, straightforward task
-• Task is trivial (< 3 steps)
-• Purely conversational or informational
+- Single, straightforward task
+- Task is trivial (< 3 steps)
+- Purely conversational or informational
 </when-to-use>
 
 <persistence-reminder>
@@ -172,11 +172,13 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   
   <task-categories>
   This tool tracks ALL work types:
-  • Coding: features, bugs, refactoring, optimization, security
-  • Research: codebase exploration, technology evaluation, root cause analysis
-  • Documentation: API docs, guides, architecture docs, migration guides
-  • Planning: system design, roadmaps, technical debt, process improvements
-  • Learning: framework deep-dives, technology exploration, codebase onboarding
+  - Coding: features, bugs, refactoring, optimization, security
+  - Research: codebase exploration, technology evaluation, root cause analysis
+  - Documentation: API docs, guides, architecture docs, migration guides
+  - Commands: CLI commands, scripts, testing, tasks, automation tasks
+  - Reviews: code review, security audit, performance analysis
+  - Planning: system design, roadmaps, technical debt, process improvements
+  - Learning: framework deep-dives, technology exploration, codebase onboarding
   </task-categories>
 
   <workflow-rules>
@@ -188,9 +190,9 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   </workflow-rules>
   
   <status-transitions>
-  • pending → in_progress: BEFORE starting work
-  • in_progress → completed: IMMEDIATELY after finishing
-  • Never leave tasks in_progress when switching
+  - pending → in_progress: BEFORE starting work
+  - in_progress → completed: IMMEDIATELY after finishing AND mark the next task as in_progress
+  - Never leave tasks in_progress when switching
   </status-transitions>
 </instructions>
 
@@ -200,7 +202,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   <content>Specific, actionable description of what needs to be done</content>
   <status>pending/in_progress/completed - only ONE in_progress allowed</status>
   <priority>high (urgent/blocking), medium (important), low (nice-to-have)</priority>
-  <adr>Architecture decisions, trade-offs, blockers, implementation notes</adr>`;
+  <adr>Document concise architecture decisions and implementation notes</adr>`;
 
     const footer = `
 </parameter-guidance>
@@ -221,10 +223,10 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 </success-pattern>
 
 <best-practices>
-• Front-load research and investigation tasks
-• Make each task independently verifiable
-• Document assumptions and decisions in ADR
-• Keep task descriptions specific and measurable
+- Front-load research and investigation tasks
+- Make each task independently verifiable
+- Document assumptions and decisions in ADR
+- Keep tasks specific and measurable
 </best-practices>`;
 
     return basePrompt + footer;
@@ -411,10 +413,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     // Update todos with the final title
     await this.todoManager.updateTodos(todos, title);
-
-    // Get state after update
-    const finalTodos = this.todoManager.getTodos();
-    const finalTitle = this.todoManager.getTitle();
 
     // Generate success message
     const pendingCount = todos.filter(t => t.status === 'pending').length;

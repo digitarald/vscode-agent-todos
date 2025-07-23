@@ -100,19 +100,19 @@
         "command": "agentTodos.setPriorityHigh",
         "title": "Set Priority: High",
         "category": "Agent TODOs",
-        "icon": "$(arrow-circle-up)"
+        "icon": "$(circle-large)"
       },
       {
         "command": "agentTodos.setPriorityMedium",
         "title": "Set Priority: Medium",
         "category": "Agent TODOs",
-        "icon": "$(arrow-circle-right)"
+        "icon": "$(circle)"
       },
       {
         "command": "agentTodos.setPriorityLow",
         "title": "Set Priority: Low",
         "category": "Agent TODOs",
-        "icon": "$(arrow-circle-down)"
+        "icon": "$(circle-small)"
       },
       {
         "command": "agentTodos.addEditAdr",
@@ -176,9 +176,15 @@
       },
       {
         "command": "agentTodos.toggleCollapsedMode",
-        "title": "Toggle Collapsed Mode",
+        "title": "Enable Collapsed Mode",
         "category": "Agent TODOs",
         "icon": "$(list-tree)"
+      },
+      {
+        "command": "agentTodos.toggleCollapsedModeEnabled",
+        "title": "Disable Collapsed Mode",
+        "category": "Agent TODOs",
+        "icon": "$(list-flat)"
       }
     ],
     "viewsContainers": {
@@ -224,7 +230,12 @@
         },
         {
           "command": "agentTodos.toggleCollapsedMode",
-          "when": "view == agentTodos",
+          "when": "view == agentTodos && !agentTodos.collapsedModeEnabled",
+          "group": "navigation"
+        },
+        {
+          "command": "agentTodos.toggleCollapsedModeEnabled",
+          "when": "view == agentTodos && agentTodos.collapsedModeEnabled",
           "group": "navigation"
         },
         {
