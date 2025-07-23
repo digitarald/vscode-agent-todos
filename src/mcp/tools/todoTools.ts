@@ -143,7 +143,7 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
   }
 
   private buildWriteDescription(): string {
-    const basePrompt = `Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
+    return `Use this tool to create and manage a structured task list for your current coding session. This helps you track progress, organize complex tasks, and demonstrate thoroughness to the user.
 
 <when-to-use>
 Use this tool proactively in these scenarios:
@@ -154,6 +154,7 @@ Use this tool proactively in these scenarios:
 5. After receiving new instructions - Immediately capture user requirements as todos
 6. When you start working on a task - Mark it as in_progress BEFORE beginning work
 7. After completing a task - Mark it as completed, update the adr, add any new follow-up tasks, and mark the next task as in_progress in the same call
+8. For any follow-up user requests - If the user asks for changes or follow-ups, track them as new tasks in the todo list
 
 Skip when:
 - Single, straightforward task
@@ -167,7 +168,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
 <instructions>
   <threshold-rule>
-  Use todos for ANY work requiring 3+ steps OR multiple contexts/files
+  Use todos for ANY work requiring 3+ steps OR multiple contexts/files OR when todos are already set and the user adds new requirements.
   </threshold-rule>
   
   <task-categories>
@@ -179,6 +180,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   - Reviews: code review, security audit, performance analysis
   - Planning: system design, roadmaps, technical debt, process improvements
   - Learning: framework deep-dives, technology exploration, codebase onboarding
+  - Follow-ups: user requests, feedback, changes, new requirements
   </task-categories>
 
   <workflow-rules>
@@ -202,9 +204,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
   <content>Specific, actionable description of what needs to be done</content>
   <status>pending/in_progress/completed - only ONE in_progress allowed</status>
   <priority>high (urgent/blocking), medium (important), low (nice-to-have)</priority>
-  <adr>Document concise architecture decisions and implementation notes</adr>`;
-
-    const footer = `
+  <adr>Document concise architecture decisions and implementation notes</adr>
 </parameter-guidance>
 
 <critical-warning>
@@ -228,8 +228,6 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 - Document assumptions and decisions in ADR
 - Keep tasks specific and measurable
 </best-practices>`;
-
-    return basePrompt + footer;
   }
 
   async handleToolCall(name: string, args: any, context?: ToolContext): Promise<ToolResult> {
@@ -552,7 +550,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
               status: {
                 type: 'string',
                 enum: ['pending', 'in_progress', 'completed'],
-                description: 'Current state: pending (not started), in_progress (actively working), completed (finished). Only ONE task can be in_progress.'
+                description: 'Current state: pending (not started), in_progress (actively working), completed (finished). Only ONE task can be in_progress. When marking a task as completed, mark the next task as in_progress in the same tool call.'
               },
               priority: {
                 type: 'string',
