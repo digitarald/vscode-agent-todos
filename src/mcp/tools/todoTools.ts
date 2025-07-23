@@ -441,39 +441,37 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
       timestamp: Date.now()
     });
 
-    // Send smart completion notification
+    // Send progress notification to user via MCP
     try {
       if (context?.sendNotification && context._meta?.progressToken) {
         let notificationLabel = "";
 
-        // Determine what changed
         const totalTodos = todos.length;
-        const completedTodos = todos.filter(t => t.status === 'completed');
-        const completedCount = completedTodos.length;
+        const completedCount = todos.filter(t => t.status === 'completed').length;
 
-        // Check if this is initialization (no previous todos) or a complete list replacement
+        // Determine notification type based on the kind of change made
         const isNewList = previousTodos.length === 0 && todos.length > 0;
         const isTitleChange = title && title !== previousTitle;
+        const isDifferentTodoSet = previousTodos.length > 0 &&
+          !todos.some(todo => previousTodos.some(prev => prev.id === todo.id));
+
         const isCompleteReplacement = todos.length > 0 && (
-          isNewList ||
-          isTitleChange ||
-          // Check if this is a completely different set of todos (different IDs)
-          (previousTodos.length > 0 && !todos.some(todo => previousTodos.some(prev => prev.id === todo.id)))
+          isNewList || isTitleChange || isDifferentTodoSet
         );
 
         if (isCompleteReplacement) {
-          notificationLabel = `Starting "${title || 'Todos'}" (${todos.length})`;
+          // Pattern 1: Started new list - show list name and total count
+          notificationLabel = `📋 ${title || 'Todos'} (${todos.length})`;
         }
-        // Check if all todos are completed
         else if (completedCount === totalTodos && totalTodos > 0) {
-          notificationLabel = `Completed "${title || 'untitled'}" (${todos.length})`;
+          // Pattern 2: Completed entire list - show completion with x/x format
+          notificationLabel = `✅ ${title || 'Todos'} (${totalTodos})`;
         }
         else {
-          // Create a map of previous todos by ID for quick lookup
+          // Pattern 3 & 4: Individual task changes - detect what changed
           const previousTodoMap = new Map(previousTodos.map(t => [t.id, t]));
-          const currentTodoMap = new Map(todos.map(t => [t.id, t]));
 
-          // Detect various types of changes
+          // Find tasks that just got completed
           const newlyCompleted = todos.filter(todo => {
             const prevTodo = previousTodoMap.get(todo.id);
             const wasCompleted = prevTodo && prevTodo.status === 'completed';
@@ -481,6 +479,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
             return isNowCompleted && !wasCompleted;
           });
 
+          // Find tasks that just got started
           const newlyInProgress = todos.filter(todo => {
             const prevTodo = previousTodoMap.get(todo.id);
             const wasInProgress = prevTodo && prevTodo.status === 'in_progress';
@@ -488,60 +487,16 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
             return isNowInProgress && !wasInProgress;
           });
 
-          const statusChangedFromInProgress = previousTodos.filter(prevTodo => {
-            const currentTodo = currentTodoMap.get(prevTodo.id);
-            const wasInProgress = prevTodo.status === 'in_progress';
-            const isStillInProgress = currentTodo && currentTodo.status === 'in_progress';
-            return wasInProgress && !isStillInProgress;
-          });
-
-          const newTasks = todos.filter(todo => !previousTodoMap.has(todo.id));
-          const deletedTasks = previousTodos.filter(prevTodo => !currentTodoMap.has(prevTodo.id));
-
-          const priorityChanges = todos.filter(todo => {
-            const prevTodo = previousTodoMap.get(todo.id);
-            return prevTodo && prevTodo.priority !== todo.priority;
-          });
-
-          // Prioritize notifications by importance
+          // Show completion notifications first (higher priority than start notifications)
           if (newlyCompleted.length > 0) {
-            // Newly completed tasks (highest priority)
+            // Pattern 3: Completed individual task - show progress and task name
             const lastCompleted = newlyCompleted[newlyCompleted.length - 1];
-            notificationLabel = `✅ (${completedCount}/${totalTodos}): ${lastCompleted.content}`;
+            notificationLabel = `✅ (${completedCount}/${totalTodos}) ${lastCompleted.content}`;
           }
           else if (newlyInProgress.length > 0) {
-            // Tasks starting work (high priority)
+            // Pattern 4: Started individual task - show progress and task name
             const lastStarted = newlyInProgress[newlyInProgress.length - 1];
-            notificationLabel = `🔄 Started: ${lastStarted.content}`;
-          }
-          else if (statusChangedFromInProgress.length > 0) {
-            // Tasks no longer in progress (could be paused/reverted)
-            const firstStopped = statusChangedFromInProgress[0];
-            const currentTodo = currentTodoMap.get(firstStopped.id);
-            const newStatus = currentTodo?.status || 'unknown';
-            notificationLabel = `⏸️ Paused: ${firstStopped.content} (now ${newStatus})`;
-          }
-          else if (newTasks.length > 0) {
-            // New tasks added
-            if (newTasks.length === 1) {
-              notificationLabel = `➕ Added: ${newTasks[0].content}`;
-            } else {
-              notificationLabel = `➕ Added ${newTasks.length} new tasks`;
-            }
-          }
-          else if (deletedTasks.length > 0) {
-            // Tasks removed
-            if (deletedTasks.length === 1) {
-              notificationLabel = `➖ Removed: ${deletedTasks[0].content}`;
-            } else {
-              notificationLabel = `➖ Removed ${deletedTasks.length} tasks`;
-            }
-          }
-          else if (priorityChanges.length > 0) {
-            // Priority changes (lowest priority notification)
-            const firstPriorityChange = priorityChanges[0];
-            const prevTodo = previousTodoMap.get(firstPriorityChange.id);
-            notificationLabel = `🔄 Priority: ${firstPriorityChange.content} (${prevTodo?.priority} → ${firstPriorityChange.priority})`;
+            notificationLabel = `🏃 (${completedCount}/${totalTodos}) ${lastStarted.content}`;
           }
         }
 
