@@ -111,6 +111,16 @@ jobs:
         env:
           APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
 
+      - name: Install vsce
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22.x'
+        run: npm install -g @vscode/vsce
+
+      - name: Create VSIX package
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22.x'
+        run: vsce package --no-git-tag-version
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ${{ secrets.APPLICATIONINSIGHTS_CONNECTION_STRING }}
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -128,6 +138,70 @@ jobs:
           name: vscode-extension-package
           path: "*.vsix"
           retention-days: 7
+
+      - name: Comment PR with VSIX download link
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '22.x' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runId = context.runId;
+            const prNumber = context.issue.number;
+            
+            // Get VSIX filename
+            const fs = require('fs');
+            const vsixFiles = fs.readdirSync('.').filter(file => file.endsWith('.vsix'));
+            const vsixFile = vsixFiles[0] || 'agent-todos-*.vsix';
+            
+            const artifactUrl = `https://github.com/${owner}/${repo}/actions/runs/${runId}`;
+            
+            const comment = `## 📦 VSIX Package Ready for Testing
+            
+            A VS Code extension package has been built for this PR and is available for download:
+            
+            **📁 Artifact:** \`${vsixFile}\`
+            **🔗 Download:** [View CI run and download artifact](${artifactUrl})
+            
+            ### How to test:
+            1. Click the link above to go to the CI run
+            2. Scroll down to the "Artifacts" section  
+            3. Download the \`vscode-extension-package\` artifact
+            4. Extract the downloaded zip file to get the \`.vsix\` file
+            5. Install in VS Code: \`Ctrl+Shift+P\` → "Extensions: Install from VSIX..." → Select the \`.vsix\` file
+            
+            _This comment is automatically updated for each push to the PR._`;
+            
+            // Check if we already commented on this PR
+            const comments = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('📦 VSIX Package Ready for Testing')
+            );
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: botComment.id,
+                body: comment
+              });
+              console.log('Updated existing VSIX comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body: comment
+              });
+              console.log('Created new VSIX comment');
+            }
 
   test-summary:
     name: Test Summary
