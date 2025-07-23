@@ -461,11 +461,11 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
         if (isCompleteReplacement) {
           // Pattern 1: Started new list - show list name and total count
-          notificationLabel = `📋 ${title || 'Todos'} (${todos.length})`;
+          notificationLabel = `📋 (${todos.length}) ${title || 'Todos'}`;
         }
         else if (completedCount === totalTodos && totalTodos > 0) {
           // Pattern 2: Completed entire list - show completion with x/x format
-          notificationLabel = `✅ ${title || 'Todos'} (${totalTodos})`;
+          notificationLabel = `✅ (${totalTodos}) ${title || 'Todos'}`;
         }
         else {
           // Pattern 3 & 4: Individual task changes - detect what changed
@@ -496,7 +496,7 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
           else if (newlyInProgress.length > 0) {
             // Pattern 4: Started individual task - show progress and task name
             const lastStarted = newlyInProgress[newlyInProgress.length - 1];
-            notificationLabel = `🏃 (${completedCount}/${totalTodos}) ${lastStarted.content}`;
+            notificationLabel = `🏃 (${completedCount + 1}/${totalTodos}) ${lastStarted.content}`;
           }
         }
 

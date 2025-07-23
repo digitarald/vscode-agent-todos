@@ -26,8 +26,20 @@ export class TodoSectionItem extends vscode.TreeItem {
             this.iconPath = new vscode.ThemeIcon('circle-large', new vscode.ThemeColor('foreground'));
         }
         
-        // Add visual distinction
-        this.description = sectionType === 'completed' ? '✓' : '○';
+        // Show preview of most relevant todo in the section
+        if (todos.length > 0) {
+            if (sectionType === 'completed') {
+                // Show the most recently completed item (last completed item in the original todo list order)
+                // Since todos are filtered by status, the last one is the most recently completed
+                const mostRecentCompleted = todos[todos.length - 1];
+                this.description = mostRecentCompleted.content;
+            } else {
+                // Show the next pending item (first pending item in the original todo list order)
+                // Since todos are filtered by status, the first one is the next to work on
+                const nextPending = todos[0];
+                this.description = nextPending.content;
+            }
+        }
     }
 }
 
