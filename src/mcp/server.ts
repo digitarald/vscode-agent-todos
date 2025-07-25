@@ -45,7 +45,8 @@ export class TodoMCPServer {
       workspaceRoot: config.workspaceRoot || process.cwd(),
       standalone: config.standalone === true,
       autoInject: config.autoInject || false,
-      autoInjectFilePath: config.autoInjectFilePath || '.github/instructions/todos.instructions.md'
+      autoInjectFilePath: config.autoInjectFilePath || '.github/instructions/todos.instructions.md',
+      enableElicitation: config.enableElicitation || false
     };
 
     console.log(`📋 Final config:`, this.config);
@@ -1430,5 +1431,9 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
     // Get autoInject from server configuration
     return this.config.autoInject || false;
+  }
+
+  public isElicitationEnabled(): boolean {
+    return this.config.enableElicitation || false;
   }
 }

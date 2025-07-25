@@ -19,6 +19,7 @@ interface MCPServerLike {
   broadcastUpdate(event: any): void;
   getConfig(): any;
   getMcpServer(context?: ToolContext): any; // Returns the underlying MCP server instance for elicitation
+  isElicitationEnabled(): boolean;
 }
 
 interface TodoManagerLike {
@@ -352,7 +353,8 @@ CRITICAL: Keep planning until the user's request is FULLY broken down. Do not st
 
       try {
         const mcpServer = this.server.getMcpServer(context);
-        if (mcpServer && mcpServer.server && typeof mcpServer.server.elicitInput === 'function') {
+        // Check if elicitation is enabled before prompting user
+        if (this.server.isElicitationEnabled() && mcpServer && mcpServer.server && typeof mcpServer.server.elicitInput === 'function') {
           console.log('[TodoTools] Requesting user confirmation for title change via MCP elicitation');
 
           const elicitResult = await mcpServer.server.elicitInput({

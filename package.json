@@ -349,6 +349,11 @@
           "type": "boolean",
           "default": false,
           "description": "Group completed and pending todos into collapsible sections, focusing on in-progress items"
+        },
+        "agentTodos.enableElicitation": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable confirmation prompts when changing todo list titles (requires restart)"
         }
       }
     },
