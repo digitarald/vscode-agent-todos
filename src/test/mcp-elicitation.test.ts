@@ -56,6 +56,16 @@ suite('MCP Elicitation for Title Change Tests', () => {
             priority: 'medium'
         }], 'Original Title');
 
+        // Create server with elicitation explicitly enabled
+        const serverWithEnabledElicitation = new TodoMCPServer({
+            standalone: true,
+            enableElicitation: true
+        });
+        serverWithEnabledElicitation.setTodoManager(todoManager);
+        serverWithEnabledElicitation.getMcpServer = () => mockMcpServer;
+
+        const todoToolsWithEnabled = new TodoTools(todoManager, serverWithEnabledElicitation);
+
         // Mock user choosing to archive
         mockMcpServer.server.elicitInput = async (params: any) => {
             elicitInputCalls.push(params);
@@ -68,7 +78,7 @@ suite('MCP Elicitation for Title Change Tests', () => {
         };
 
         // Update with new title - should trigger elicitation
-        const result = await todoTools.handleToolCall('todo_write', {
+        const result = await todoToolsWithEnabled.handleToolCall('todo_write', {
             todos: [{
                 id: 'test-1',
                 content: 'Test todo',
@@ -149,6 +159,16 @@ suite('MCP Elicitation for Title Change Tests', () => {
             priority: 'medium'
         }], 'Original Title');
 
+        // Create server with elicitation explicitly enabled
+        const serverWithEnabledElicitation = new TodoMCPServer({
+            standalone: true,
+            enableElicitation: true
+        });
+        serverWithEnabledElicitation.setTodoManager(todoManager);
+        serverWithEnabledElicitation.getMcpServer = () => mockMcpServer;
+
+        const todoToolsWithEnabled = new TodoTools(todoManager, serverWithEnabledElicitation);
+
         // Mock user choosing to reject the update
         mockMcpServer.server.elicitInput = async (params: any) => {
             elicitInputCalls.push(params);
@@ -161,7 +181,7 @@ suite('MCP Elicitation for Title Change Tests', () => {
         };
 
         // Try to change title and todo content
-        const result = await todoTools.handleToolCall('todo_write', {
+        const result = await todoToolsWithEnabled.handleToolCall('todo_write', {
             todos: [{
                 id: 'test-1',
                 content: 'Updated test todo',
@@ -196,6 +216,16 @@ suite('MCP Elicitation for Title Change Tests', () => {
             priority: 'medium'
         }], 'Original Title');
 
+        // Create server with elicitation explicitly enabled
+        const serverWithEnabledElicitation = new TodoMCPServer({
+            standalone: true,
+            enableElicitation: true
+        });
+        serverWithEnabledElicitation.setTodoManager(todoManager);
+        serverWithEnabledElicitation.getMcpServer = () => mockMcpServer;
+
+        const todoToolsWithEnabled = new TodoTools(todoManager, serverWithEnabledElicitation);
+
         // Mock user cancelling
         mockMcpServer.server.elicitInput = async (params: any) => {
             elicitInputCalls.push(params);
@@ -205,7 +235,7 @@ suite('MCP Elicitation for Title Change Tests', () => {
         };
 
         // Try to change title and todo content
-        const result = await todoTools.handleToolCall('todo_write', {
+        const result = await todoToolsWithEnabled.handleToolCall('todo_write', {
             todos: [{
                 id: 'test-1',
                 content: 'Updated test todo',
@@ -237,6 +267,16 @@ suite('MCP Elicitation for Title Change Tests', () => {
             priority: 'medium'
         }], 'Original Title');
 
+        // Create server with elicitation explicitly enabled
+        const serverWithEnabledElicitation = new TodoMCPServer({
+            standalone: true,
+            enableElicitation: true
+        });
+        serverWithEnabledElicitation.setTodoManager(todoManager);
+        serverWithEnabledElicitation.getMcpServer = () => mockMcpServer;
+
+        const todoToolsWithEnabled = new TodoTools(todoManager, serverWithEnabledElicitation);
+
         // Mock elicitation throwing an error
         mockMcpServer.server.elicitInput = async (params: any) => {
             elicitInputCalls.push(params);
@@ -244,7 +284,7 @@ suite('MCP Elicitation for Title Change Tests', () => {
         };
 
         // Try to change title
-        const result = await todoTools.handleToolCall('todo_write', {
+        const result = await todoToolsWithEnabled.handleToolCall('todo_write', {
             todos: [{
                 id: 'test-1',
                 content: 'Test todo',
@@ -287,5 +327,77 @@ suite('MCP Elicitation for Title Change Tests', () => {
         assert.strictEqual(todoManager.getTitle(), 'New Title', 'Should use new title when MCP server not available');
         assert.ok(!result.isError, 'Should not return error when MCP server not available');
         assert.strictEqual(elicitInputCalls.length, 0, 'Elicitation should not be called when server not available');
+    });
+
+    test('Should skip elicitation when enableElicitation is disabled', async () => {
+        // Set up initial state
+        await todoManager.updateTodos([{
+            id: 'test-1',
+            content: 'Test todo',
+            status: 'pending',
+            priority: 'medium'
+        }], 'Original Title');
+
+        // Create server with elicitation disabled
+        const serverWithDisabledElicitation = new TodoMCPServer({
+            standalone: true,
+            enableElicitation: false
+        });
+        serverWithDisabledElicitation.setTodoManager(todoManager);
+        serverWithDisabledElicitation.getMcpServer = () => mockMcpServer;
+
+        const todoToolsWithDisabled = new TodoTools(todoManager, serverWithDisabledElicitation);
+
+        // Try to change title - should not trigger elicitation
+        const result = await todoToolsWithDisabled.handleToolCall('todo_write', {
+            todos: [{
+                id: 'test-1',
+                content: 'Test todo',
+                status: 'pending',
+                priority: 'medium'
+            }],
+            title: 'New Title'
+        });
+
+        // Verify elicitation was NOT called
+        assert.strictEqual(elicitInputCalls.length, 0, 'Elicitation should not be called when disabled');
+        assert.strictEqual(todoManager.getTitle(), 'New Title', 'Should use new title without prompting');
+        assert.ok(!result.isError, 'Should not return error');
+    });
+
+    test('Should trigger elicitation when enableElicitation is explicitly enabled', async () => {
+        // Set up initial state
+        await todoManager.updateTodos([{
+            id: 'test-1',
+            content: 'Test todo',
+            status: 'pending',
+            priority: 'medium'
+        }], 'Original Title');
+
+        // Create server with elicitation explicitly enabled
+        const serverWithEnabledElicitation = new TodoMCPServer({
+            standalone: true,
+            enableElicitation: true
+        });
+        serverWithEnabledElicitation.setTodoManager(todoManager);
+        serverWithEnabledElicitation.getMcpServer = () => mockMcpServer;
+
+        const todoToolsWithEnabled = new TodoTools(todoManager, serverWithEnabledElicitation);
+
+        // Try to change title - should trigger elicitation
+        const result = await todoToolsWithEnabled.handleToolCall('todo_write', {
+            todos: [{
+                id: 'test-1',
+                content: 'Test todo',
+                status: 'pending',
+                priority: 'medium'
+            }],
+            title: 'New Title'
+        });
+
+        // Verify elicitation was called
+        assert.strictEqual(elicitInputCalls.length, 1, 'Elicitation should be called when enabled');
+        assert.strictEqual(todoManager.getTitle(), 'New Title', 'Should use new title after confirmation');
+        assert.ok(!result.isError, 'Should not return error');
     });
 });

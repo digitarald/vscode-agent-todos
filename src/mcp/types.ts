@@ -27,6 +27,7 @@ export interface MCPServerConfig {
   standalone?: boolean;
   autoInject?: boolean;
   autoInjectFilePath?: string;
+  enableElicitation?: boolean;
 }
 
 export interface ToolResult {
