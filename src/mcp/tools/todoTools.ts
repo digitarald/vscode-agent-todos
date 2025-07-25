@@ -1,6 +1,6 @@
 import { TodoItem } from '../../types';
 import { TodoValidator } from '../../todoValidator';
-import { ToolResult } from '../types';
+import { ToolResult, ToolAnnotations } from '../types';
 
 interface TodoWriteParams {
   todos: TodoItem[];
@@ -112,7 +112,7 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
           annotations: {
             title: 'Check Todos',
             readOnlyHint: true
-          }
+          } as ToolAnnotations
         });
       } else {
         console.log('[TodoTools] Skipping todo_read tool - auto-inject enabled or no todos');
@@ -128,7 +128,7 @@ Returns JSON with title and todos array. Each todo includes id, content, status,
         annotations: {
           title: 'Update Todos',
           readOnlyHint: false
-        }
+        } as ToolAnnotations
       });
       console.log('[TodoTools] todo_write tool added');
 
@@ -163,7 +163,7 @@ Skip when:
 </when-to-use>
 
 <persistence-reminder>
-CRITICAL: Keep planning until the user's request is FULLY broken down. Do not stop at high-level tasks - decompose until each task is independently actionable (2-4 hour chunks).
+CRITICAL: Keep planning until the user's request is FULLY broken down. Do not stop at high-level tasks - decompose until each task is independently actionable (1 hour or less).
 </persistence-reminder>
 
 <instructions>
